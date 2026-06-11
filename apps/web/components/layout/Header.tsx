@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 interface HeaderProps {
@@ -24,6 +24,71 @@ export default function Header({
   onNavChange,
   onFavoritesClick,
 }: HeaderProps) {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Mock notifications data matching VIPAASA Organics premium products and events
+  const [notifications, setNotifications] = useState([
+    {
+      id: "1",
+      title: "Fresh Harvest Alert 🌿",
+      description: "Our premium Matcha green tea has just been restocked. Grab yours before it's gone!",
+      timestamp: "2 hours ago",
+      isRead: false,
+    },
+    {
+      id: "2",
+      title: "Order Dispatched 📦",
+      description: "Your order #VP-8921 has been shipped and is on its way to your organic sanctuary.",
+      timestamp: "1 day ago",
+      isRead: false,
+    },
+    {
+      id: "3",
+      title: "Ethos Update 🌸",
+      description: "Read about our new regenerative farming partner in Southern India on our blog.",
+      timestamp: "3 days ago",
+      isRead: true,
+    },
+  ]);
+
+  const hasUnread = notifications.some((n) => !n.isRead);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    }
+
+    if (isNotificationsOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isNotificationsOpen]);
+
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
+
+  const clearAll = () => {
+    setNotifications([]);
+  };
+
+  const toggleRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n))
+    );
+  };
+
+  const deleteNotification = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // prevent marking as read when deleting
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-[#F9F7F2]/90 backdrop-blur-md border-b border-[#EAE6DB] px-6 lg:px-16 py-4 flex items-center justify-between">
       {/* Brand Logo */}
@@ -101,13 +166,116 @@ export default function Header({
           )}
         </button>
 
-        {/* Notifications Icon Link */}
-        <a href="#" className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="Notifications">
-          <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-          </svg>
-          <span className="absolute top-1.5 right-1.5 bg-[#2D6A4F] w-2 h-2 rounded-full border border-[#F9F7F2]"></span>
-        </a>
+        {/* Notifications Popover Dropdown */}
+        <div className="relative flex items-center" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none flex items-center justify-center"
+            aria-label="Notifications"
+          >
+            <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+            </svg>
+            {hasUnread && (
+              <span className="absolute top-1.5 right-1.5 bg-[#2D6A4F] w-2 h-2 rounded-full border border-[#F9F7F2]"></span>
+            )}
+          </button>
+
+          {isNotificationsOpen && (
+            <div className="absolute right-0 top-full mt-3 w-80 sm:w-96 bg-white border border-[#EAE6DB] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] z-50 overflow-hidden font-sans">
+              {/* Popover Header */}
+              <div className="px-4 py-3 border-b border-[#EAE6DB]/60 flex justify-between items-center bg-[#FAF9F5]">
+                <span className="text-sm font-bold text-[#113C27]">Notifications</span>
+                <div className="flex items-center gap-3">
+                  {notifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllAsRead}
+                      className="text-[10px] font-extrabold text-[#2D6A4F] hover:text-[#113C27] transition-all tracking-wider uppercase"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsNotificationsOpen(false)}
+                    className="p-1 hover:bg-[#ECE9E0]/50 rounded-lg text-[#738276] hover:text-[#113C27] transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Popover Body List */}
+              <div className="max-h-[320px] overflow-y-auto divide-y divide-[#EAE6DB]/40">
+                {notifications.length > 0 ? (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => toggleRead(n.id)}
+                      className={`p-4 flex gap-3 cursor-pointer transition-colors group relative hover:bg-[#FAF9F5]/50 ${
+                        !n.isRead ? "bg-[#FAF9F5]/30" : ""
+                      }`}
+                    >
+                      {/* Unread dot */}
+                      <div className="flex-shrink-0 w-2 pt-1.5">
+                        {!n.isRead && (
+                          <div className="w-2 h-2 bg-[#2D6A4F] rounded-full" />
+                        )}
+                      </div>
+
+                      {/* Content details */}
+                      <div className="flex-grow pr-4">
+                        <h5 className="text-xs font-bold text-[#113C27]">{n.title}</h5>
+                        <p className="text-xs text-[#5C6E61] mt-1 leading-relaxed">{n.description}</p>
+                        <span className="text-[10px] text-[#738276] mt-2 block font-semibold">{n.timestamp}</span>
+                      </div>
+
+                      {/* Delete notification button on hover */}
+                      <button
+                        type="button"
+                        onClick={(e) => deleteNotification(n.id, e)}
+                        className="absolute right-3 top-4 opacity-0 group-hover:opacity-100 p-1 hover:bg-[#ECE9E0] rounded-md text-[#738276] hover:text-[#113C27] transition-all"
+                        aria-label="Delete notification"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  /* Popover Empty State */
+                  <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
+                    <div className="w-12 h-12 rounded-full bg-[#FAF9F5] flex items-center justify-center text-[#EAE6DB] mb-3">
+                      <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-bold text-[#113C27]">No notifications</span>
+                    <span className="text-xs text-[#738276] mt-1 font-semibold">You’re all caught up.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Popover Footer */}
+              {notifications.length > 0 && (
+                <div className="px-4 py-2 bg-[#FAF9F5] border-t border-[#EAE6DB]/60 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    className="text-[10px] font-extrabold text-[#738276] hover:text-[#A84444] transition-all tracking-wider uppercase"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Cart Icon Link */}
         <a href="/cart" className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="Shopping Cart">
