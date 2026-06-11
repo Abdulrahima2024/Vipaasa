@@ -1,0 +1,132 @@
+"use client";
+
+import React from "react";
+
+interface HeaderProps {
+  showSearch?: boolean;
+  searchQuery?: string;
+  onSearchChange?: (val: string) => void;
+  cartCount?: number;
+  favoritesCount?: number;
+  activeNav?: string;
+  onNavChange?: (val: string) => void;
+  onFavoritesClick?: () => void;
+}
+
+export default function Header({
+  showSearch = false,
+  searchQuery = "",
+  onSearchChange,
+  cartCount = 0,
+  favoritesCount = 0,
+  activeNav = "Shop",
+  onNavChange,
+  onFavoritesClick,
+}: HeaderProps) {
+  return (
+    <header className="sticky top-0 z-40 bg-[#F9F7F2]/90 backdrop-blur-md border-b border-[#EAE6DB] px-6 lg:px-16 py-4 flex items-center justify-between">
+      {/* Brand Logo */}
+      <a
+        href="/"
+        className="font-serif text-2xl font-bold tracking-tight text-[#113C27] hover:opacity-90 transition-opacity"
+      >
+        Vipaasa Organics
+      </a>
+
+      {/* Desktop Navigation */}
+      <nav className="hidden md:flex items-center space-x-10">
+        {["Shop", "Categories", "Ethos", "Deals"].map((navItem) => (
+          <button
+            key={navItem}
+            type="button"
+            onClick={() => onNavChange && onNavChange(navItem)}
+            className={`text-sm font-medium transition-colors relative py-1 ${
+              activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
+            }`}
+          >
+            {navItem}
+            {activeNav === navItem && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
+            )}
+          </button>
+        ))}
+      </nav>
+
+      {/* Header Right Interactions */}
+      <div className="flex items-center space-x-4 lg:space-x-6">
+        {/* Search Box */}
+        {showSearch && (
+          <div className="relative hidden sm:block">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#738276]">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="Search harvests..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+              className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-4 py-2 w-48 lg:w-60 focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange && onSearchChange("")}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#738276] hover:text-[#113C27]"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Favourites Icon Link */}
+        <button
+          type="button"
+          onClick={onFavoritesClick}
+          className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none"
+          aria-label="Favourites"
+        >
+          <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+          </svg>
+          {favoritesCount > 0 && (
+            <span className="absolute -top-1 -right-1.5 bg-[#A84444] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-all scale-100">
+              {favoritesCount}
+            </span>
+          )}
+        </button>
+
+        {/* Notifications Icon Link */}
+        <a href="#" className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="Notifications">
+          <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+          </svg>
+          <span className="absolute top-1.5 right-1.5 bg-[#2D6A4F] w-2 h-2 rounded-full border border-[#F9F7F2]"></span>
+        </a>
+
+        {/* Cart Icon Link */}
+        <a href="/cart" className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="Shopping Cart">
+          <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+          </svg>
+          {cartCount > 0 && (
+            <span className="absolute -top-1 -right-1.5 bg-[#A84444] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-all scale-100">
+              {cartCount}
+            </span>
+          )}
+        </a>
+
+        {/* User Profile Link */}
+        <a href="#" className="p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="User Account">
+          <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+        </a>
+      </div>
+    </header>
+  );
+}
