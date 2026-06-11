@@ -1,3 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.font-sans {
+  font-family: 'Outfit', sans-serif;
+}
+.font-serif {
+  font-family: 'Playfair Display', serif;
+}
+
+@keyframes local-heart-burst {
+  0% {
+    transform: scale(0.3) rotate(0deg);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(2.2) rotate(-12deg);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.8) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3.5) rotate(0deg);
+    opacity: 0;
+  }
+}
+@keyframes local-float-up-left {
+  0% {
+    transform: translate(0, 0) scale(0.8) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-32px, -48px) scale(0.4) rotate(-30deg);
+    opacity: 0;
+  }
+}
+@keyframes local-float-up-right {
+  0% {
+    transform: translate(0, 0) scale(0.8) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(32px, -44px) scale(0.4) rotate(30deg);
+    opacity: 0;
+  }
+}
+@keyframes local-float-up-center {
+  0% {
+    transform: translate(0, 0) scale(0.8) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(4px, -56px) scale(0.4) rotate(10deg);
+    opacity: 0;
+  }
+}
+
+.animate-local-heart-burst {
+  animation: local-heart-burst 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.animate-local-float-up-left {
+  animation: local-float-up-left 1.1s ease-out forwards;
+}
+.animate-local-float-up-right {
+  animation: local-float-up-right 1.2s ease-out forwards;
+}
+.animate-local-float-up-center {
+  animation: local-float-up-center 1.0s ease-out forwards;
+}

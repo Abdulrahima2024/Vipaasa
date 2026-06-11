@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Header from "../../../components/layout/Header";
 import { useCartStore } from "../../../store/useCartStore";
 import { Lock, Mail, Phone, User, Check } from "lucide-react";
@@ -355,7 +356,24 @@ export default function RegisterPage() {
       </main>
 
       {/* Footer (matches homepage design styling) */}
-      <footer className="bg-[#EAE8E1] border-t border-[#EAE6DB] px-6 lg:px-16 py-12 text-[#4B594F]">
+      <footer className="relative z-10 border-t border-[#EAE6DB] px-6 lg:px-16 pt-16 pb-20 text-[#4B594F] overflow-hidden">
+        {/* Background Image Container using optimized Next.js Image component */}
+        <div className="absolute inset-0 -z-20">
+          <Image
+            src="/images/footer_bg.png"
+            alt="Farming silhouette background"
+            fill
+            quality={100}
+            sizes="100vw"
+            className="object-cover object-bottom"
+          />
+        </div>
+        {/* Bright Cream Tint Overlay for perfect text contrast while preserving image details */}
+        <div className="absolute inset-0 bg-[#F9F7F2]/75 -z-10" />
+
+
+
+
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
           
           {/* Brand & Narrative */}
