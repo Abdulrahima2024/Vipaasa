@@ -25,7 +25,7 @@ interface CategoryProduct {
   createdAt: string;
 }
 
-const CATEGORY_PRODUCTS: CategoryProduct[] = [
+export const CATEGORY_PRODUCTS: CategoryProduct[] = [
   {
     id: "pe-1",
     name: "Golden Turmeric",
@@ -272,9 +272,7 @@ export default function CategoriesClient() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Filters state
-  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([
-    "Dals & Pulses" // checked by default in reference design
-  ]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<number>(5000);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 
