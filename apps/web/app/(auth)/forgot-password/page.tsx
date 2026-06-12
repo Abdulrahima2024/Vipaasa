@@ -22,8 +22,9 @@ export default function ForgotPasswordPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (emailOrMobile.trim()) {
-      // Navigate to /verify-otp with user's input as state
-      router.push(`/verify-otp?target=${encodeURIComponent(emailOrMobile)}`);
+      const target = emailOrMobile.trim();
+      const method = target.includes("@") ? "email" : "mobile";
+      router.push(`/verify-otp?target=${encodeURIComponent(target)}&flow=forgot-password&method=${method}`);
     }
   };
 
