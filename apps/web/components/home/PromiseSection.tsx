@@ -4,9 +4,54 @@ import Image from "next/image";
 export default function PromiseSection() {
   return (
     <section className="space-y-8">
-      <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#113C27] text-center">
-        The Vipaasa Promise
-      </h3>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        @keyframes swayLeft {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(-7deg); }
+        }
+        @keyframes swayRight {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(7deg); }
+        }
+        .origin-bottom-right-leaf {
+          transform-origin: 12px 14px;
+        }
+        .origin-bottom-left-leaf {
+          transform-origin: 12px 11.5px;
+        }
+        .animate-float {
+          animation: float 4s ease-in-out infinite;
+        }
+        .animate-sway-left {
+          animation: swayLeft 3s ease-in-out infinite;
+        }
+        .animate-sway-right {
+          animation: swayRight 3.6s ease-in-out infinite;
+        }
+      ` }} />
+
+      <div className="flex flex-row items-center justify-center space-x-3">
+        <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#113C27]">
+          The Vipaasa Promise
+        </h3>
+        {/* Animated Sprout Icon */}
+        <div className="animate-float flex-shrink-0">
+          <svg className="w-9 h-9" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Stem */}
+            <path d="M12 21C12 17.5 12 13.5 12 9.5" stroke="#113C27" strokeWidth="2.2" strokeLinecap="round" />
+            {/* Left Leaf */}
+            <path d="M12 14C9.5 12 6.5 12.5 5.5 15C4.5 17.5 7 18.5 9.5 17.5C11 17 12 15.5 12 14Z" fill="#81C784" stroke="#113C27" strokeWidth="1.5" className="origin-bottom-right-leaf animate-sway-left" />
+            {/* Right Leaf */}
+            <path d="M12 11.5C14.5 9.5 17.5 10 18.5 12.5C19.5 15 17 16 14.5 15C13 14.5 12 13 12 11.5Z" fill="#4CAF50" stroke="#113C27" strokeWidth="1.5" className="origin-bottom-left-leaf animate-sway-right" />
+            {/* Bud / Top Sprout */}
+            <circle cx="12" cy="9.5" r="1.5" fill="#C8E6C9" />
+          </svg>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         

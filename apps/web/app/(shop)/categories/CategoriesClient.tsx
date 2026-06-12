@@ -657,7 +657,36 @@ export default function CategoriesClient() {
                             {product.name}
                           </h4>
                           
-                          <p className="text-xs text-[#738276] font-medium mt-1">
+                          {/* Rating Review Stars */}
+                          <div className="flex items-center gap-1 mt-1">
+                            <div className="flex items-center text-[#F5A623]">
+                              {[...Array(5)].map((_, i) => {
+                                const starVal = i + 1;
+                                const isFull = starVal <= Math.floor(product.rating);
+                                const isHalf = !isFull && starVal - 0.5 <= product.rating;
+                                return (
+                                  <svg
+                                    key={i}
+                                    className="w-3.5 h-3.5 fill-current"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    {isFull ? (
+                                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                    ) : isHalf ? (
+                                      <path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4V6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z" />
+                                    ) : (
+                                      <path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1v9.3z" fill="none" stroke="currentColor" strokeWidth="2" />
+                                    )}
+                                  </svg>
+                                );
+                              })}
+                            </div>
+                            <span className="text-[10px] font-bold text-[#738276] leading-none mt-0.5 ml-1">
+                              {product.rating.toFixed(1)}
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-[#738276] font-medium mt-1.5">
                             {product.description}
                           </p>
                         </div>
