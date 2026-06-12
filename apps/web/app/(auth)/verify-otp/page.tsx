@@ -34,7 +34,7 @@ function VerifyOtpContent() {
 
   const handleOtpChange = (index: number, value: string) => {
     if (isNaN(Number(value))) return; // only allow numbers
-    
+
     const newOtp = [...otp];
     newOtp[index] = value.substring(value.length - 1); // take the last digit if pasted
     setOtp(newOtp);
@@ -76,9 +76,10 @@ function VerifyOtpContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">
-      
+
       {/* Dynamic Font Import */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
         
         .font-sans {
@@ -100,7 +101,7 @@ function VerifyOtpContent() {
       {/* Main Grid */}
       <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl w-full bg-white rounded-2xl border border-[#EAE6DB]/60 shadow-[0_12px_40px_rgba(0,0,0,0.03)] overflow-hidden grid grid-cols-1 md:grid-cols-2">
-          
+
           {/* Left Side: Editorial */}
           <div className="relative hidden md:block min-h-[520px]">
             <img
@@ -109,7 +110,7 @@ function VerifyOtpContent() {
               className="absolute inset-0 w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#113C27]/90 via-[#113C27]/40 to-black/10" />
-            
+
             <div className="absolute bottom-0 left-0 right-0 p-10 text-white space-y-3 z-10">
               <h3 className="font-serif text-3xl sm:text-4xl font-bold leading-tight tracking-tight">
                 Secure Your Ritual
@@ -122,7 +123,7 @@ function VerifyOtpContent() {
 
           {/* Right Side: Form */}
           <div className="p-8 sm:p-12 flex flex-col justify-center bg-[#FAF9F5]">
-            
+
             {/* Progress: 2 of 3 segments active */}
             <div className="flex space-x-2 mb-8">
               <div className="h-1 flex-1 bg-[#113C27] rounded-full" />
@@ -142,7 +143,7 @@ function VerifyOtpContent() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
               {/* Digit Input Boxes */}
               <div className="flex justify-between gap-2">
                 {otp.map((digit, idx) => (
@@ -206,7 +207,7 @@ function VerifyOtpContent() {
       {/* Footer */}
       <footer className="bg-[#EAE8E1] border-t border-[#EAE6DB] px-6 lg:px-16 py-12 text-[#4B594F]">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
-          
+
           <div className="md:col-span-6 space-y-4">
             <h4 className="font-serif text-xl font-bold text-[#113C27]">Vipaasa Organics</h4>
             <p className="text-xs text-[#5C6E61] max-w-sm leading-relaxed">
