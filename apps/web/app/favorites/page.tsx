@@ -108,6 +108,7 @@ export default function FavoritesPage() {
                 isFavorite={favorites.includes(product.id)}
                 onToggleFavorite={() => toggleFavorite(product.id)}
                 isAnimatingFavorite={animatingProductId === product.id}
+                onRemoveFavorite={() => toggleFavorite(product.id)}
               />
             ))}
           </div>

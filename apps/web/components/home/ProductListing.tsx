@@ -26,12 +26,14 @@ export function ProductCard({
   isFavorite,
   onToggleFavorite,
   isAnimatingFavorite,
+  onRemoveFavorite,
 }: {
   product: Product;
   onAddToCart: (weight: "1kg" | "500g" | "250g") => void;
   isFavorite: boolean;
   onToggleFavorite: () => void;
   isAnimatingFavorite: boolean;
+  onRemoveFavorite?: () => void;
 }) {
   const [selectedWeight, setSelectedWeight] = useState<"1kg" | "500g" | "250g">("1kg");
 
@@ -116,15 +118,33 @@ export function ProductCard({
             </span>
           </div>
 
-          <button
-            onClick={() => onAddToCart(selectedWeight)}
-            className="bg-[#113C27] text-white hover:bg-[#2D6A4F] p-2.5 rounded-xl transition-colors shadow-sm active:scale-95 transform"
-            aria-label={`Add ${product.name} to cart`}
-          >
-            <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Remove from Favorites button — only shown when onRemoveFavorite is passed */}
+            {onRemoveFavorite && (
+              <button
+                type="button"
+                onClick={onRemoveFavorite}
+                title="Remove from favorites"
+                aria-label={`Remove ${product.name} from favorites`}
+                className="bg-[#FEF2F2] text-[#A84444] hover:bg-[#A84444] hover:text-white border border-[#F5C6C6] hover:border-[#A84444] p-2.5 rounded-xl transition-all duration-200 shadow-sm active:scale-95 transform"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+              </button>
+            )}
+
+            {/* Add to Cart button */}
+            <button
+              onClick={() => onAddToCart(selectedWeight)}
+              className="bg-[#113C27] text-white hover:bg-[#2D6A4F] p-2.5 rounded-xl transition-colors shadow-sm active:scale-95 transform"
+              aria-label={`Add ${product.name} to cart`}
+            >
+              <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
