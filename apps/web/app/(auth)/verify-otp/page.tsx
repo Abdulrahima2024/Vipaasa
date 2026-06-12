@@ -10,10 +10,14 @@ function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const target = searchParams.get("target") || "";
+  const flow = searchParams.get("flow") || "forgot-password"; // "register" or "forgot-password"
+  const method = searchParams.get("method") || "email"; // "email" or "mobile"
 
   const [mounted, setMounted] = useState(false);
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [timeLeft, setTimeLeft] = useState(60);
+  const [verifying, setVerifying] = useState(false);
+  const [verified, setVerified] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Cart store for Header notifications/counts
@@ -53,15 +57,29 @@ function VerifyOtpContent() {
 
   const handleResend = () => {
     setTimeLeft(60);
-    alert("OTP has been resent!");
+    alert(`OTP has been resent to your ${method === "email" ? "email" : "mobile number"}!`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const otpValue = otp.join("");
     if (otpValue.length === 6) {
-      // Simulate verification and proceed to reset password
-      router.push("/reset-password");
+      setVerifying(true);
+      // Simulate OTP verification with a short delay
+      setTimeout(() => {
+        setVerifying(false);
+        setVerified(true);
+        // Redirect after showing success
+        setTimeout(() => {
+          if (flow === "register") {
+            // Registration complete — go to login
+            router.push("/login");
+          } else {
+            // Forgot password — go to reset password
+            router.push("/reset-password");
+          }
+        }, 1500);
+      }, 1200);
     } else {
       alert("Please enter a valid 6-digit OTP.");
     }
@@ -101,7 +119,6 @@ function VerifyOtpContent() {
       {/* Main Grid */}
       <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl w-full bg-white rounded-2xl border border-[#EAE6DB]/60 shadow-[0_12px_40px_rgba(0,0,0,0.03)] overflow-hidden grid grid-cols-1 md:grid-cols-2">
-
           {/* Left Side: Editorial */}
           <div className="relative hidden md:block min-h-[520px]">
             <img
@@ -113,10 +130,12 @@ function VerifyOtpContent() {
 
             <div className="absolute bottom-0 left-0 right-0 p-10 text-white space-y-3 z-10">
               <h3 className="font-serif text-3xl sm:text-4xl font-bold leading-tight tracking-tight">
-                Secure Your Ritual
+                {flow === "register" ? "Almost There!" : "Secure Your Ritual"}
               </h3>
               <p className="text-xs sm:text-sm text-white/90 font-medium leading-relaxed max-w-sm">
-                Your account safety is our priority. Follow the simple steps to restore access to your organic sanctuary.
+                {flow === "register"
+                  ? "Verify your identity to complete your registration and start your organic wellness journey."
+                  : "Your account safety is our priority. Follow the simple steps to restore access to your organic sanctuary."}
               </p>
             </div>
           </div>
@@ -124,81 +143,138 @@ function VerifyOtpContent() {
           {/* Right Side: Form */}
           <div className="p-8 sm:p-12 flex flex-col justify-center bg-[#FAF9F5]">
 
-            {/* Progress: 2 of 3 segments active */}
+            {/* Progress bar */}
             <div className="flex space-x-2 mb-8">
               <div className="h-1 flex-1 bg-[#113C27] rounded-full" />
-              <div className="h-1 flex-1 bg-[#113C27] rounded-full" />
-              <div className="h-1 flex-1 bg-[#ECE9E0] rounded-full" />
+              <div className={`h-1 flex-1 rounded-full ${verified ? "bg-[#113C27]" : "bg-[#113C27]"}`} />
+              <div className={`h-1 flex-1 rounded-full ${verified ? "bg-[#113C27]" : "bg-[#ECE9E0]"}`} />
             </div>
 
-            {/* Title */}
-            <div className="mb-6">
-              <h2 className="font-serif text-2.5xl sm:text-3xl font-bold text-[#113C27] leading-tight mb-2">
-                OTP Verification
-              </h2>
-              <p className="text-xs sm:text-sm text-[#5C6E61] font-semibold leading-relaxed">
-                Enter the 6-digit verification code sent to <span className="text-[#113C27] font-bold">{target || "your registered email/mobile"}</span>.
-              </p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-
-              {/* Digit Input Boxes */}
-              <div className="flex justify-between gap-2">
-                {otp.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    type="text"
-                    pattern="[0-9]*"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    ref={(el) => {
-                      inputRefs.current[idx] = el;
-                    }}
-                    onChange={(e) => handleOtpChange(idx, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(idx, e)}
-                    className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold border border-[#EAE6DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#113C27] focus:border-[#113C27] bg-[#F9F7F2]/30 text-[#113C27] font-sans"
-                  />
-                ))}
+            {/* SUCCESS STATE */}
+            {verified ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4 animate-[fadeIn_0.4s_ease-out]">
+                <div className="w-16 h-16 rounded-full bg-[#EAF5EC] flex items-center justify-center">
+                  <svg className="w-8 h-8 text-[#2D6A4F]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </div>
+                <h2 className="font-serif text-2xl font-bold text-[#113C27]">
+                  {flow === "register" ? "Account Verified!" : "Identity Confirmed!"}
+                </h2>
+                <p className="text-sm text-[#5C6E61] font-semibold text-center max-w-xs">
+                  {flow === "register"
+                    ? "Your account has been created successfully. Redirecting you to login..."
+                    : "Redirecting you to set a new password..."}
+                </p>
+                <div className="flex gap-1 pt-2">
+                  <span className="w-2 h-2 bg-[#113C27] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 bg-[#113C27] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 bg-[#113C27] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
               </div>
+            ) : (
+              <>
+                {/* Title */}
+                <div className="mb-6">
+                  <h2 className="font-serif text-2.5xl sm:text-3xl font-bold text-[#113C27] leading-tight mb-2">
+                    {flow === "register" ? "Verify Your Account" : "OTP Verification"}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#5C6E61] font-semibold leading-relaxed">
+                    Enter the 6-digit verification code sent to your{" "}
+                    <span className="text-[#113C27] font-bold">
+                      {method === "email" ? "email" : "mobile number"}{target ? ` (${target})` : ""}
+                    </span>.
+                  </p>
+                </div>
 
-              {/* Countdown and Resend Options */}
-              <div className="flex justify-between items-center text-xs font-semibold text-[#5C6E61]">
-                {timeLeft > 0 ? (
-                  <span>Resend code in <span className="text-[#113C27] font-bold">{formatTime(timeLeft)}</span></span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    className="text-[#2D6A4F] hover:text-[#113C27] font-bold hover:underline transition-all"
+                {/* Method indicator badge */}
+                <div className="flex items-center gap-2 mb-5 px-3 py-2 bg-[#EAF5EC] border border-[#C1F2D0] rounded-xl w-fit">
+                  {method === "email" ? (
+                    <svg className="w-4 h-4 text-[#2D6A4F]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-[#2D6A4F]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                    </svg>
+                  )}
+                  <span className="text-[10px] font-bold text-[#2D6A4F] uppercase tracking-wider">
+                    {method === "email" ? "Email Verification" : "Mobile Verification"}
+                  </span>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+
+                  {/* Digit Input Boxes */}
+                  <div className="flex justify-between gap-2">
+                    {otp.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        type="text"
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        ref={(el) => {
+                          inputRefs.current[idx] = el;
+                        }}
+                        onChange={(e) => handleOtpChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(idx, e)}
+                        disabled={verifying}
+                        className={`w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold border border-[#EAE6DB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#113C27] focus:border-[#113C27] bg-[#F9F7F2]/30 text-[#113C27] font-sans transition-all ${verifying ? "opacity-50" : ""}`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Countdown and Resend Options */}
+                  <div className="flex justify-between items-center text-xs font-semibold text-[#5C6E61]">
+                    {timeLeft > 0 ? (
+                      <span>Resend code in <span className="text-[#113C27] font-bold">{formatTime(timeLeft)}</span></span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResend}
+                        className="text-[#2D6A4F] hover:text-[#113C27] font-bold hover:underline transition-all"
+                      >
+                        Resend Verification Code
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Verify Button */}
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={verifying}
+                      className={`w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-[#113C27] hover:bg-[#2D6A4F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#113C27] active:scale-[0.98] transform transition-all duration-200 ${verifying ? "opacity-70 cursor-wait" : ""}`}
+                    >
+                      {verifying ? (
+                        <>
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Verifying...
+                        </>
+                      ) : (
+                        flow === "register" ? "Verify & Create Account" : "Verify OTP"
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Back to Sign In Link */}
+                <div className="mt-8 text-center">
+                  <Link
+                    href={flow === "register" ? "/register" : "/login"}
+                    className="text-xs font-bold text-[#5C6E61] hover:text-[#113C27] transition-colors"
                   >
-                    Resend Verification Code
-                  </button>
-                )}
-              </div>
-
-              {/* Verify Button */}
-              <div>
-                <button
-                  type="submit"
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-[#113C27] hover:bg-[#2D6A4F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#113C27] active:scale-[0.98] transform transition-all duration-200"
-                >
-                  Verify OTP
-                </button>
-              </div>
-            </form>
-
-            {/* Back to Sign In Link */}
-            <div className="mt-8 text-center">
-              <Link
-                href="/login"
-                className="text-xs font-bold text-[#5C6E61] hover:text-[#113C27] transition-colors"
-              >
-                Back to Sign In
-              </Link>
-            </div>
+                    {flow === "register" ? "← Back to Registration" : "Back to Sign In"}
+                  </Link>
+                </div>
+              </>
+            )}
 
           </div>
         </div>

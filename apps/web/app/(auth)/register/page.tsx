@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Header from "../../../components/layout/Header";
 import { useCartStore } from "../../../store/useCartStore";
@@ -27,10 +28,19 @@ export default function RegisterPage() {
     setMounted(true);
   }, []);
 
+  const router = useRouter();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate auth action
-    alert(`${authMode === "login" ? "Logging in" : "Registering"} with ${loginMethod === "email" ? email : mobileNumber}`);
+    if (authMode === "register") {
+      // Navigate to OTP verification for registration
+      const target = loginMethod === "email" ? email : mobileNumber;
+      const method = loginMethod;
+      router.push(`/verify-otp?target=${encodeURIComponent(target)}&flow=register&method=${method}`);
+    } else {
+      // Login flow — simulate for now
+      alert(`Logging in with ${loginMethod === "email" ? email : mobileNumber}`);
+    }
   };
 
   return (

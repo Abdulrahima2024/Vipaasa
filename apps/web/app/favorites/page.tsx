@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { ProductCard, Product } from "../../components/home/ProductListing";
@@ -89,12 +90,12 @@ export default function FavoritesPage() {
             <p className="text-sm text-[#5C6E61] mb-8 max-w-sm mx-auto leading-relaxed">
               Explore our fresh seasonal harvests and tap the heart icon on any product to save them here.
             </p>
-            <a
-              href="/"
+            <Link
+              href="/categories"
               className="inline-block bg-[#1B4332] text-white px-8 py-3.5 rounded-xl text-sm font-semibold tracking-wide hover:bg-[#113C27] transition-all duration-200 shadow-md shadow-green-950/10"
             >
               Explore Products
-            </a>
+            </Link>
           </div>
         ) : (
           /* PRODUCTS GRID */
@@ -107,6 +108,7 @@ export default function FavoritesPage() {
                 isFavorite={favorites.includes(product.id)}
                 onToggleFavorite={() => toggleFavorite(product.id)}
                 isAnimatingFavorite={animatingProductId === product.id}
+                onRemoveFavorite={() => toggleFavorite(product.id)}
               />
             ))}
           </div>
