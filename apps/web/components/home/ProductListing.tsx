@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useCartStore } from "../../store/useCartStore";
 import productsData from "../../data/products.json";
 
@@ -271,12 +272,12 @@ export default function ProductListing({
             </p>
           </div>
           
-          <a href="#" className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#113C27] hover:opacity-85 transition-opacity whitespace-nowrap">
+          <Link href="/categories" className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#113C27] hover:opacity-85 transition-opacity whitespace-nowrap">
             <span>View All</span>
             <svg className="w-4 h-4 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
             </svg>
-          </a>
+          </Link>
         </div>
 
         {displayedProducts.length === 0 ? (

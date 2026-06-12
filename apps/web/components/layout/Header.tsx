@@ -101,21 +101,39 @@ export default function Header({
 
       {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center space-x-10">
-        {["Shop", "Categories", "Ethos", "Deals"].map((navItem) => (
-          <button
-            key={navItem}
-            type="button"
-            onClick={() => onNavChange && onNavChange(navItem)}
-            className={`text-sm font-medium transition-colors relative py-1 ${
-              activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
-            }`}
-          >
-            {navItem}
-            {activeNav === navItem && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
-            )}
-          </button>
-        ))}
+        {["Shop", "Categories", "Ethos", "Deals"].map((navItem) => {
+          if (navItem === "Categories") {
+            return (
+              <Link
+                key={navItem}
+                href="/categories"
+                className={`text-sm font-medium transition-colors relative py-1 ${
+                  activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
+                }`}
+              >
+                {navItem}
+                {activeNav === navItem && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
+                )}
+              </Link>
+            );
+          }
+          return (
+            <button
+              key={navItem}
+              type="button"
+              onClick={() => onNavChange && onNavChange(navItem)}
+              className={`text-sm font-medium transition-colors relative py-1 ${
+                activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
+              }`}
+            >
+              {navItem}
+              {activeNav === navItem && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </nav>
 
       {/* Header Right Interactions */}
