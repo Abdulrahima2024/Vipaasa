@@ -389,20 +389,22 @@ export default function CartPage() {
       </main>
 
       {/* FOOTER SECTION */}
-      <footer className="relative z-10 border-t border-[#EAE6DB] mt-24 px-6 lg:px-16 pt-16 pb-20 text-[#4B594F] overflow-hidden">
+      <footer className="relative z-10 mt-24 px-6 lg:px-16 pt-16 pb-20 text-[#4B594F] overflow-hidden">
         {/* Background Image Container using optimized Next.js Image component */}
-        <div className="absolute inset-0 -z-20">
+        <div className="absolute inset-0 -z-20 overflow-hidden">
           <Image
-            src="/images/footer_bg.png"
+            src="/images/footer_bg_v4.png"
             alt="Farming silhouette background"
             fill
             quality={100}
             sizes="100vw"
-            className="object-cover object-bottom"
+            className="object-contain md:object-cover object-bottom"
           />
         </div>
         {/* Bright Cream Tint Overlay for perfect text contrast while preserving image details */}
-        <div className="absolute inset-0 bg-[#F9F7F2]/75 -z-10" />
+        <div className="absolute inset-0 bg-[#F9F7F2]/45 -z-10" />
+        {/* Fade-in blend gradient from page background (#F9F7F2) to transparent */}
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#F9F7F2] to-transparent -z-10" />
 
 
 
