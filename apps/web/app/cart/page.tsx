@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Header from "../../components/layout/Header";
 import { useCartStore } from "../../store/useCartStore";
 
@@ -111,7 +112,7 @@ export default function CartPage() {
         <nav className="text-xs font-semibold tracking-wider text-[#738276] mb-8" aria-label="Breadcrumb">
           <ol className="flex items-center space-x-2">
             <li>
-              <a href="#" className="hover:text-[#113C27] transition-colors">Home</a>
+              <Link href="/" className="hover:text-[#113C27] transition-colors">Home</Link>
             </li>
             <li className="flex items-center space-x-2">
               <span>/</span>
@@ -137,12 +138,12 @@ export default function CartPage() {
             <p className="text-sm text-[#5C6E61] mb-8 max-w-sm mx-auto leading-relaxed">
               Looks like you haven&apos;t added any artisanal, sustainable products to your basket yet.
             </p>
-            <a
-              href="#"
+            <Link
+              href="/categories"
               className="inline-block bg-[#1B4332] text-white px-8 py-3.5 rounded-xl text-sm font-semibold tracking-wide hover:bg-[#113C27] transition-all duration-200 shadow-md shadow-green-950/10"
             >
               Start Shopping
-            </a>
+            </Link>
           </div>
         ) : (
           /* ACTIVE CART LAYOUT */
