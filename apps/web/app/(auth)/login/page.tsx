@@ -33,9 +33,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
-    // Auto-switch to register mode if ?mode=register is in the URL
+    // Auto-switch to register/login mode based on URL query param
     if (searchParams.get("mode") === "register") {
       setAuthMode("register");
+    } else {
+      setAuthMode("login");
     }
   }, [searchParams]);
 
