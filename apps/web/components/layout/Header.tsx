@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useAuthStore } from "../../store/authStore";
 
 interface HeaderProps {
   showSearch?: boolean;
@@ -26,6 +27,9 @@ export default function Header({
 }: HeaderProps) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Mock notifications data matching VIPAASA Organics premium products and events
   const [notifications, setNotifications] = useState([
@@ -60,15 +64,19 @@ export default function Header({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsNotificationsOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     }
 
-    if (isNotificationsOpen) {
+    if (isNotificationsOpen || isUserMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isNotificationsOpen]);
+  }, [isNotificationsOpen, isUserMenuOpen]);
+
 
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
@@ -308,11 +316,63 @@ export default function Header({
         </a>
 
         {/* User Profile Link */}
-        <Link href="/login" className="p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="User Account">
-          <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-          </svg>
-        </Link>
+        {isAuthenticated ? (
+          <div className="relative flex items-center animate-fade-in" ref={userMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="relative w-8 h-8 rounded-full bg-[#113C27] hover:bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs transition-colors focus:outline-none"
+              aria-label="User Menu"
+            >
+              {user?.profile?.firstName
+                ? `${user.profile.firstName[0]}${user.profile.lastName ? user.profile.lastName[0] : ""}`.toUpperCase()
+                : user?.email ? user.email.slice(0, 2).toUpperCase() : "U"}
+            </button>
+            {isUserMenuOpen && (
+              <div className="absolute right-0 top-full mt-3 w-56 bg-white border border-[#EAE6DB] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] z-50 overflow-hidden font-sans">
+                <div className="px-4 py-3 border-b border-[#EAE6DB]/60 bg-[#FAF9F5]">
+                  <p className="text-[10px] text-[#738276] font-bold uppercase tracking-wider">Signed in as</p>
+                  <p className="text-xs font-bold text-[#113C27] truncate mt-0.5">
+                    {user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ""}` : user?.email}
+                  </p>
+                </div>
+                <div className="py-1">
+                  <Link
+                    href="/account/profile"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="block px-4 py-2 text-xs font-semibold text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27] transition-colors"
+                  >
+                    My Profile
+                  </Link>
+                  <Link
+                    href="/orders"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="block px-4 py-2 text-xs font-semibold text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27] transition-colors"
+                  >
+                    My Orders
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full text-left block px-4 py-2 text-xs font-bold text-[#A84444] hover:bg-[#FAF9F5] transition-colors border-t border-[#EAE6DB]/40"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link href="/login" className="p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="User Account">
+            <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+          </Link>
+        )}
+
       </div>
     </header>
   );
