@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Header from "../../../components/layout/Header";
 import { useCartStore } from "../../../store/useCartStore";
+import { useAuthStore } from "../../../store/authStore";
 import { Lock, Mail, Phone, User, Check } from "lucide-react";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("register");
   const [loginMethod, setLoginMethod] = useState<"email" | "mobile">("email");
@@ -20,6 +22,10 @@ export default function RegisterPage() {
   const [mobileNumber, setMobileNumber] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Zustand Auth Store
+  const { login, register, isLoading, error: authError, isAuthenticated } = useAuthStore();
 
   // Cart store for Header notifications/counts
   const { items, favorites } = useCartStore();
@@ -28,18 +34,49 @@ export default function RegisterPage() {
     setMounted(true);
   }, []);
 
-  const router = useRouter();
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (authMode === "register") {
-      // Navigate to OTP verification for registration
-      const target = loginMethod === "email" ? email : mobileNumber;
-      const method = loginMethod;
-      router.push(`/verify-otp?target=${encodeURIComponent(target)}&flow=register&method=${method}`);
+    setValidationError(null);
+
+    if (loginMethod === "mobile") {
+      setValidationError("Mobile authentication is not supported. Please use Email method.");
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      setValidationError("Please enter a valid email address (e.g. name@domain.com).");
+      return;
+    }
+
+    // Password length validation
+    if (password.length < 8) {
+      setValidationError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (authMode === "login") {
+      const success = await login(email, password);
+      if (success) {
+        router.push("/");
+      }
     } else {
-      // Login flow — simulate for now
-      alert(`Logging in with ${loginMethod === "email" ? email : mobileNumber}`);
+      if (!termsAccepted) {
+        setValidationError("You must accept the terms and conditions.");
+        return;
+      }
+      const success = await register(email, password, fullName, mobileNumber || undefined);
+      if (success) {
+        router.push("/");
+      }
     }
   };
 
@@ -106,6 +143,16 @@ export default function RegisterPage() {
               </p>
             </div>
 
+            {/* Error display */}
+            {(authError || validationError) && (
+              <div className="mb-4 p-3.5 bg-[#A84444]/10 border border-[#A84444]/25 text-[#A84444] rounded-xl text-xs font-semibold leading-relaxed flex items-start gap-2">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#A84444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{authError || validationError}</span>
+              </div>
+            )}
+
             {/* Email / Mobile Selector Tabs */}
             <div className="flex bg-[#ECE9E0]/60 p-1 rounded-xl mb-6">
               <button
@@ -113,8 +160,8 @@ export default function RegisterPage() {
                 onClick={() => setLoginMethod("email")}
                 className={`flex-1 text-center py-2 rounded-lg text-xs font-bold transition-all ${
                   loginMethod === "email"
-                    ? "bg-white text-[#113C27] shadow-sm"
-                    : "text-[#5C6E61] hover:text-[#113C27]"
+                     ? "bg-white text-[#113C27] shadow-sm"
+                     : "text-[#5C6E61] hover:text-[#113C27]"
                 }`}
               >
                 Email
@@ -240,7 +287,7 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setRememberMe(!rememberMe)}
-                      className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center transition-all ${
+                      className={`h-5 w-5 rounded-md border flex items-center justify-center transition-all ${
                         rememberMe
                           ? "bg-[#113C27] border-[#113C27] text-white"
                           : "border-[#EAE6DB] bg-[#F9F7F2]/30"
@@ -259,7 +306,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setTermsAccepted(!termsAccepted)}
-                    className={`mt-0.5 h-4.5 w-4.5 rounded-md border flex items-center justify-center transition-all flex-shrink-0 ${
+                    className={`mt-0.5 h-5 w-5 rounded-md border flex items-center justify-center transition-all flex-shrink-0 ${
                       termsAccepted
                         ? "bg-[#113C27] border-[#113C27] text-white"
                         : "border-[#EAE6DB] bg-[#F9F7F2]/30"

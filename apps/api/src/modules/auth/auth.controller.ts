@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
-import { authenticateUser, registerUser } from "./auth.service";
+import { 
+  authenticateUser, 
+  registerUser, 
+  generatePasswordResetOtp, 
+  confirmOtp, 
+  updatePasswordWithOtp 
+} from "./auth.service";
 
 export async function login(req: Request, res: Response) {
   try {
@@ -59,6 +65,57 @@ export async function register(req: Request, res: Response) {
     console.error("Register controller error:", error);
     const errorMessage = error?.message || "Internal server error";
     return res.status(400).json({ error: errorMessage });
+  }
+}
+
+export async function forgotPassword(req: Request, res: Response) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    const result = await generatePasswordResetOtp(email);
+    if (!result) {
+      return res.status(404).json({ error: "No account found with this email" });
+    }
+    return res.status(200).json({ message: "OTP sent successfully (Check backend console for code)" });
+  } catch (error: any) {
+    console.error("ForgotPassword controller error:", error);
+    return res.status(500).json({ error: error.message || "Internal server error" });
+  }
+}
+
+export async function verifyOtp(req: Request, res: Response) {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ error: "Email and OTP are required" });
+    }
+    const isValid = await confirmOtp(email, otp);
+    if (!isValid) {
+      return res.status(400).json({ error: "Invalid or expired OTP code" });
+    }
+    return res.status(200).json({ message: "OTP verified successfully" });
+  } catch (error: any) {
+    console.error("VerifyOtp controller error:", error);
+    return res.status(500).json({ error: error.message || "Internal server error" });
+  }
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ error: "Email, OTP, and new password are required" });
+    }
+    const success = await updatePasswordWithOtp(email, otp, newPassword);
+    if (!success) {
+      return res.status(400).json({ error: "Password reset failed. Ensure OTP is verified." });
+    }
+    return res.status(200).json({ message: "Password updated successfully" });
+  } catch (error: any) {
+    console.error("ResetPassword controller error:", error);
+    return res.status(500).json({ error: error.message || "Internal server error" });
   }
 }
 

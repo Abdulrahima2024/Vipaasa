@@ -11,6 +11,9 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [emailOrMobile, setEmailOrMobile] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Cart store for Header notifications/counts
   const { items, favorites } = useCartStore();
@@ -19,12 +22,54 @@ export default function ForgotPasswordPage() {
     setMounted(true);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (emailOrMobile.trim()) {
-      const target = emailOrMobile.trim();
-      const method = target.includes("@") ? "email" : "mobile";
-      router.push(`/verify-otp?target=${encodeURIComponent(target)}&flow=forgot-password&method=${method}`);
+    setValidationError(null);
+    setApiError(null);
+    setIsLoading(true);
+
+    const target = emailOrMobile.trim();
+    if (!target) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (!target.includes("@")) {
+      setValidationError("Mobile authentication is not supported. Please enter a valid email address.");
+      setIsLoading(false);
+      return;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(target)) {
+      setValidationError("Please enter a valid email address (e.g. name@domain.com).");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const response = await fetch(`${apiBaseUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: target }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setApiError(data.error || "No account found with this email address.");
+        setIsLoading(false);
+        return;
+      }
+
+      router.push(`/verify-otp?target=${encodeURIComponent(target)}&flow=forgot-password&method=email`);
+    } catch (err) {
+      console.error("Forgot password API error:", err);
+      setApiError("Cannot connect to the authentication server.");
+      setIsLoading(false);
     }
   };
 
@@ -92,9 +137,19 @@ export default function ForgotPasswordPage() {
                 Forgot Password?
               </h2>
               <p className="text-xs sm:text-sm text-[#5C6E61] font-semibold leading-relaxed">
-                Enter your registered email or mobile number and we'll send you an OTP to verify your identity.
+                Enter your registered email and we'll send you an OTP to verify your identity.
               </p>
             </div>
+
+            {/* Error Display */}
+            {(validationError || apiError) && (
+              <div className="mb-4 p-3.5 bg-[#A84444]/10 border border-[#A84444]/25 text-[#A84444] rounded-xl text-xs font-semibold leading-relaxed flex items-start gap-2">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#A84444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{validationError || apiError}</span>
+              </div>
+            )}
 
             {/* Verification Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -102,7 +157,7 @@ export default function ForgotPasswordPage() {
               {/* Email or Mobile Number Input */}
               <div>
                 <label htmlFor="emailOrMobile" className="block text-[10px] font-bold text-[#113C27] mb-1.5 uppercase tracking-wider">
-                  Email or Mobile Number
+                  Email Address
                 </label>
                 <div className="relative rounded-xl shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#738276]">
@@ -124,9 +179,20 @@ export default function ForgotPasswordPage() {
               <div>
                 <button
                   type="submit"
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-[#113C27] hover:bg-[#2D6A4F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#113C27] active:scale-[0.98] transform transition-all duration-200"
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-[#113C27] hover:bg-[#2D6A4F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#113C27] active:scale-[0.98] transform transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Send Verification Code
+                  {isLoading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Verification Code"
+                  )}
                 </button>
               </div>
             </form>

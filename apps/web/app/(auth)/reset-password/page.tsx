@@ -1,18 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../../../components/layout/Header";
 import { useCartStore } from "../../../store/useCartStore";
 import { Lock, Check, AlertCircle } from "lucide-react";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get("target") || "";
+  const otp = searchParams.get("otp") || "";
+
   const [mounted, setMounted] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [strength, setStrength] = useState<{ label: string; color: string; width: string }>({
     label: "",
@@ -50,12 +55,12 @@ export default function ResetPasswordPage() {
     }
   }, [newPassword]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
 
-    if (newPassword.length < 6) {
-      setErrorMessage("Password must be at least 6 characters long.");
+    if (newPassword.length < 8) {
+      setErrorMessage("Password must be at least 8 characters long.");
       return;
     }
 
@@ -64,15 +69,37 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // Simulate successful password update
-    setIsSuccess(true);
-    
-    // Automatically redirect after 4 seconds
-    const timeout = setTimeout(() => {
-      router.push("/login");
-    }, 4000);
+    setIsUpdating(true);
+    try {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const response = await fetch(`${apiBaseUrl}/api/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, otp, newPassword }),
+      });
 
-    return () => clearTimeout(timeout);
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorMessage(data.error || "Password reset failed. Ensure OTP is verified.");
+        setIsUpdating(false);
+        return;
+      }
+
+      setIsSuccess(true);
+      
+      const timeout = setTimeout(() => {
+        router.push("/login");
+      }, 4000);
+
+      return () => clearTimeout(timeout);
+    } catch (err) {
+      console.error("Reset password error:", err);
+      setErrorMessage("Cannot connect to the authentication server.");
+      setIsUpdating(false);
+    }
   };
 
   return (
@@ -237,9 +264,10 @@ export default function ResetPasswordPage() {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-[#113C27] hover:bg-[#2D6A4F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#113C27] active:scale-[0.98] transform transition-all duration-200"
+                      disabled={isUpdating}
+                      className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-[#113C27] hover:bg-[#2D6A4F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#113C27] active:scale-[0.98] transform transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Update Password
+                      {isUpdating ? "Updating..." : "Update Password"}
                     </button>
                   </div>
                 </form>
@@ -274,5 +302,13 @@ export default function ResetPasswordPage() {
       </footer>
 
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F9F7F2] text-[#113C27] font-serif text-xl">Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

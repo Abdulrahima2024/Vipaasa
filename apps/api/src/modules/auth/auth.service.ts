@@ -42,6 +42,103 @@ export async function authenticateUser(email: string, password_raw: string) {
   return { token, user };
 }
 
+export async function generatePasswordResetOtp(email: string) {
+  const user = await prisma.user.findFirst({
+    where: { email, isDeleted: false }
+  });
+  if (!user) return null;
+
+  // Generate 6-digit random code
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const codeHash = await bcrypt.hash(otp, 10);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+  // Delete previous reset OTPs for this email to prevent spam/clutter
+  await prisma.otpVerification.deleteMany({
+    where: { email, purpose: "PASSWORD_RESET" }
+  });
+
+  // Create new OTP verification record
+  await prisma.otpVerification.create({
+    data: {
+      userId: user.id,
+      email,
+      codeHash,
+      purpose: "PASSWORD_RESET",
+      expiresAt,
+      isVerified: false
+    }
+  });
+
+  // Log OTP code directly to terminal console for local developer check
+  console.log(`\n========================================`);
+  console.log(`[PASSWORD RESET OTP] Generated for: ${email}`);
+  console.log(`OTP Code: ${otp}`);
+  console.log(`Expires At: ${expiresAt.toISOString()}`);
+  console.log(`========================================\n`);
+
+  return true;
+}
+
+export async function confirmOtp(email: string, otp: string) {
+  const verification = await prisma.otpVerification.findFirst({
+    where: {
+      email,
+      purpose: "PASSWORD_RESET",
+      isVerified: false,
+      expiresAt: { gt: new Date() }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  if (!verification) return false;
+
+  const matches = await bcrypt.compare(otp, verification.codeHash);
+  if (!matches) return false;
+
+  // Mark verification record as verified
+  await prisma.otpVerification.update({
+    where: { id: verification.id },
+    data: { isVerified: true }
+  });
+
+  return true;
+}
+
+export async function updatePasswordWithOtp(
+  email: string,
+  otp: string,
+  password_raw: string
+) {
+  // Confirm that a verified OTP exists for this email
+  const verification = await prisma.otpVerification.findFirst({
+    where: {
+      email,
+      purpose: "PASSWORD_RESET",
+      isVerified: true
+    },
+    orderBy: { updatedAt: "desc" }
+  });
+
+  if (!verification) return false;
+
+  // Hash new password
+  const passwordHash = await bcrypt.hash(password_raw, 10);
+
+  // Update password in user record
+  await prisma.user.update({
+    where: { email },
+    data: { passwordHash }
+  });
+
+  // Clean up all reset OTPs for this user
+  await prisma.otpVerification.deleteMany({
+    where: { email, purpose: "PASSWORD_RESET" }
+  });
+
+  return true;
+}
+
 export async function registerUser(
   email: string,
   password_raw: string,
@@ -126,4 +223,7 @@ export async function registerUser(
 
   return { token, user };
 }
+
+
+
 

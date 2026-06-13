@@ -18,6 +18,7 @@ function VerifyOtpContent() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Cart store for Header notifications/counts
@@ -55,33 +56,73 @@ function VerifyOtpContent() {
     }
   };
 
-  const handleResend = () => {
-    setTimeLeft(60);
-    alert(`OTP has been resent to your ${method === "email" ? "email" : "mobile number"}!`);
+  const handleResend = async () => {
+    setError(null);
+    try {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const response = await fetch(`${apiBaseUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: target }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Resend failed.");
+        return;
+      }
+
+      setTimeLeft(60);
+      alert(`OTP has been resent to your email!`);
+    } catch (err) {
+      console.error("Resend OTP error:", err);
+      setError("Cannot connect to server to resend OTP.");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     const otpValue = otp.join("");
     if (otpValue.length === 6) {
       setVerifying(true);
-      // Simulate OTP verification with a short delay
-      setTimeout(() => {
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const response = await fetch(`${apiBaseUrl}/api/auth/verify-otp`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: target, otp: otpValue }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || "Invalid or expired OTP code.");
+          setVerifying(false);
+          return;
+        }
+
         setVerifying(false);
         setVerified(true);
         // Redirect after showing success
         setTimeout(() => {
           if (flow === "register") {
-            // Registration complete — go to login
             router.push("/login");
           } else {
-            // Forgot password — go to reset password
-            router.push("/reset-password");
+            router.push(`/reset-password?target=${encodeURIComponent(target)}&otp=${encodeURIComponent(otpValue)}`);
           }
         }, 1500);
-      }, 1200);
+      } catch (err) {
+        console.error("Verify OTP error:", err);
+        setError("Cannot connect to the authentication server.");
+        setVerifying(false);
+      }
     } else {
-      alert("Please enter a valid 6-digit OTP.");
+      setError("Please enter a valid 6-digit OTP.");
     }
   };
 
@@ -202,6 +243,16 @@ function VerifyOtpContent() {
                     {method === "email" ? "Email Verification" : "Mobile Verification"}
                   </span>
                 </div>
+
+                {/* Error display */}
+                {error && (
+                  <div className="mb-4 p-3.5 bg-[#A84444]/10 border border-[#A84444]/25 text-[#A84444] rounded-xl text-xs font-semibold leading-relaxed flex items-start gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#A84444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>{error}</span>
+                  </div>
+                )}
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-6">
