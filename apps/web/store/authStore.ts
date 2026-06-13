@@ -28,6 +28,7 @@ interface AuthState {
     phoneNumber?: string
   ) => Promise<boolean>;
   logout: () => void;
+  clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -121,6 +122,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      clearError: () => {
+        set({ error: null });
+      },
+
       logout: () => {
         set({
           user: null,
@@ -132,6 +137,18 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "vipaasa-auth-store",
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      onRehydrateStorage: () => (state) => {
+        // Always clear transient UI state when store rehydrates from localStorage
+        if (state) {
+          state.error = null;
+          state.isLoading = false;
+        }
+      },
     }
   )
 );

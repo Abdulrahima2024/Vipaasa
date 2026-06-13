@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Header from "../../../components/layout/Header";
 import { useCartStore } from "../../../store/useCartStore";
@@ -11,6 +11,7 @@ import { Lock, Mail, Phone, User, Check } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [loginMethod, setLoginMethod] = useState<"email" | "mobile">("email");
@@ -32,7 +33,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Auto-switch to register mode if ?mode=register is in the URL
+    if (searchParams.get("mode") === "register") {
+      setAuthMode("register");
+    }
+  }, [searchParams]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -133,7 +138,7 @@ export default function LoginPage() {
             {/* Error display */}
             {(authError || validationError) && (
               <div className="mb-4 p-3.5 bg-[#A84444]/10 border border-[#A84444]/25 text-[#A84444] rounded-xl text-xs font-semibold leading-relaxed flex items-start gap-2">
-                <svg className="w-4.5 h-4.5 flex-shrink-0 mt-0.5 text-[#A84444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#A84444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <span>{authError || validationError}</span>

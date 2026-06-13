@@ -366,11 +366,22 @@ export default function Header({
             )}
           </div>
         ) : (
-          <Link href="/login" className="p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="User Account">
-            <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-            </svg>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/login"
+              id="header-signin-btn"
+              className="px-4 py-1.5 text-xs font-bold text-[#113C27] border border-[#113C27] rounded-full hover:bg-[#113C27] hover:text-white transition-all duration-200 active:scale-95"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/login?mode=register"
+              id="header-signup-btn"
+              className="px-4 py-1.5 text-xs font-bold text-white bg-[#113C27] border border-[#113C27] rounded-full hover:bg-[#2D6A4F] hover:border-[#2D6A4F] transition-all duration-200 active:scale-95"
+            >
+              Sign Up
+            </Link>
+          </div>
         )}
 
       </div>
