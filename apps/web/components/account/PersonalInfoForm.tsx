@@ -49,8 +49,11 @@ export default function PersonalInfoForm() {
       errors.email = "Please enter a valid email address.";
     }
 
-    if (phone && !/^(\+?\d{1,4})?[\d\s-]{7,15}$/.test(phone.replace(/\s/g, ""))) {
-      errors.phone = "Please enter a valid mobile number.";
+    if (phone) {
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length !== 10) {
+        errors.phone = "Mobile number must be exactly 10 digits.";
+      }
     }
 
     setFieldErrors(errors);
@@ -218,6 +221,8 @@ export default function PersonalInfoForm() {
               <input
                 id="profilePhone"
                 type="tel"
+                minLength={10}
+                maxLength={10}
                 value={phone}
                 onChange={(e) => {
                   setPhone(e.target.value);
