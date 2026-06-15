@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../../../components/layout/Header";
+import Footer from "../../../components/layout/Footer";
 import ProfileSidebar from "../../../components/account/ProfileSidebar";
 import PersonalInfoForm from "../../../components/account/PersonalInfoForm";
 import SecuritySettings from "../../../components/account/SecuritySettings";
@@ -130,36 +131,7 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 px-6 lg:px-16 pt-16 pb-20 text-[#4B594F] overflow-hidden bg-[#FAF9F5] border-t border-[#EAE6DB]/60">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
-          <div className="md:col-span-6 space-y-5">
-            <h4 className="font-serif text-xl font-bold text-[#113C27]">Vipaasa Organics</h4>
-            <p className="text-sm leading-relaxed max-w-sm">
-              Crafting premium, artisanal wellness products with a commitment to pure ingredients and ethical earth stewardship.
-            </p>
-          </div>
-          <div className="md:col-span-3 space-y-4">
-            <h4 className="font-bold text-xs uppercase tracking-wider text-[#113C27]">Company</h4>
-            <ul className="space-y-2.5 text-sm font-semibold">
-              <li><a href="#" className="hover:text-[#113C27] transition-colors">Ethos</a></li>
-              <li><a href="#" className="hover:text-[#113C27] transition-colors">Wholesale</a></li>
-              <li><a href="#" className="hover:text-[#113C27] transition-colors">Contact Us</a></li>
-            </ul>
-          </div>
-          <div className="md:col-span-3 space-y-4">
-            <h4 className="font-bold text-xs uppercase tracking-wider text-[#113C27]">Support</h4>
-            <ul className="space-y-2.5 text-sm font-semibold">
-              <li><a href="#" className="hover:text-[#113C27] transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-[#113C27] transition-colors">Shipping Info</a></li>
-              <li><a href="#" className="hover:text-[#113C27] transition-colors">Returns</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto border-t border-[#DEDAD0] mt-10 pt-6 text-center text-xs font-medium text-[#738276]">
-          &copy; 2024 Vipaasa Organics. Artisanal. Ethical. Pure.
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
