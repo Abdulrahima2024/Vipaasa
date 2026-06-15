@@ -5,12 +5,14 @@ interface UserProfile {
   firstName: string;
   lastName: string;
   avatarUrl?: string;
+  dateOfBirth?: string | Date;
 }
 
 interface User {
   id: string;
   email: string;
   role: string;
+  phoneNumber?: string;
   profile?: UserProfile;
 }
 
@@ -29,6 +31,9 @@ interface AuthState {
   ) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
+  updateUser: (user: User) => void;
+  _hasHydrated: boolean;
+  setHasHydrated: (val: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -39,6 +44,8 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       error: null,
       isLoading: false,
+      _hasHydrated: false,
+      setHasHydrated: (val) => set({ _hasHydrated: val }),
 
       login: async (email, password) => {
         set({ isLoading: true, error: null });
@@ -126,6 +133,10 @@ export const useAuthStore = create<AuthState>()(
         set({ error: null });
       },
 
+      updateUser: (user) => {
+        set({ user });
+      },
+
       logout: () => {
         set({
           user: null,
@@ -147,6 +158,7 @@ export const useAuthStore = create<AuthState>()(
         if (state) {
           state.error = null;
           state.isLoading = false;
+          state.setHasHydrated(true);
         }
       },
     }

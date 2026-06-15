@@ -27,7 +27,7 @@ export default function Header({
 }: HeaderProps) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user, logout, _hasHydrated } = useAuthStore();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -316,7 +316,7 @@ export default function Header({
         </a>
 
         {/* User Profile Link */}
-        {isAuthenticated ? (
+        {_hasHydrated && isAuthenticated ? (
           <div className="relative flex items-center animate-fade-in" ref={userMenuRef}>
             <button
               type="button"
