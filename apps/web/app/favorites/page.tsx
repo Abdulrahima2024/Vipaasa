@@ -51,7 +51,7 @@ export default function FavoritesPage() {
 
       {/* HEADER SECTION */}
       <Header
-        showSearch={false}
+        showSearch={true}
         cartCount={mounted ? items.reduce((acc, item) => acc + item.quantity, 0) : 0}
         favoritesCount={mounted ? favorites.length : 0}
         onFavoritesClick={() => {

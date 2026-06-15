@@ -74,7 +74,7 @@ export default function CartPage() {
           .font-sans { font-family: 'Outfit', sans-serif; }
           .font-serif { font-family: 'Playfair Display', serif; }
         `}} />
-        <Header showSearch={false} cartCount={0} favoritesCount={0} />
+        <Header showSearch={true} cartCount={0} favoritesCount={0} />
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-16 py-8 flex items-center justify-center">
           <div className="text-center py-20 text-[#738276] font-semibold text-lg animate-pulse">
             Loading your basket...
@@ -100,7 +100,7 @@ export default function CartPage() {
 
       {/* HEADER SECTION */}
       <Header
-        showSearch={false}
+        showSearch={true}
         cartCount={mounted ? items.reduce((acc, item) => acc + item.quantity, 0) : 0}
         favoritesCount={mounted ? favorites.length : 0}
         onFavoritesClick={() => {

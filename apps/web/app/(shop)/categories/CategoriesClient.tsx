@@ -290,7 +290,29 @@ export default function CategoriesClient() {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const searchParam = params.get("search");
+      if (searchParam) {
+        setSearchQuery(searchParam);
+      }
+    }
   }, []);
+
+  // Sync searchQuery to URL query parameter silently
+  useEffect(() => {
+    if (mounted && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (searchQuery) {
+        params.set("search", searchQuery);
+      } else {
+        params.delete("search");
+      }
+      const newSearch = params.toString();
+      const newUrl = `${window.location.pathname}${newSearch ? "?" + newSearch : ""}`;
+      window.history.pushState({ path: newUrl }, "", newUrl);
+    }
+  }, [searchQuery, mounted]);
 
   const handleSubcategoryToggle = (subcategory: string) => {
     setSelectedSubcategories((prev) =>

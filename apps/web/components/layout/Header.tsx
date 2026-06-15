@@ -16,7 +16,7 @@ interface HeaderProps {
 }
 
 export default function Header({
-  showSearch = false,
+  showSearch = true,
   searchQuery = "",
   onSearchChange,
   cartCount = 0,
@@ -30,6 +30,42 @@ export default function Header({
   const { isAuthenticated, user, logout, _hasHydrated } = useAuthStore();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalSearchQuery(val);
+    if (onSearchChange) {
+      onSearchChange(val);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setLocalSearchQuery("");
+    if (onSearchChange) {
+      onSearchChange("");
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (localSearchQuery.trim()) {
+      if (typeof window !== "undefined") {
+        if (window.location.pathname === "/categories") {
+          const newUrl = `${window.location.pathname}?search=${encodeURIComponent(localSearchQuery.trim())}`;
+          window.history.pushState({ path: newUrl }, "", newUrl);
+        } else {
+          window.location.href = `/categories?search=${encodeURIComponent(localSearchQuery.trim())}`;
+        }
+      }
+    }
+  };
 
   // Mock notifications data matching VIPAASA Organics premium products and events
   const [notifications, setNotifications] = useState([
@@ -98,23 +134,40 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#F9F7F2]/90 backdrop-blur-md border-b border-[#EAE6DB] px-6 lg:px-16 py-4 flex items-center justify-between">
-      {/* Brand Logo */}
-      <a
-        href="/"
-        className="font-serif text-2xl font-bold tracking-tight text-[#113C27] hover:opacity-90 transition-opacity"
-      >
-        Vipaasa Organics
-      </a>
+    <header className="sticky top-0 z-40 bg-[#F9F7F2]/90 backdrop-blur-md border-b border-[#EAE6DB] w-full">
+      <div className="px-6 lg:px-16 py-4 flex items-center justify-between">
+        {/* Brand Logo */}
+        <a
+          href="/"
+          className="font-serif text-2xl font-bold tracking-tight text-[#113C27] hover:opacity-90 transition-opacity"
+        >
+          Vipaasa Organics
+        </a>
 
-      {/* Desktop Navigation */}
-      <nav className="hidden md:flex items-center space-x-10">
-        {["Shop", "Categories", "Ethos", "Deals"].map((navItem) => {
-          if (navItem === "Categories") {
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center space-x-10">
+          {["Shop", "Categories", "Ethos", "Deals"].map((navItem) => {
+            if (navItem === "Categories") {
+              return (
+                <Link
+                  key={navItem}
+                  href="/categories"
+                  className={`text-sm font-medium transition-colors relative py-1 ${
+                    activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
+                  }`}
+                >
+                  {navItem}
+                  {activeNav === navItem && (
+                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
+                  )}
+                </Link>
+              );
+            }
             return (
-              <Link
+              <button
                 key={navItem}
-                href="/categories"
+                type="button"
+                onClick={() => onNavChange && onNavChange(navItem)}
                 className={`text-sm font-medium transition-colors relative py-1 ${
                   activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
                 }`}
@@ -123,57 +176,55 @@ export default function Header({
                 {activeNav === navItem && (
                   <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
                 )}
-              </Link>
+              </button>
             );
-          }
-          return (
-            <button
-              key={navItem}
-              type="button"
-              onClick={() => onNavChange && onNavChange(navItem)}
-              className={`text-sm font-medium transition-colors relative py-1 ${
-                activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
-              }`}
-            >
-              {navItem}
-              {activeNav === navItem && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
+          })}
+        </nav>
 
-      {/* Header Right Interactions */}
-      <div className="flex items-center space-x-4 lg:space-x-6">
-        {/* Search Box */}
-        {showSearch && (
-          <div className="relative hidden sm:block">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#738276]">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        {/* Header Right Interactions */}
+        <div className="flex items-center space-x-4 lg:space-x-6">
+          {/* Search Box */}
+          {showSearch && (
+            <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#738276]">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                placeholder="Search harvests..."
+                value={localSearchQuery}
+                onChange={handleInputChange}
+                className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-8 py-2 w-48 lg:w-60 focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
+              />
+              {localSearchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#738276] hover:text-[#113C27]"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </form>
+          )}
+
+          {/* Mobile Search Toggle */}
+          {showSearch && (
+            <button
+              type="button"
+              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              className="p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none sm:hidden flex items-center justify-center"
+              aria-label="Toggle search"
+            >
+              <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
               </svg>
-            </span>
-            <input
-              type="text"
-              placeholder="Search harvests..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-              className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-4 py-2 w-48 lg:w-60 focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => onSearchChange && onSearchChange("")}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#738276] hover:text-[#113C27]"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        )}
+            </button>
+          )}
 
         {/* Favourites Icon Link */}
         <button
@@ -383,8 +434,39 @@ export default function Header({
             </Link>
           </div>
         )}
-
       </div>
+    </div>
+
+      {/* Mobile Search Bar Dropdown */}
+      {showSearch && isMobileSearchOpen && (
+        <div className="px-6 pb-4 pt-1 border-t border-[#EAE6DB]/40 sm:hidden bg-[#F9F7F2]/95 animate-fade-in">
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#738276]">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="Search harvests..."
+              value={localSearchQuery}
+              onChange={handleInputChange}
+              className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-10 py-2.5 w-full focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
+            />
+            {localSearchQuery && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#738276] hover:text-[#113C27]"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </form>
+        </div>
+      )}
     </header>
   );
 }

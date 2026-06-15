@@ -45,7 +45,7 @@ export default function CheckoutPage() {
   }, [mounted, isAuthenticated, router]);
 
   // Default Addresses from mockup
-  const [addresses, setAddresses] = useState<Address[]>([
+  const DEFAULT_MOCK_ADDRESSES: Address[] = [
     {
       id: "addr-1",
       type: "Home",
@@ -68,12 +68,38 @@ export default function CheckoutPage() {
       postalCode: "122002",
       country: "India",
       phone: "+91 98765 99887",
+      isDefault: false,
     },
-  ]);
+  ];
 
-  const [selectedAddressId, setSelectedAddressId] = useState("addr-1");
-  const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || addresses[0];
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
 
+  useEffect(() => {
+    if (mounted) {
+      const stored = localStorage.getItem("vipaasa_addresses");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setAddresses(parsed);
+          const defaultAddr = parsed.find((a: Address) => a.isDefault) || parsed[0];
+          if (defaultAddr) {
+            setSelectedAddressId(defaultAddr.id);
+          }
+        } catch (e) {
+          console.error("Failed to parse stored addresses", e);
+          setAddresses(DEFAULT_MOCK_ADDRESSES);
+          setSelectedAddressId(DEFAULT_MOCK_ADDRESSES[0].id);
+        }
+      } else {
+        setAddresses(DEFAULT_MOCK_ADDRESSES);
+        localStorage.setItem("vipaasa_addresses", JSON.stringify(DEFAULT_MOCK_ADDRESSES));
+        setSelectedAddressId(DEFAULT_MOCK_ADDRESSES[0].id);
+      }
+    }
+  }, [mounted]);
+
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || addresses[0] || DEFAULT_MOCK_ADDRESSES[0];
 
   // Total amount details for payment
   const activeItems = mounted ? items.filter(item => !item.saved) : [];
@@ -86,13 +112,29 @@ export default function CheckoutPage() {
   // Address Handlers
   const handleAddAddress = (newAddr: Omit<Address, "id">) => {
     const id = `addr-${Date.now()}`;
-    const added: Address = { ...newAddr, id };
-    setAddresses((prev) => [...prev, added]);
+    const added: Address = { ...newAddr, id, isDefault: addresses.length === 0 };
+    
+    let updated: Address[];
+    if (added.isDefault) {
+      updated = [...addresses.map((a) => ({ ...a, isDefault: false })), added];
+    } else {
+      updated = [...addresses, added];
+    }
+    
+    setAddresses(updated);
+    localStorage.setItem("vipaasa_addresses", JSON.stringify(updated));
     setSelectedAddressId(id);
   };
 
   const handleEditAddress = (id: string, updatedAddr: Address) => {
-    setAddresses((prev) => prev.map((a) => (a.id === id ? updatedAddr : a)));
+    let updated = addresses.map((a) => (a.id === id ? updatedAddr : a));
+    
+    if (updatedAddr.isDefault) {
+      updated = updated.map((a) => ({ ...a, isDefault: a.id === id }));
+    }
+    
+    setAddresses(updated);
+    localStorage.setItem("vipaasa_addresses", JSON.stringify(updated));
   };
 
   const handlePaymentComplete = (method: string) => {
@@ -115,7 +157,7 @@ export default function CheckoutPage() {
           .font-sans { font-family: 'Outfit', sans-serif; }
           .font-serif { font-family: 'Playfair Display', serif; }
         `}} />
-        <Header showSearch={false} cartCount={0} favoritesCount={0} />
+        <Header showSearch={true} cartCount={0} favoritesCount={0} />
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-16 py-8 flex items-center justify-center">
           <div className="text-center py-20 text-[#738276] font-semibold text-lg animate-pulse">
             Loading checkout...
@@ -130,7 +172,7 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">
         <Header
-          showSearch={false}
+          showSearch={true}
           cartCount={0}
           favoritesCount={favorites.length}
         />
@@ -168,7 +210,7 @@ export default function CheckoutPage() {
 
       {/* Header */}
       <Header
-        showSearch={false}
+        showSearch={true}
         cartCount={activeItems.reduce((acc, item) => acc + item.quantity, 0)}
         favoritesCount={favorites.length}
       />

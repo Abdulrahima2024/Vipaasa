@@ -45,8 +45,27 @@ export default function HomeClientLayout({
       if (params.get("filter") === "favorites") {
         window.location.href = "/favorites";
       }
+      const searchParam = params.get("search");
+      if (searchParam) {
+        setSearchQuery(searchParam);
+      }
     }
   }, []);
+
+  // Sync searchQuery to URL query parameter silently
+  useEffect(() => {
+    if (mounted && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (searchQuery) {
+        params.set("search", searchQuery);
+      } else {
+        params.delete("search");
+      }
+      const newSearch = params.toString();
+      const newUrl = `${window.location.pathname}${newSearch ? "?" + newSearch : ""}`;
+      window.history.pushState({ path: newUrl }, "", newUrl);
+    }
+  }, [searchQuery, mounted]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">

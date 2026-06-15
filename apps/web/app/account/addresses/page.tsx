@@ -26,29 +26,29 @@ interface Address {
 
 const DEFAULT_MOCK_ADDRESSES: Address[] = [
   {
-    id: "mock-addr-1",
+    id: "addr-1",
     type: "Home",
-    name: "Elena Thorne",
-    addressLine1: "482 Silver Birch Lane",
-    addressLine2: "Apt 4B, Organic District",
-    city: "Portland",
-    state: "OR",
-    postalCode: "97201",
-    country: "United States",
-    phone: "+1 (503) 555-0192",
+    name: "Ananya Sharma",
+    addressLine1: "42, Lotus Boulevard, Sector 150",
+    addressLine2: "",
+    city: "Noida",
+    state: "Uttar Pradesh",
+    postalCode: "201310",
+    country: "India",
+    phone: "+91 98765 43210",
     isDefault: true,
   },
   {
-    id: "mock-addr-2",
+    id: "addr-2",
     type: "Work",
-    name: "Elena Thorne",
-    addressLine1: "Vipaasa Boutique HQ",
-    addressLine2: "912 Laurel Street",
-    city: "Seattle",
-    state: "WA",
-    postalCode: "98101",
-    country: "United States",
-    phone: "+1 (206) 555-0144",
+    name: "Ananya Sharma",
+    addressLine1: "The Hub, Floor 12, Cyber City, Phase III",
+    addressLine2: "",
+    city: "Gurugram",
+    state: "Haryana",
+    postalCode: "122002",
+    country: "India",
+    phone: "+91 98765 99887",
     isDefault: false,
   },
 ];
@@ -73,7 +73,7 @@ export default function ManageAddressesPage() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [postalCode, setPostalCode] = useState("");
-  const [country, setCountry] = useState("United States");
+  const [country, setCountry] = useState("India");
   const [phone, setPhone] = useState("");
   const [isDefault, setIsDefault] = useState(false);
 
@@ -115,7 +115,7 @@ export default function ManageAddressesPage() {
     setCity("");
     setState("");
     setPostalCode("");
-    setCountry("United States");
+    setCountry("India");
     setPhone("");
     setIsDefault(false);
     setShowForm(false);
