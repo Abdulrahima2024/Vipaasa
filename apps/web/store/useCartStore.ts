@@ -19,7 +19,7 @@ interface CartStore {
   savedItems: CartItem[];
   favorites: string[];
   animatingProductId: string | null;
-  addToCart: (product: any, weight: "1kg" | "500g" | "250g") => void;
+  addToCart: (product: any, weight: "1kg" | "500g" | "250g", quantityToAdd?: number) => void;
   updateQuantity: (id: string, delta: number) => void;
   removeItem: (id: string) => void;
   saveForLater: (id: string) => void;
@@ -63,7 +63,7 @@ export const useCartStore = create<CartStore>()(
       favorites: [],
       animatingProductId: null,
       
-      addToCart: (product, weight) =>
+      addToCart: (product, weight, quantityToAdd = 1) =>
         set((state) => {
           const cartItemId = `${product.id}-${weight}`;
           const existingItem = state.items.find((item) => item.id === cartItemId);
@@ -71,7 +71,7 @@ export const useCartStore = create<CartStore>()(
           if (existingItem) {
             return {
               items: state.items.map((item) =>
-                item.id === cartItemId ? { ...item, quantity: item.quantity + 1 } : item
+                item.id === cartItemId ? { ...item, quantity: item.quantity + quantityToAdd } : item
               ),
             };
           }
@@ -84,7 +84,7 @@ export const useCartStore = create<CartStore>()(
             description: product.category,
             spec: `${weight} • Pure Organic`,
             price: price,
-            quantity: 1,
+            quantity: quantityToAdd,
             image: product.image,
             weight: weight,
             saved: false,
