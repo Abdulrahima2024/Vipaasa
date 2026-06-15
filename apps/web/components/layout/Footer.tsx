@@ -24,7 +24,7 @@ export default function Footer() {
 
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10">
-        
+
         {/* Brand & Socials */}
         <div className="md:col-span-6 space-y-5">
           <h4 className="font-serif text-xl font-bold text-[#113C27]">Vipaasa Organics</h4>
@@ -77,7 +77,7 @@ export default function Footer() {
       </div>
 
       {/* Footer Bottom copyright */}
-      <div className="max-w-7xl mx-auto border-t border-[#DEDAD0] mt-10 pt-6 text-center text-xs font-medium text-[#738276]">
+      <div className="max-w-7xl mx-auto  mt-10 pt-6 text-center text-xs font-medium text-[#738276]">
         &copy; 2024 Vipaasa Organics. Artisanal. Ethical. Pure.
       </div>
     </footer>

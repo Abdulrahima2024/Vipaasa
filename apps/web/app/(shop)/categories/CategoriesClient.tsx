@@ -5,6 +5,7 @@ import Link from "next/link";
 import Header from "../../../components/layout/Header";
 import Footer from "../../../components/layout/Footer";
 import { useCartStore } from "../../../store/useCartStore";
+import { useAuthStore } from "../../../store/authStore";
 
 // Mock products representing the curated Pantry Essentials catalog
 interface CategoryProduct {
@@ -267,6 +268,7 @@ export default function CategoriesClient() {
 
   // Cart/Favorites store
   const { items, favorites, addToCart, toggleFavorite } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
 
   // Search input query
   const [searchQuery, setSearchQuery] = useState("");
@@ -379,6 +381,15 @@ export default function CategoriesClient() {
     setTimeout(() => {
       setAddingId(null);
     }, 800);
+  };
+
+  const handleBuyNow = (product: CategoryProduct) => {
+    addToCart(product, product.weight);
+    if (isAuthenticated) {
+      window.location.href = "/checkout";
+    } else {
+      window.location.href = `/login?redirect=/checkout`;
+    }
   };
 
   return (
@@ -689,40 +700,57 @@ export default function CategoriesClient() {
                           </p>
                         </div>
 
-                        {/* Price & Add to Cart button */}
-                        <div className="flex items-center justify-between pt-1">
-                          <span className="text-base sm:text-lg font-bold text-[#113C27]">
-                            ₹{price}
-                          </span>
+                        {/* Price & Action Buttons */}
+                        <div className="flex flex-col gap-2.5 pt-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-base sm:text-lg font-bold text-[#113C27]">
+                              ₹{price}
+                            </span>
+                            <span className="text-[10px] text-[#738276] font-bold uppercase tracking-wider bg-[#FAF8F5] px-2 py-0.5 rounded-md border border-[#EAE6DB]/60">
+                              {product.weight}
+                            </span>
+                          </div>
 
-                          <button
-                            onClick={() => handleAddToCart(product)}
-                            disabled={!product.inStock || isAdding}
-                            className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${
-                              !product.inStock
-                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                : isAdding
-                                ? "bg-[#2D6A4F] text-white"
-                                : "bg-[#113C27] text-white hover:bg-[#2D6A4F]"
-                            }`}
-                            aria-label={`Add ${product.name} to cart`}
-                          >
-                            {isAdding ? (
-                              <>
-                                <svg className="w-3.5 h-3.5 stroke-[3.5] animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                </svg>
-                                <span>Added!</span>
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                                </svg>
-                                <span>Add to Cart</span>
-                              </>
-                            )}
-                          </button>
+                          <div className="flex gap-2">
+                            {/* Buy Now button */}
+                            <button
+                              onClick={() => handleBuyNow(product)}
+                              disabled={!product.inStock}
+                              className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Buy Now
+                            </button>
+
+                            {/* Add to Cart button */}
+                            <button
+                              onClick={() => handleAddToCart(product)}
+                              disabled={!product.inStock || isAdding}
+                              className={`flex items-center justify-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${
+                                !product.inStock
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                  : isAdding
+                                  ? "bg-[#2D6A4F] text-white"
+                                  : "bg-[#113C27] text-white hover:bg-[#2D6A4F]"
+                              }`}
+                              aria-label={`Add ${product.name} to cart`}
+                            >
+                              {isAdding ? (
+                                <>
+                                  <svg className="w-3.5 h-3.5 stroke-[3.5] animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                  </svg>
+                                  <span>Added!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                  </svg>
+                                  <span>Add</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                         
                       </div>

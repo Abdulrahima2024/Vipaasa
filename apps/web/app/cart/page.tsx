@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Header from "../../components/layout/Header";
 import { useCartStore } from "../../store/useCartStore";
+import { useAuthStore } from "../../store/authStore";
 
 export default function CartPage() {
   const {
@@ -18,6 +19,8 @@ export default function CartPage() {
     clearCart,
     favorites,
   } = useCartStore();
+
+  const { isAuthenticated } = useAuthStore();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -284,8 +287,8 @@ export default function CartPage() {
                 </div>
 
                 {/* Proceed Button */}
-                <button
-                  onClick={handleCheckout}
+                <Link
+                  href={mounted && isAuthenticated ? "/checkout" : "/login?redirect=/checkout"}
                   className="w-full bg-[#1B4332] hover:bg-[#113C27] text-white py-4 px-6 rounded-xl font-bold flex items-center justify-center gap-2 group transition-all duration-200 shadow-md shadow-green-950/10 active:scale-[0.98]"
                 >
                   <span>Proceed to Checkout</span>
@@ -299,7 +302,7 @@ export default function CartPage() {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                   </svg>
-                </button>
+                </Link>
 
                 {/* Free Shipping Dynamic Progress */}
                 <div className="bg-[#EAF5EC] text-[#2D6A4F] px-4 py-3.5 rounded-xl flex items-center gap-3 text-xs sm:text-[13px] font-semibold leading-snug">

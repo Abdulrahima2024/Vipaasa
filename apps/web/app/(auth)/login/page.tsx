@@ -44,9 +44,10 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/");
+      const redirectTo = searchParams.get("redirect") || "/";
+      router.push(redirectTo);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +74,8 @@ export default function LoginPage() {
     if (authMode === "login") {
       const success = await login(email, password);
       if (success) {
-        router.push("/");
+        const redirectTo = searchParams.get("redirect") || "/";
+        router.push(redirectTo);
       }
     } else {
       if (!termsAccepted) {
@@ -82,7 +84,8 @@ export default function LoginPage() {
       }
       const success = await register(email, password, fullName, mobileNumber || undefined);
       if (success) {
-        router.push("/");
+        const redirectTo = searchParams.get("redirect") || "/";
+        router.push(redirectTo);
       }
     }
   };

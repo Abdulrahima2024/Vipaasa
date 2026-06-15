@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCartStore } from "../../store/useCartStore";
+import { useAuthStore } from "../../store/authStore";
 import productsData from "../../data/products.json";
 import { CATEGORY_PRODUCTS } from "../../app/(shop)/categories/CategoriesClient";
 
@@ -25,6 +26,7 @@ export interface Product {
 export function ProductCard({
   product,
   onAddToCart,
+  onBuyNow,
   isFavorite,
   onToggleFavorite,
   isAnimatingFavorite,
@@ -32,6 +34,7 @@ export function ProductCard({
 }: {
   product: Product;
   onAddToCart: (weight: "1kg" | "500g" | "250g") => void;
+  onBuyNow: (weight: "1kg" | "500g" | "250g") => void;
   isFavorite: boolean;
   onToggleFavorite: () => void;
   isAnimatingFavorite: boolean;
@@ -167,6 +170,14 @@ export function ProductCard({
               </button>
             )}
 
+            {/* Buy Now button */}
+            <button
+              onClick={() => onBuyNow(selectedWeight)}
+              className="bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-[11px] font-bold px-3 py-2.5 rounded-xl transition-colors shadow-sm active:scale-95 transform whitespace-nowrap"
+            >
+              Buy Now
+            </button>
+
             {/* Add to Cart button */}
             <button
               onClick={() => onAddToCart(selectedWeight)}
@@ -224,9 +235,7 @@ export default function ProductListing({
   setShowFavoritesOnly,
 }: ProductListingProps) {
   
-  const products = (showFavoritesOnly
-    ? [...productsData, ...CATEGORY_PRODUCTS]
-    : productsData) as Product[];
+  const products = [...productsData, ...CATEGORY_PRODUCTS] as Product[];
 
   // Zustand Cart Store connection
   const {
@@ -235,6 +244,17 @@ export default function ProductListing({
     addToCart,
     toggleFavorite,
   } = useCartStore();
+
+  const { isAuthenticated } = useAuthStore();
+
+  const handleBuyNow = (product: Product, weight: "1kg" | "500g" | "250g") => {
+    addToCart(product, weight);
+    if (isAuthenticated) {
+      window.location.href = "/checkout";
+    } else {
+      window.location.href = `/login?redirect=/checkout`;
+    }
+  };
 
   const [mounted, setMounted] = useState(false);
 
@@ -356,6 +376,7 @@ export default function ProductListing({
                 key={product.id}
                 product={product}
                 onAddToCart={(weight) => addToCart(product, weight)}
+                onBuyNow={(weight) => handleBuyNow(product, weight)}
                 isFavorite={mounted && favorites.includes(product.id)}
                 onToggleFavorite={() => toggleFavorite(product.id)}
                 isAnimatingFavorite={animatingProductId === product.id}

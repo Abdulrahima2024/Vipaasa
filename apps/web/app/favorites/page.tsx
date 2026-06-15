@@ -6,6 +6,7 @@ import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { ProductCard, Product } from "../../components/home/ProductListing";
 import { useCartStore } from "../../store/useCartStore";
+import { useAuthStore } from "../../store/authStore";
 import productsData from "../../data/products.json";
 import { CATEGORY_PRODUCTS } from "../(shop)/categories/CategoriesClient";
 
@@ -17,6 +18,17 @@ export default function FavoritesPage() {
     addToCart,
     toggleFavorite,
   } = useCartStore();
+
+  const { isAuthenticated } = useAuthStore();
+
+  const handleBuyNow = (product: Product, weight: "1kg" | "500g" | "250g") => {
+    addToCart(product, weight);
+    if (isAuthenticated) {
+      window.location.href = "/checkout";
+    } else {
+      window.location.href = `/login?redirect=/checkout`;
+    }
+  };
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -106,6 +118,7 @@ export default function FavoritesPage() {
                 key={product.id}
                 product={product}
                 onAddToCart={(weight) => addToCart(product, weight)}
+                onBuyNow={(weight) => handleBuyNow(product, weight)}
                 isFavorite={favorites.includes(product.id)}
                 onToggleFavorite={() => toggleFavorite(product.id)}
                 isAnimatingFavorite={animatingProductId === product.id}
