@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { sendEmail, getOtpEmailTemplate } from "../notifications/email.service";
 
 const prisma = new PrismaClient();
 
@@ -77,14 +78,68 @@ export async function generatePasswordResetOtp(email: string) {
   console.log(`Expires At: ${expiresAt.toISOString()}`);
   console.log(`========================================\n`);
 
+  // Send email to user
+  const emailHtml = getOtpEmailTemplate(otp, "reset");
+  await sendEmail({
+    to: email,
+    subject: "Reset Your Password - Vipaasa Organics",
+    html: emailHtml,
+  });
+
+  return true;
+}
+
+export async function generateEmailVerificationOtp(email: string) {
+  // Check if active user exists with this email
+  const user = await prisma.user.findFirst({
+    where: { email, isDeleted: false }
+  });
+
+  // Generate 6-digit random code
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const codeHash = await bcrypt.hash(otp, 10);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+  // Delete previous verification OTPs for this email to prevent spam/clutter
+  await prisma.otpVerification.deleteMany({
+    where: { email, purpose: "EMAIL_VERIFICATION" }
+  });
+
+  // Create new OTP verification record
+  await prisma.otpVerification.create({
+    data: {
+      userId: user?.id || null,
+      email,
+      codeHash,
+      purpose: "EMAIL_VERIFICATION",
+      expiresAt,
+      isVerified: false
+    }
+  });
+
+  // Log OTP code directly to terminal console for local developer check
+  console.log(`\n========================================`);
+  console.log(`[EMAIL VERIFICATION OTP] Generated for: ${email}`);
+  console.log(`OTP Code: ${otp}`);
+  console.log(`Expires At: ${expiresAt.toISOString()}`);
+  console.log(`========================================\n`);
+
+  // Send email to user
+  const emailHtml = getOtpEmailTemplate(otp, "verification");
+  await sendEmail({
+    to: email,
+    subject: "Verify Your Account - Vipaasa Organics",
+    html: emailHtml,
+  });
+
   return true;
 }
 
 export async function confirmOtp(email: string, otp: string) {
+  // Find the latest active verification OTP for this email
   const verification = await prisma.otpVerification.findFirst({
     where: {
       email,
-      purpose: "PASSWORD_RESET",
       isVerified: false,
       expiresAt: { gt: new Date() }
     },
@@ -208,6 +263,13 @@ export async function registerUser(
       profile: true
     }
   });
+
+  // Send verification code upon registration
+  try {
+    await generateEmailVerificationOtp(email);
+  } catch (error) {
+    console.error("Failed to generate/send registration verification OTP:", error);
+  }
 
   // Generate JWT token
   const secret = process.env.JWT_ACCESS_SECRET || "vipaasa_default_jwt_access_secret_key_1234567890";

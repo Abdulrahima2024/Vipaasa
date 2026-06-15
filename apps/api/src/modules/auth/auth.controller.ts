@@ -3,6 +3,7 @@ import {
   authenticateUser, 
   registerUser, 
   generatePasswordResetOtp, 
+  generateEmailVerificationOtp,
   confirmOtp, 
   updatePasswordWithOtp 
 } from "./auth.service";
@@ -52,7 +53,7 @@ export async function register(req: Request, res: Response) {
     }
 
     return res.status(201).json({
-      message: "Registration successful",
+      message: "Registration successful. Verification email sent.",
       token: registrationResult.token,
       user: {
         id: registrationResult.user.id,
@@ -78,9 +79,23 @@ export async function forgotPassword(req: Request, res: Response) {
     if (!result) {
       return res.status(404).json({ error: "No account found with this email" });
     }
-    return res.status(200).json({ message: "OTP sent successfully (Check backend console for code)" });
+    return res.status(200).json({ message: "OTP sent successfully (Check backend console and your email for code)" });
   } catch (error: any) {
     console.error("ForgotPassword controller error:", error);
+    return res.status(500).json({ error: error.message || "Internal server error" });
+  }
+}
+
+export async function sendVerificationOtp(req: Request, res: Response) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    await generateEmailVerificationOtp(email);
+    return res.status(200).json({ message: "Verification OTP sent successfully (Check backend console and your email for code)" });
+  } catch (error: any) {
+    console.error("SendVerificationOtp controller error:", error);
     return res.status(500).json({ error: error.message || "Internal server error" });
   }
 }
