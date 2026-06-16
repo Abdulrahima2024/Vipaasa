@@ -2,3 +2,13 @@ node_modules
 .next
 dist
 *.log
+
+# Environment variables - NEVER commit these
+.env
+.env.*
+!.env.example
+
+# Nested env files (in src/ or any subdirectory)
+**/.env
+**/.env.*
+!**/.env.example
