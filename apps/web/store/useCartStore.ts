@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useAuthStore } from "./authStore";
 
 export interface CartItem {
   id: string; // product.id + '-' + weight
@@ -33,32 +34,7 @@ interface CartStore {
 export const useCartStore = create<CartStore>()(
   persist(
     (set) => ({
-      items: [
-        {
-          id: "1-250g",
-          productId: "1",
-          name: "Organic Lakadong Turmeric",
-          description: "Pure Hand-ground",
-          spec: "250g • Pure Hand-ground",
-          price: 18,
-          quantity: 1,
-          image: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&q=80&w=400",
-          weight: "250g",
-          saved: false,
-        },
-        {
-          id: "37-500g",
-          productId: "37",
-          name: "Wild Forest Honey",
-          description: "Cold Pressed",
-          spec: "500g • Cold Pressed",
-          price: 24,
-          quantity: 2,
-          image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
-          weight: "500g",
-          saved: false,
-        },
-      ],
+      items: [],
       savedItems: [],
       favorites: [],
       animatingProductId: null,
@@ -154,6 +130,120 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "vipaasa-cart-storage",
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const user = useAuthStore.getState().user;
+          if (user) {
+            const savedCart = localStorage.getItem(`vipaasa-cart-user-${user.id}`);
+            if (savedCart) {
+              try {
+                const parsed = JSON.parse(savedCart);
+                state.items = parsed.items || [];
+                state.savedItems = parsed.savedItems || [];
+              } catch (e) {
+                console.error("Error parsing saved cart during rehydration", e);
+              }
+            } else {
+              state.items = [];
+              state.savedItems = [];
+            }
+          }
+        }
+      }
     }
   )
 );
+
+// Subscribe to auth store changes to sync cart per user
+if (typeof window !== "undefined") {
+  let prevUser: any = null;
+
+  // Set initial prevUser if already hydrated/loaded
+  prevUser = useAuthStore.getState().user;
+
+  useAuthStore.subscribe((state) => {
+    const user = state.user;
+
+    if (user && (!prevUser || prevUser.id !== user.id)) {
+      // User logged in or switched
+      const guestCartItems = useCartStore.getState().items;
+      const guestSavedItems = useCartStore.getState().savedItems;
+
+      const savedCart = localStorage.getItem(`vipaasa-cart-user-${user.id}`);
+      let userItems: CartItem[] = [];
+      let userSavedItems: CartItem[] = [];
+
+      if (savedCart) {
+        try {
+          const parsed = JSON.parse(savedCart);
+          userItems = parsed.items || [];
+          userSavedItems = parsed.savedItems || [];
+        } catch (e) {
+          console.error("Error parsing saved cart", e);
+        }
+      }
+
+      // Merge guest items into user items (avoiding duplicates based on product ID & weight)
+      const mergedItems = [...userItems];
+      guestCartItems.forEach((gItem) => {
+        const existing = mergedItems.find((uItem) => uItem.id === gItem.id);
+        if (existing) {
+          existing.quantity += gItem.quantity;
+        } else {
+          mergedItems.push(gItem);
+        }
+      });
+
+      const mergedSaved = [...userSavedItems];
+      guestSavedItems.forEach((gItem) => {
+        const existing = mergedSaved.find((uItem) => uItem.id === gItem.id);
+        if (!existing) {
+          mergedSaved.push(gItem);
+        }
+      });
+
+      // Save merged cart back to user's storage
+      localStorage.setItem(
+        `vipaasa-cart-user-${user.id}`,
+        JSON.stringify({
+          items: mergedItems,
+          savedItems: mergedSaved,
+        })
+      );
+
+      useCartStore.setState({
+        items: mergedItems,
+        savedItems: mergedSaved,
+      });
+    } else if (!user && prevUser) {
+      // User logged out
+      // Save current cart before clearing
+      const currentCart = useCartStore.getState();
+      localStorage.setItem(
+        `vipaasa-cart-user-${prevUser.id}`,
+        JSON.stringify({
+          items: currentCart.items,
+          savedItems: currentCart.savedItems,
+        })
+      );
+      // Clear the cart
+      useCartStore.setState({ items: [], savedItems: [] });
+    }
+
+    prevUser = user;
+  });
+
+  // Subscribe to cart changes to save to user persistent storage
+  useCartStore.subscribe((state) => {
+    const user = useAuthStore.getState().user;
+    if (user) {
+      localStorage.setItem(
+        `vipaasa-cart-user-${user.id}`,
+        JSON.stringify({
+          items: state.items,
+          savedItems: state.savedItems,
+        })
+      );
+    }
+  });
+}
