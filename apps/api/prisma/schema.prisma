@@ -399,6 +399,7 @@ model Category {
   products Product[]
 
   @@index([parentId])
+  @@index([parentId, isActive])
   @@map("categories")
 }
 
@@ -420,6 +421,8 @@ model Product {
 
   @@index([categoryId])
   @@index([isDeleted])
+  @@index([categoryId, isActive, isDeleted])
+  @@index([isActive, isDeleted])
   @@map("products")
 }
 
