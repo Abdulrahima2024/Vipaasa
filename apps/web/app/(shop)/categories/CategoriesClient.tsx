@@ -6,6 +6,7 @@ import Header from "../../../components/layout/Header";
 import Footer from "../../../components/layout/Footer";
 import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
+import { fetchApi } from "../../../lib/api";
 
 import productsData from "../../../data/products.json";
 
@@ -45,6 +46,9 @@ export const CATEGORY_PRODUCTS: CategoryProduct[] = (productsData as any[]).map(
 
 export default function CategoriesClient() {
   const [mounted, setMounted] = useState(false);
+  const [apiProducts, setApiProducts] = useState<CategoryProduct[]>([]);
+  const [hasFetched, setHasFetched] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Cart/Favorites store
   const { items, favorites, addToCart, toggleFavorite } = useCartStore();
@@ -77,7 +81,45 @@ export default function CategoriesClient() {
         setSearchQuery(searchParam);
       }
     }
-  }, []);
+
+    async function loadProducts() {
+      if (!useAuthStore.getState().isAuthenticated) {
+        setApiProducts([]);
+        setHasFetched(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const data = await fetchApi<{ items: any[] }>("/api/products");
+        if (data && data.items) {
+          const mapped: CategoryProduct[] = data.items.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            category: item.category.name as any,
+            prices: {
+              "250g": item.price,
+              "500g": item.price * 2,
+              "1kg": item.price * 4,
+            },
+            weight: "250g",
+            image: item.images[0] || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
+            tag: item.stockStatus === "IN_STOCK" ? "In Stock" : "Out of Stock",
+            description: item.description || "",
+            inStock: item.stockStatus === "IN_STOCK",
+            rating: 4.5 + (parseInt(item.id.replace(/\D/g, "") || "0") % 5) * 0.1,
+            createdAt: new Date().toISOString().split("T")[0],
+          }));
+          setApiProducts(mapped);
+          setHasFetched(true);
+        }
+      } catch (err) {
+        console.error("Failed to load products in categories:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProducts();
+  }, [isAuthenticated]);
 
   // Sync searchQuery to URL query parameter silently
   useEffect(() => {
@@ -113,7 +155,8 @@ export default function CategoriesClient() {
 
   // Filtered and Sorted products
   const filteredProducts = useMemo(() => {
-    return CATEGORY_PRODUCTS.filter((product) => {
+    const activeProducts = (isAuthenticated && hasFetched) ? apiProducts : CATEGORY_PRODUCTS;
+    return activeProducts.filter((product) => {
       // Subcategories filter
       const matchesSubcategory =
         selectedSubcategories.length === 0 ||
