@@ -8,6 +8,7 @@ import Header from "../../../components/layout/Header";
 import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 import { Lock, Mail, Phone, User, Check } from "lucide-react";
+import AnimatedEye from "../../../components/ui/AnimatedEye";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Zustand Auth Store
   const { login, register, isLoading, error: authError, isAuthenticated } = useAuthStore();
@@ -282,13 +284,20 @@ export default function LoginPage() {
                   </div>
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="appearance-none block w-full pl-10 pr-3.5 py-2.5 border border-[#EAE6DB] rounded-xl placeholder-[#738276] text-sm text-[#113C27] bg-[#F9F7F2]/30 focus:outline-none focus:ring-1 focus:ring-[#113C27] focus:border-[#113C27] focus:bg-white font-semibold transition-all duration-200"
+                    className="appearance-none block w-full pl-10 pr-10 py-2.5 border border-[#EAE6DB] rounded-xl placeholder-[#738276] text-sm text-[#113C27] bg-[#F9F7F2]/30 focus:outline-none focus:ring-1 focus:ring-[#113C27] focus:border-[#113C27] focus:bg-white font-semibold transition-all duration-200"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#738276] hover:text-[#113C27] transition-colors"
+                  >
+                    <AnimatedEye isOpen={showPassword} className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 

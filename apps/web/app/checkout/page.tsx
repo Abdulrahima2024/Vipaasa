@@ -12,6 +12,7 @@ import OrderReview from "../../components/checkout/OrderReview";
 import PaymentSection from "../../components/checkout/PaymentSection";
 import { useAuthStore } from "../../store/authStore";
 import { useRouter } from "next/navigation";
+import { Sprout } from "lucide-react";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -206,6 +207,14 @@ export default function CheckoutPage() {
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
         .font-sans { font-family: 'Outfit', sans-serif; }
         .font-serif { font-family: 'Playfair Display', serif; }
+        @keyframes active-sprout-grow {
+          0%, 100% { transform: scale(1) rotate(-5deg); }
+          50% { transform: scale(1.15) rotate(5deg); }
+        }
+        .active-sprout-animation {
+          display: inline-block;
+          animation: active-sprout-grow 2.2s ease-in-out infinite;
+        }
       `}} />
 
       {/* Header */}
@@ -221,10 +230,10 @@ export default function CheckoutPage() {
           <div className="max-w-xl mx-auto mb-12">
             <div className="flex items-center justify-between relative">
               {/* Connection Lines Background */}
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-[#EAE6DB] -z-10" />
+              <div className="absolute left-10 right-10 top-5 -translate-y-1/2 h-[2px] bg-[#EAE6DB] z-0" />
               {/* Active Connection Line Progress */}
               <div
-                className="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-[#2D6A4F] transition-all duration-500 -z-10"
+                className="absolute left-10 top-5 -translate-y-1/2 h-[2px] bg-[#2D6A4F] transition-all duration-500 z-0"
                 style={{ width: step === 1 ? "0%" : step === 2 ? "50%" : "100%" }}
               />
 
@@ -238,9 +247,9 @@ export default function CheckoutPage() {
                 const isCompleted = step > s.num;
 
                 return (
-                  <div key={s.num} className="flex flex-col items-center gap-2 bg-[#F9F7F2] px-4">
+                  <div key={s.num} className="flex flex-col items-center gap-2 relative">
                     <div
-                      className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+                      className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm transition-all duration-300 relative z-10 ${
                         isCompleted
                           ? "bg-[#2D6A4F] border-[#2D6A4F] text-white"
                           : isActive
@@ -252,6 +261,8 @@ export default function CheckoutPage() {
                         <svg className="w-5 h-5 stroke-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                         </svg>
+                      ) : isActive ? (
+                        <Sprout className="w-5 h-5 text-[#C1F2D0] stroke-[2.5] active-sprout-animation" />
                       ) : (
                         s.num
                       )}

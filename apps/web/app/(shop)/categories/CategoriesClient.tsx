@@ -7,6 +7,8 @@ import Footer from "../../../components/layout/Footer";
 import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 
+import productsData from "../../../data/products.json";
+
 // Mock products representing the curated Pantry Essentials catalog
 interface CategoryProduct {
   id: string;
@@ -26,242 +28,20 @@ interface CategoryProduct {
   createdAt: string;
 }
 
-export const CATEGORY_PRODUCTS: CategoryProduct[] = [
-  {
-    id: "pe-1",
-    name: "Golden Turmeric",
-    category: "Spices & Powders",
-    prices: { "250g": 345, "500g": 650, "1kg": 1200 },
-    weight: "250g",
-    image: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&q=80&w=600",
-    tag: "USDA Organic",
-    description: "250g • High Curcumin Content",
-    inStock: true,
-    rating: 4.9,
-    createdAt: "2026-06-01"
-  },
-  {
-    id: "pe-2",
-    name: "Wood-Pressed Coconut Oil",
-    category: "Honey & Ghee",
-    prices: { "250g": 360, "500g": 680, "1kg": 1300 },
-    weight: "500g",
-    image: "https://images.unsplash.com/photo-1618897996318-5a901fa6ca71?auto=format&fit=crop&q=80&w=600",
-    tag: "In Stock",
-    description: "500ml • Cold-pressed",
-    inStock: true,
-    rating: 4.8,
-    createdAt: "2026-06-02"
-  },
-  {
-    id: "pe-3",
-    name: "Snow-fed Walnuts",
-    category: "Millets & Grains",
-    prices: { "250g": 520, "500g": 980, "1kg": 1800 },
-    weight: "250g",
-    image: "https://images.unsplash.com/photo-1585445490387-f47934b73b54?auto=format&fit=crop&q=80&w=600",
-    tag: "Premium",
-    description: "200g • Extra Light Halves",
-    inStock: true,
-    rating: 4.7,
-    createdAt: "2026-06-03"
-  },
-  {
-    id: "pe-4",
-    name: "Vedic A2 Desi Ghee",
-    category: "Honey & Ghee",
-    prices: { "250g": 680, "500g": 1250, "1kg": 2400 },
-    weight: "500g",
-    image: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=600",
-    tag: "Bilona Churned",
-    description: "500ml • Traditional Method",
-    inStock: true,
-    rating: 4.95,
-    createdAt: "2026-06-04"
-  },
-  {
-    id: "pe-5",
-    name: "Long Grain Basmati Rice",
-    category: "Millets & Grains",
-    prices: { "250g": 70, "500g": 130, "1kg": 225 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=600",
-    tag: "Aged 2 Years",
-    description: "1kg • 2-Year Aged",
-    inStock: true,
-    rating: 4.6,
-    createdAt: "2026-06-05"
-  },
-  {
-    id: "pe-6",
-    name: "Wild Forest Honey",
-    category: "Honey & Ghee",
-    prices: { "250g": 480, "500g": 890, "1kg": 1700 },
-    weight: "500g",
-    image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=600",
-    tag: "Raw & Unfiltered",
-    description: "500g • Cold-processed",
-    inStock: true,
-    rating: 4.9,
-    createdAt: "2026-06-06"
-  },
-  {
-    id: "pe-7",
-    name: "Kandipappu",
-    category: "Dals & Pulses",
-    prices: { "250g": 90, "500g": 180, "1kg": 360 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
-    tag: "Best Seller",
-    description: "1kg • Organic Pigeon Peas",
-    inStock: true,
-    rating: 4.8,
-    createdAt: "2026-06-07"
-  },
-  {
-    id: "pe-8",
-    name: "Pottu Minapappu",
-    category: "Dals & Pulses",
-    prices: { "250g": 74, "500g": 147, "1kg": 294 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
-    tag: "Unpolished",
-    description: "1kg • Split Black Gram",
-    inStock: true,
-    rating: 4.7,
-    createdAt: "2026-06-08"
-  },
-  {
-    id: "pe-9",
-    name: "Pesalu",
-    category: "Dals & Pulses",
-    prices: { "250g": 59, "500g": 117, "1kg": 234 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
-    tag: "Rich Protein",
-    description: "1kg • Split Green Gram",
-    inStock: true,
-    rating: 4.65,
-    createdAt: "2026-06-09"
-  },
-  {
-    id: "pe-10",
-    name: "Raagi Pindi",
-    category: "Flours",
-    prices: { "250g": 36, "500g": 72, "1kg": 144 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400",
-    tag: "Gluten-Free",
-    description: "1kg • Sprouted Ragi Flour",
-    inStock: true,
-    rating: 4.8,
-    createdAt: "2026-06-10"
-  },
-  {
-    id: "pe-11",
-    name: "Godhuma Pindi",
-    category: "Flours",
-    prices: { "250g": 29, "500g": 57, "1kg": 114 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400",
-    tag: "Stone Ground",
-    description: "1kg • Whole Wheat Flour",
-    inStock: true,
-    rating: 4.7,
-    createdAt: "2026-06-11"
-  },
-  {
-    id: "pe-12",
-    name: "Bellam Podi",
-    category: "Spices & Powders",
-    prices: { "250g": 60, "500g": 120, "1kg": 240 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=400",
-    tag: "Chemical Free",
-    description: "1kg • Jaggery Powder",
-    inStock: true,
-    rating: 4.6,
-    createdAt: "2026-06-12"
-  },
-  {
-    id: "pe-13",
-    name: "Pachi Karam",
-    category: "Spices & Powders",
-    prices: { "250g": 210, "500g": 420, "1kg": 840 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=400",
-    tag: "Pure Spicy",
-    description: "1kg • Raw Chilli Powder",
-    inStock: true,
-    rating: 4.7,
-    createdAt: "2026-06-13"
-  },
-  {
-    id: "pe-14",
-    name: "Raagulu",
-    category: "Millets & Grains",
-    prices: { "250g": 22, "500g": 44, "1kg": 87 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?auto=format&fit=crop&q=80&w=400",
-    tag: "Whole Grain",
-    description: "1kg • Whole Finger Millets",
-    inStock: true,
-    rating: 4.8,
-    createdAt: "2026-06-14"
-  },
-  {
-    id: "pe-15",
-    name: "Arikelu",
-    category: "Millets & Grains",
-    prices: { "250g": 41, "500g": 81, "1kg": 162 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?auto=format&fit=crop&q=80&w=400",
-    tag: "Organic",
-    description: "1kg • Kodo Millet Grains",
-    inStock: true,
-    rating: 4.75,
-    createdAt: "2026-06-15"
-  },
-  {
-    id: "pe-16",
-    name: "Korra Upma Ravva",
-    category: "Broken Grains (Rava)",
-    prices: { "250g": 65, "500g": 129, "1kg": 258 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1626132647523-66f5bf380027?auto=format&fit=crop&q=80&w=400",
-    tag: "Fiber Rich",
-    description: "1kg • Foxtail Millet Rava",
-    inStock: true,
-    rating: 4.7,
-    createdAt: "2026-06-16"
-  },
-  {
-    id: "pe-17",
-    name: "Korra Idly Ravva",
-    category: "Broken Grains (Rava)",
-    prices: { "250g": 65, "500g": 129, "1kg": 258 },
-    weight: "1kg",
-    image: "https://images.unsplash.com/photo-1626132647523-66f5bf380027?auto=format&fit=crop&q=80&w=400",
-    tag: "High Nutrient",
-    description: "1kg • Foxtail Millet Idli Rava",
-    inStock: true,
-    rating: 4.65,
-    createdAt: "2026-06-17"
-  },
-  {
-    id: "pe-18",
-    name: "Jamun Honey",
-    category: "Honey & Ghee",
-    prices: { "250g": 199, "500g": 398, "1kg": 795 },
-    weight: "500g",
-    image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
-    tag: "Medicinal",
-    description: "500g • Jamun Wood Honey",
-    inStock: true,
-    rating: 4.8,
-    createdAt: "2026-06-18"
-  }
-];
+export const CATEGORY_PRODUCTS: CategoryProduct[] = (productsData as any[]).map((p) => ({
+  id: p.id,
+  name: p.name,
+  category: p.category as any,
+  prices: p.prices,
+  weight: "1kg",
+  image: p.image,
+  tag: p.isNew ? "New" : undefined,
+  description: `${p.name} - 100% pure organic staple.`,
+  inStock: true,
+  rating: p.rating || 4.7,
+  createdAt: "2026-06-01"
+}));
+
 
 export default function CategoriesClient() {
   const [mounted, setMounted] = useState(false);

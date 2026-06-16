@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/authStore";
 import productsData from "../../data/products.json";
-import { CATEGORY_PRODUCTS } from "../../app/(shop)/categories/CategoriesClient";
 
 export interface Product {
   id: string;
@@ -239,7 +238,7 @@ export default function ProductListing({
   setShowFavoritesOnly,
 }: ProductListingProps) {
   
-  const products = [...productsData, ...CATEGORY_PRODUCTS] as Product[];
+  const products = productsData as Product[];
 
   // Zustand Cart Store connection
   const {

@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "../../store/authStore";
-import { Lock, Eye, EyeOff, Check, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Lock, Check, AlertTriangle, ShieldCheck } from "lucide-react";
+import AnimatedEye from "../ui/AnimatedEye";
 
 export default function SecuritySettings() {
   const router = useRouter();
@@ -150,7 +151,7 @@ export default function SecuritySettings() {
               onClick={() => setShowCurrentPassword(!showCurrentPassword)}
               className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#738276] hover:text-[#113C27] transition-colors"
             >
-              {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <AnimatedEye isOpen={showCurrentPassword} className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -182,7 +183,7 @@ export default function SecuritySettings() {
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#738276] hover:text-[#113C27] transition-colors"
               >
-                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <AnimatedEye isOpen={showNewPassword} className="w-4 h-4" />
               </button>
             </div>
             {/* Strength meter */}
@@ -234,7 +235,7 @@ export default function SecuritySettings() {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#738276] hover:text-[#113C27] transition-colors"
               >
-                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <AnimatedEye isOpen={showConfirmPassword} className="w-4 h-4" />
               </button>
             </div>
             {confirmPassword && confirmPassword !== newPassword && (

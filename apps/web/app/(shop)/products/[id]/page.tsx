@@ -21,7 +21,6 @@ import Footer from "../../../../components/layout/Footer";
 import { useCartStore } from "../../../../store/useCartStore";
 import { useAuthStore } from "../../../../store/authStore";
 import productsData from "../../../../data/products.json";
-import { CATEGORY_PRODUCTS } from "../../categories/CategoriesClient";
 
 interface Product {
   id: string;
@@ -150,7 +149,7 @@ export default function ProductDetailPage() {
 
   // Aggregate all products to search from
   const products = useMemo(() => {
-    return [...productsData, ...CATEGORY_PRODUCTS] as Product[];
+    return productsData as Product[];
   }, []);
 
   const product = useMemo(() => {

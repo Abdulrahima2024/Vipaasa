@@ -8,7 +8,6 @@ import { ProductCard, Product } from "../../components/home/ProductListing";
 import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/authStore";
 import productsData from "../../data/products.json";
-import { CATEGORY_PRODUCTS } from "../(shop)/categories/CategoriesClient";
 
 export default function FavoritesPage() {
   const {
@@ -35,10 +34,7 @@ export default function FavoritesPage() {
     setMounted(true);
   }, []);
 
-  const favoriteProducts = [
-    ...(productsData as Product[]),
-    ...(CATEGORY_PRODUCTS as unknown as Product[])
-  ].filter((p) => favorites.includes(p.id));
+  const favoriteProducts = (productsData as Product[]).filter((p) => favorites.includes(p.id));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">

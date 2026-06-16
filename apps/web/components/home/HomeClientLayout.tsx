@@ -88,7 +88,7 @@ export default function HomeClientLayout({
       {hero}
 
       {/* MAIN CONTENT SECTION */}
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-16 py-10 space-y-16">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-16 py-6 md:py-10 space-y-8 md:space-y-16">
         
         {/* Product listing container wrapper (Client component) */}
         <ProductListing

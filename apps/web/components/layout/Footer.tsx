@@ -4,7 +4,7 @@ import NewsletterForm from "./NewsletterForm";
 
 export default function Footer() {
   return (
-    <footer className="relative z-10 mt-24 px-6 lg:px-16 pt-16 pb-20 text-[#4B594F] overflow-hidden">
+    <footer className="relative z-10 mt-8 md:mt-24 px-6 lg:px-16 pt-10 md:pt-16 pb-12 md:pb-20 text-[#4B594F] overflow-hidden">
       {/* Background Image Container using optimized Next.js Image component */}
       <div className="absolute inset-0 -z-20 overflow-hidden">
         <Image
