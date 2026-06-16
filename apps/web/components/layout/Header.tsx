@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 
 interface HeaderProps {
@@ -33,6 +34,7 @@ export default function Header({
 
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
@@ -136,13 +138,15 @@ export default function Header({
   return (
     <header className="sticky top-0 z-40 bg-[#F9F7F2]/90 backdrop-blur-md border-b border-[#EAE6DB] w-full">
       <div className="px-6 lg:px-16 py-4 flex items-center justify-between">
-        {/* Brand Logo */}
-        <a
-          href="/"
-          className="font-serif text-2xl font-bold tracking-tight text-[#113C27] hover:opacity-90 transition-opacity"
-        >
-          Vipaasa Organics
-        </a>
+        <div className="flex items-center gap-3">
+          {/* Brand Logo */}
+          <a
+            href="/"
+            className="font-serif text-2xl font-bold tracking-tight text-[#113C27] hover:opacity-90 transition-opacity"
+          >
+            Vipaasa Organics
+          </a>
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-10">
@@ -368,7 +372,7 @@ export default function Header({
 
         {/* User Profile Link */}
         {_hasHydrated && isAuthenticated ? (
-          <div className="relative flex items-center animate-fade-in" ref={userMenuRef}>
+          <div className="relative hidden md:flex items-center animate-fade-in" ref={userMenuRef}>
             <button
               type="button"
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -417,7 +421,7 @@ export default function Header({
             )}
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             <Link
               href="/login"
               id="header-signin-btn"
@@ -434,8 +438,115 @@ export default function Header({
             </Link>
           </div>
         )}
+
+        {/* Hamburger Menu Icon for Mobile */}
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="md:hidden p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none flex items-center justify-center"
+          aria-label="Toggle navigation menu"
+        >
+          {isMobileMenuOpen ? (
+            <X className="w-6 h-6 stroke-2" />
+          ) : (
+            <Menu className="w-6 h-6 stroke-2" />
+          )}
+        </button>
       </div>
     </div>
+
+      {/* Mobile Navigation Panel */}
+      {isMobileMenuOpen && (
+        <div className="px-6 py-4 border-t border-[#EAE6DB]/40 md:hidden bg-[#F9F7F2]/95 animate-fade-in flex flex-col gap-3 shadow-inner">
+          <nav className="flex flex-col gap-2">
+            {["Shop", "Categories", "Ethos", "Deals"].map((navItem) => {
+              if (navItem === "Categories") {
+                return (
+                  <Link
+                    key={navItem}
+                    href="/categories"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${
+                      activeNav === navItem 
+                        ? "bg-[#C1F2D0] text-[#113C27]" 
+                        : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
+                    }`}
+                  >
+                    {navItem}
+                  </Link>
+                );
+              }
+              return (
+                <button
+                  key={navItem}
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onNavChange && onNavChange(navItem);
+                  }}
+                  className={`text-left text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${
+                    activeNav === navItem 
+                      ? "bg-[#C1F2D0] text-[#113C27]" 
+                      : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
+                  }`}
+                >
+                  {navItem}
+                </button>
+              );
+            })}
+
+            {/* Divider */}
+            <div className="border-t border-[#EAE6DB]/60 my-2" />
+
+            {/* Mobile Auth Options */}
+            {_hasHydrated && isAuthenticated ? (
+              <div className="flex flex-col gap-1">
+                <Link
+                  href="/account/profile"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-left text-sm font-semibold text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27] py-2 px-3 rounded-lg transition-colors"
+                >
+                  My Profile
+                </Link>
+                <Link
+                  href="/orders"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-left text-sm font-semibold text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27] py-2 px-3 rounded-lg transition-colors"
+                >
+                  My Orders
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-left text-sm font-bold text-[#A84444] hover:bg-[#FAF9F5] py-2 px-3 rounded-lg transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 pt-1 px-3">
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-center text-sm font-bold text-[#113C27] border border-[#113C27] rounded-full py-2 hover:bg-[#113C27] hover:text-white transition-all duration-200"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/login?mode=register"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-center text-sm font-bold text-white bg-[#113C27] border border-[#113C27] rounded-full py-2 hover:bg-[#2D6A4F] hover:border-[#2D6A4F] transition-all duration-200"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </nav>
+        </div>
+      )}
 
       {/* Mobile Search Bar Dropdown */}
       {showSearch && isMobileSearchOpen && (

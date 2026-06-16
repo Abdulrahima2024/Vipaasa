@@ -82,6 +82,8 @@ export default function LoginPage() {
         setValidationError("You must accept the terms and conditions.");
         return;
       }
+      // For every new account creation, clear the cart and favorites first
+      useCartStore.setState({ items: [], savedItems: [], favorites: [] });
       const success = await register(email, password, fullName, mobileNumber || undefined);
       if (success) {
         const redirectTo = searchParams.get("redirect") || "/";

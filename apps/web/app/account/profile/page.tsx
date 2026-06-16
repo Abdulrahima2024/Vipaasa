@@ -70,6 +70,10 @@ export default function ProfilePage() {
       router.push("/account/addresses");
       return;
     }
+    if (section === "notifications") {
+      router.push("/account/notifications");
+      return;
+    }
     setActiveSection(section);
     
     // Smooth scroll to card

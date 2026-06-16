@@ -632,12 +632,14 @@ export default function CategoriesClient() {
                     >
                       {/* Product Image and Overlay Labels */}
                       <div className="relative w-full aspect-square bg-[#FAF9F5] rounded-xl overflow-hidden mb-4">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
-                        />
+                        <Link href={`/products/${product.id}`} className="block w-full h-full relative">
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                        </Link>
                         
                         {/* Organic Label / Custom tag */}
                         {product.tag && (
@@ -684,9 +686,11 @@ export default function CategoriesClient() {
                             </span>
                           </div>
                           
-                          <h4 className="font-serif text-base font-extrabold text-[#113C27] tracking-tight mt-1 group-hover:text-primary transition-colors leading-tight">
-                            {product.name}
-                          </h4>
+                          <Link href={`/products/${product.id}`} className="block">
+                            <h4 className="font-serif text-base font-extrabold text-[#113C27] tracking-tight mt-1 hover:text-[#2d6a4f] transition-colors leading-tight">
+                              {product.name}
+                            </h4>
+                          </Link>
                           
                           {/* Rating Review Stars */}
                           <div className="flex items-center gap-1 mt-1">

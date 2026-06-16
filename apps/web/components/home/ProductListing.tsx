@@ -47,19 +47,21 @@ export function ProductCard({
       
       {/* Product Image using next/image */}
       <div className="relative w-full aspect-square bg-white rounded-xl overflow-hidden mb-4">
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-        />
-        {product.isNew && (
-          <span className="absolute top-2.5 left-2.5 bg-[#A84444] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full z-10">
-            New
-          </span>
-        )}
+        <Link href={`/products/${product.id}`} className="block w-full h-full relative">
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
+          />
+          {product.isNew && (
+            <span className="absolute top-2.5 left-2.5 bg-[#A84444] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full z-10">
+              New
+            </span>
+          )}
+        </Link>
         
         {/* Favorite Heart Button Overlay */}
         <button
@@ -89,9 +91,11 @@ export function ProductCard({
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#738276]">
             {product.category}
           </span>
-          <h4 className="font-sans text-sm sm:text-base font-bold text-[#113C27] tracking-tight mt-0.5 leading-tight">
-            {product.name}
-          </h4>
+          <Link href={`/products/${product.id}`} className="block">
+            <h4 className="font-sans text-sm sm:text-base font-bold text-[#113C27] tracking-tight mt-0.5 leading-tight hover:text-[#2d6a4f] transition-colors">
+              {product.name}
+            </h4>
+          </Link>
           
           {/* Rating Review Stars (Yellowish Gold) */}
           <div className="flex items-center gap-1 mt-1">

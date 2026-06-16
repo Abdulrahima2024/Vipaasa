@@ -161,12 +161,14 @@ export default function CartPage() {
                 >
                   {/* Product Image */}
                   <div className="relative w-full sm:w-32 h-32 rounded-xl overflow-hidden bg-[#FAF8F5] flex-shrink-0">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                      loading="lazy"
-                    />
+                    <Link href={`/products/${item.productId}`} className="block w-full h-full">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                        loading="lazy"
+                      />
+                    </Link>
                   </div>
 
                   {/* Product Details & Actions */}
@@ -174,9 +176,11 @@ export default function CartPage() {
                     <div className="flex justify-between items-start gap-4">
                       {/* Title & Specification */}
                       <div>
-                        <h2 className="font-sans text-lg sm:text-xl font-bold text-[#113C27] leading-snug">
-                          {item.name}
-                        </h2>
+                        <Link href={`/products/${item.productId}`} className="block">
+                          <h2 className="font-sans text-lg sm:text-xl font-bold text-[#113C27] hover:text-[#2d6a4f] transition-colors leading-snug">
+                            {item.name}
+                          </h2>
+                        </Link>
                         <p className="text-[13px] font-medium text-[#738276] mt-1">
                           {item.spec}
                         </p>
