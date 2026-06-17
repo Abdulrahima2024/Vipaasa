@@ -306,3 +306,106 @@ export async function searchProducts(filter: SearchFilter) {
     total,
   };
 }
+
+export async function createProduct(payload: {
+  name: string;
+  slug: string;
+  categoryId: string;
+  description: string;
+  isActive?: boolean;
+  imageBg?: string;
+  imageEmoji?: string;
+  images?: string[];
+  variants: Array<{
+    name: string;
+    sku?: string;
+    weightGrams: number;
+    skuStatus?: "IN_STOCK" | "OUT_OF_STOCK" | "DISCONTINUED";
+    price: number;
+    compareAtPrice?: number;
+    stock?: number;
+  }>;
+}) {
+  return prisma.$transaction(async (tx) => {
+    // 1. Find a default active warehouse to associate inventory with
+    const warehouse = await tx.warehouse.findFirst({
+      where: { isActive: true },
+    });
+
+    // 2. Create the Product
+    const product = await tx.product.create({
+      data: {
+        name: payload.name,
+        slug: payload.slug,
+        description: payload.description,
+        categoryId: payload.categoryId,
+        isActive: payload.isActive ?? true,
+      },
+    });
+
+    // 3. Create Product Image if any provided (or use a mock/emoji placeholder)
+    if (payload.images && payload.images.length > 0) {
+      await tx.productImage.createMany({
+        data: payload.images.map((url, index) => ({
+          productId: product.id,
+          url,
+          altText: payload.name,
+          sortOrder: index,
+          isPrimary: index === 0,
+        })),
+      });
+    } else if (payload.imageEmoji) {
+      // Create a virtual url/placeholder image based on emoji and bg
+      await tx.productImage.create({
+        data: {
+          productId: product.id,
+          url: `emoji://${payload.imageEmoji}?bg=${encodeURIComponent(payload.imageBg || "bg-[#edf6ee]")}`,
+          altText: payload.name,
+          sortOrder: 0,
+          isPrimary: true,
+        },
+      });
+    }
+
+    // 4. Create variants, pricing and inventory
+    for (const v of payload.variants) {
+      const generatedSku = v.sku || `VPA-${payload.name.slice(0, 3).toUpperCase()}-${v.weightGrams}G-${Math.floor(100 + Math.random() * 900)}`;
+      
+      const variant = await tx.productVariant.create({
+        data: {
+          productId: product.id,
+          sku: generatedSku,
+          name: v.name,
+          weightGrams: v.weightGrams,
+          skuStatus: v.skuStatus || "IN_STOCK",
+        },
+      });
+
+      // Pricing
+      await tx.productPricing.create({
+        data: {
+          variantId: variant.id,
+          basePrice: new Prisma.Decimal(v.price),
+          compareAtPrice: v.compareAtPrice ? new Prisma.Decimal(v.compareAtPrice) : null,
+          currency: "INR",
+        },
+      });
+
+      // Inventory
+      if (warehouse) {
+        await tx.inventory.create({
+          data: {
+            warehouseId: warehouse.id,
+            variantId: variant.id,
+            quantityOnHand: v.stock ?? 0,
+            quantityReserved: 0,
+            reorderLevel: 10,
+          },
+        });
+      }
+    }
+
+    return product;
+  });
+}
+

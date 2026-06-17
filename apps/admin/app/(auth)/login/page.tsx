@@ -3,17 +3,38 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail } from "lucide-react";
+import { fetchAPI } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Basic mockup logic, redirect to dashboard
-    router.push("/dashboard");
+    setError(null);
+    setLoading(true);
+    try {
+      const data = await fetchAPI("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      if (data.accessToken) {
+        localStorage.setItem("vipaasa_admin_token", data.accessToken);
+        router.push("/dashboard");
+      } else {
+        setError("Invalid response format from server.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to log in. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   return (
     <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -25,6 +46,11 @@ export default function LoginPage() {
       </div>
 
       <div className="bg-white py-8 px-4 shadow-xl sm:rounded-xl sm:px-10 border border-gray-100">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-800">
+            {error}
+          </div>
+        )}
         <form className="space-y-6" onSubmit={handleLogin}>
           <div>
             <label
@@ -105,9 +131,10 @@ export default function LoginPage() {
           <div>
             <button
               type="submit"
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--primary-green)] hover:bg-[var(--primary-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary-green)] transition-colors duration-200"
+              disabled={loading}
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--primary-green)] hover:bg-[var(--primary-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary-green)] transition-colors duration-200 disabled:opacity-50"
             >
-              Sign in
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </div>
         </form>

@@ -1,4 +1,6 @@
 import * as productRepository from "./product.repository";
+import { slugify } from "../../shared/utils/slugify";
+import { CreateProductInput } from "./product.validation";
 import {
   CategoryTreeItem,
   ProductFilter,
@@ -201,3 +203,19 @@ export async function searchProductsList(
     totalPages,
   };
 }
+
+/**
+ * Creates a new product with variants, pricing and inventory
+ */
+export async function createProduct(input: CreateProductInput) {
+  // Generate product slug
+  const baseSlug = slugify(input.name);
+  const slugSuffix = Math.floor(1000 + Math.random() * 9000);
+  const slug = `${baseSlug}-${slugSuffix}`;
+
+  return productRepository.createProduct({
+    ...input,
+    slug,
+  });
+}
+

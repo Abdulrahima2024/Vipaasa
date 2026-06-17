@@ -5,6 +5,7 @@ import {
   GetProductsQuerySchema,
   SearchProductsQuerySchema,
   GetProductParamsSchema,
+  CreateProductSchema,
 } from "./product.validation";
 
 /**
@@ -92,3 +93,29 @@ export async function searchProducts(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ error: "Failed to search products" });
   }
 }
+
+/**
+ * POST /products
+ * Creates a new product with variants and pricing (Admin only)
+ */
+export async function createProduct(req: AuthenticatedRequest, res: Response) {
+  try {
+    const validation = CreateProductSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: validation.error.format(),
+      });
+    }
+
+    const product = await productService.createProduct(validation.data);
+    return res.status(201).json({
+      message: "Product created successfully",
+      product,
+    });
+  } catch (error) {
+    console.error("Error creating product:", error);
+    return res.status(500).json({ error: "Failed to create product" });
+  }
+}
+
