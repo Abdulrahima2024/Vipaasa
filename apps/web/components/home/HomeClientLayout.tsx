@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Header from "../layout/Header";
 import ProductListing from "./ProductListing";
+import DealsSection from "./DealsSection";
 import { useCartStore } from "../../store/useCartStore";
 
 interface HomeClientLayoutProps {
@@ -98,6 +99,9 @@ export default function HomeClientLayout({
           showFavoritesOnly={showFavoritesOnly}
           setShowFavoritesOnly={setShowFavoritesOnly}
         />
+
+        {/* HIGH-CONTRAST FLASH DEALS */}
+        <DealsSection />
 
         {/* Benefits Section (Server Component) */}
         {benefits}

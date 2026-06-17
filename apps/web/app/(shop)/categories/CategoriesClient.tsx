@@ -47,6 +47,10 @@ export default function CategoriesClient() {
   const [priceRange, setPriceRange] = useState<number>(5000);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 
+  // Mobile drawer states
+  const [isFilterOpenMobile, setIsFilterOpenMobile] = useState<boolean>(false);
+  const [isSortOpenMobile, setIsSortOpenMobile] = useState<boolean>(false);
+
   // Sorting state
   const [sortBy, setSortBy] = useState<"Latest" | "Price Low to High" | "Price High to Low" | "Popular">("Latest");
 
@@ -120,6 +124,22 @@ export default function CategoriesClient() {
     }
   }, [searchQuery, mounted]);
 
+  // Lock body scroll when mobile drawers are open
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (isFilterOpenMobile || isSortOpenMobile) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "";
+      }
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        document.body.style.overflow = "";
+      }
+    };
+  }, [isFilterOpenMobile, isSortOpenMobile]);
+
   const handleSubcategoryToggle = (subcategory: string) => {
     setSelectedSubcategories((prev) =>
       prev.includes(subcategory)
@@ -136,6 +156,11 @@ export default function CategoriesClient() {
     setSearchQuery("");
     setCurrentPage(1);
   };
+
+  // Active filters count for mobile UI
+  const activeFiltersCount = useMemo(() => {
+    return selectedSubcategories.length + (priceRange < 5000 ? 1 : 0) + (inStockOnly ? 1 : 0);
+  }, [selectedSubcategories, priceRange, inStockOnly]);
 
   // Filtered and Sorted products — always use apiProducts (real API only)
   const filteredProducts = useMemo(() => {
@@ -188,7 +213,7 @@ export default function CategoriesClient() {
   // Pagination calculations
   const totalItems = sortedProducts.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-  
+
   // Safe page guard
   const activePage = currentPage > totalPages ? totalPages : currentPage;
 
@@ -205,7 +230,7 @@ export default function CategoriesClient() {
   const handleAddToCart = (product: CategoryProduct) => {
     setAddingId(product.id);
     addToCart(product, product.weight);
-    
+
     setTimeout(() => {
       setAddingId(null);
     }, 800);
@@ -222,7 +247,7 @@ export default function CategoriesClient() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">
-      
+
       {/* HEADER SECTION */}
       <Header
         showSearch={true}
@@ -243,7 +268,7 @@ export default function CategoriesClient() {
 
       {/* MAIN LAYOUT */}
       <main className="max-w-7xl mx-auto w-full px-6 lg:px-16 py-8 flex-1 flex flex-col gap-6">
-        
+
         {/* BREADCRUMB */}
         <nav aria-label="Breadcrumb" className="text-[11px] font-extrabold tracking-wider flex items-center gap-2 text-[#738276] uppercase">
           <Link href="/" className="hover:text-[#113C27] transition-colors">
@@ -276,7 +301,7 @@ export default function CategoriesClient() {
               Showing {showingFrom}-{showingTo} of {totalItems} results
             </span>
 
-            <div className="relative flex items-center">
+            <div className="relative hidden md:flex items-center">
               <select
                 id="sort-select"
                 value={sortBy}
@@ -297,12 +322,44 @@ export default function CategoriesClient() {
           </div>
         </div>
 
+        {/* MOBILE FILTER & SORT BAR */}
+        <div className="md:hidden flex items-center justify-between gap-4 py-3 px-4 bg-white/95 backdrop-blur-md border border-[#EAE6DB] rounded-2xl sticky top-[72px] z-30 shadow-md">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpenMobile(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold text-[#113C27] hover:bg-[#FAF9F5] rounded-xl transition-all"
+          >
+            <svg className="w-4 h-4 text-[#113C27]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+            </svg>
+            <span>Filter</span>
+            {activeFiltersCount > 0 && (
+              <span className="w-5 h-5 flex items-center justify-center bg-[#113C27] text-white text-[10px] rounded-full font-bold ml-1">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+          
+          <div className="w-px h-5 bg-[#EAE6DB]" />
+          
+          <button
+            type="button"
+            onClick={() => setIsSortOpenMobile(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold text-[#113C27] hover:bg-[#FAF9F5] rounded-xl transition-all"
+          >
+            <svg className="w-4 h-4 text-[#113C27]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+            </svg>
+            <span className="truncate">Sort: {sortBy}</span>
+          </button>
+        </div>
+
         {/* WORKSPACE CONTENT GRID */}
         <div className="flex flex-col md:flex-row gap-10 mt-2">
-          
+
           {/* LEFT FILTERS SIDEBAR */}
-          <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-24 self-start bg-white md:bg-transparent p-5 md:p-0 rounded-2xl border border-[#EAE6DB]/60 md:border-none">
-            
+          <aside className="hidden md:block w-64 flex-shrink-0 md:sticky md:top-24 self-start">
+
             {/* SUBCATEGORIES SECTION */}
             <div className="space-y-4">
               <h4 className="text-xs font-bold tracking-widest text-[#738276] uppercase">
@@ -327,11 +384,10 @@ export default function CategoriesClient() {
                         className="sr-only"
                       />
                       <div
-                        className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${
-                          isChecked
-                            ? "bg-[#113C27] border-[#113C27] text-white"
-                            : "border-[#EAE6DB] bg-white group-hover:border-[#738276]"
-                        }`}
+                        className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${isChecked
+                          ? "bg-[#113C27] border-[#113C27] text-white"
+                          : "border-[#EAE6DB] bg-white group-hover:border-[#738276]"
+                          }`}
                       >
                         {isChecked && (
                           <svg className="w-2.5 h-2.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -469,7 +525,7 @@ export default function CategoriesClient() {
                   const isFavorite = mounted && favorites.includes(product.id);
                   const price = product.prices[product.weight];
                   const isAdding = addingId === product.id;
-                  
+
                   return (
                     <div
                       key={product.id}
@@ -485,14 +541,14 @@ export default function CategoriesClient() {
                             loading="lazy"
                           />
                         </Link>
-                        
+
                         {/* Organic Label / Custom tag */}
                         {product.tag && (
                           <span className="absolute top-2.5 left-2.5 bg-[#C1F2D0] text-[#113C27] text-[10px] font-bold px-2.5 py-0.5 rounded-full z-10 select-none shadow-sm">
                             {product.tag}
                           </span>
                         )}
-                        
+
                         {/* Favorite button */}
                         <button
                           type="button"
@@ -513,7 +569,7 @@ export default function CategoriesClient() {
 
                       {/* Product Content Details */}
                       <div className="space-y-3 flex-1 flex flex-col justify-between">
-                        
+
                         <div>
                           {/* Stock Status + Name Row */}
                           <div className="flex items-center justify-between gap-2">
@@ -521,22 +577,21 @@ export default function CategoriesClient() {
                               {product.category}
                             </span>
                             <span
-                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                                product.inStock
-                                  ? "bg-[#C1F2D0]/50 text-[#113C27]"
-                                  : "bg-red-50 text-red-600"
-                              }`}
+                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${product.inStock
+                                ? "bg-[#C1F2D0]/50 text-[#113C27]"
+                                : "bg-red-50 text-red-600"
+                                }`}
                             >
                               {product.inStock ? "In Stock" : "Out of Stock"}
                             </span>
                           </div>
-                          
+
                           <Link href={`/products/${product.id}`} className="block">
                             <h4 className="font-serif text-base font-extrabold text-[#113C27] tracking-tight mt-1 hover:text-[#2d6a4f] transition-colors leading-tight">
                               {product.name}
                             </h4>
                           </Link>
-                          
+
                           {/* Rating Review Stars */}
                           <div className="flex items-center gap-1 mt-1">
                             <div className="flex items-center text-[#F5A623]">
@@ -565,7 +620,7 @@ export default function CategoriesClient() {
                               {product.rating.toFixed(1)}
                             </span>
                           </div>
-                          
+
                           <p className="text-xs text-[#738276] font-medium mt-1.5">
                             {product.description}
                           </p>
@@ -596,13 +651,12 @@ export default function CategoriesClient() {
                             <button
                               onClick={() => handleAddToCart(product)}
                               disabled={!product.inStock || isAdding}
-                              className={`flex items-center justify-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${
-                                !product.inStock
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : isAdding
+                              className={`flex items-center justify-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${!product.inStock
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                : isAdding
                                   ? "bg-[#2D6A4F] text-white"
                                   : "bg-[#113C27] text-white hover:bg-[#2D6A4F]"
-                              }`}
+                                }`}
                               aria-label={`Add ${product.name} to cart`}
                             >
                               {isAdding ? (
@@ -623,7 +677,7 @@ export default function CategoriesClient() {
                             </button>
                           </div>
                         </div>
-                        
+
                       </div>
 
                     </div>
@@ -635,16 +689,15 @@ export default function CategoriesClient() {
             {/* PAGINATION CONTROLS */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 pt-6">
-                
+
                 {/* Prev Button */}
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={activePage === 1}
-                  className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${
-                    activePage === 1
-                      ? "border-[#EAE6DB]/60 text-gray-300 cursor-not-allowed"
-                      : "border-[#EAE6DB] text-[#113C27] hover:border-[#738276] hover:bg-white"
-                  }`}
+                  className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${activePage === 1
+                    ? "border-[#EAE6DB]/60 text-gray-300 cursor-not-allowed"
+                    : "border-[#EAE6DB] text-[#113C27] hover:border-[#738276] hover:bg-white"
+                    }`}
                   aria-label="Previous Page"
                 >
                   <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -660,11 +713,10 @@ export default function CategoriesClient() {
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`w-9 h-9 rounded-full text-xs font-bold transition-all ${
-                        isActive
-                          ? "bg-[#113C27] text-white shadow-sm"
-                          : "border border-[#EAE6DB] text-[#4B594F] hover:border-[#738276] hover:bg-white"
-                      }`}
+                      className={`w-9 h-9 rounded-full text-xs font-bold transition-all ${isActive
+                        ? "bg-[#113C27] text-white shadow-sm"
+                        : "border border-[#EAE6DB] text-[#4B594F] hover:border-[#738276] hover:bg-white"
+                        }`}
                     >
                       {page}
                     </button>
@@ -675,11 +727,10 @@ export default function CategoriesClient() {
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   disabled={activePage === totalPages}
-                  className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${
-                    activePage === totalPages
-                      ? "border-[#EAE6DB]/60 text-gray-300 cursor-not-allowed"
-                      : "border-[#EAE6DB] text-[#113C27] hover:border-[#738276] hover:bg-white"
-                  }`}
+                  className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${activePage === totalPages
+                    ? "border-[#EAE6DB]/60 text-gray-300 cursor-not-allowed"
+                    : "border-[#EAE6DB] text-[#113C27] hover:border-[#738276] hover:bg-white"
+                    }`}
                   aria-label="Next Page"
                 >
                   <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -698,6 +749,205 @@ export default function CategoriesClient() {
 
       {/* FOOTER SECTION */}
       <Footer />
+
+      {/* MOBILE FILTER DRAWER */}
+      <div className={`fixed inset-0 z-50 transition-all duration-300 md:hidden ${isFilterOpenMobile ? "visible pointer-events-auto" : "invisible pointer-events-none"}`}>
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ${isFilterOpenMobile ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setIsFilterOpenMobile(false)}
+        />
+        
+        {/* Drawer sheet */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 max-h-[85vh] bg-[#F9F7F2] rounded-t-[2rem] flex flex-col shadow-2xl transition-transform duration-300 transform ${isFilterOpenMobile ? "translate-y-0" : "translate-y-full"}`}
+        >
+          {/* Drag Handle */}
+          <div className="w-12 h-1.5 bg-[#EAE6DB] rounded-full mx-auto my-3 flex-shrink-0" />
+          
+          {/* Header */}
+          <div className="px-6 pb-4 border-b border-[#EAE6DB]/60 flex items-center justify-between flex-shrink-0">
+            <h3 className="font-serif text-lg font-extrabold text-[#113C27]">Filters</h3>
+            <div className="flex items-center gap-4">
+              {activeFiltersCount > 0 && (
+                <button
+                  onClick={handleResetFilters}
+                  className="text-xs font-bold text-[#A84444] hover:underline"
+                >
+                  Clear All
+                </button>
+              )}
+              <button
+                onClick={() => setIsFilterOpenMobile(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#EAE6DB]/40 text-[#113C27]"
+              >
+                <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="px-6 py-6 overflow-y-auto space-y-8 flex-1">
+            {/* Subcategories */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold tracking-widest text-[#738276] uppercase">
+                Subcategories
+              </h4>
+              <div className="flex flex-col gap-3.5">
+                {[
+                  "Dals & Pulses",
+                  "Flours",
+                  "Spices & Powders",
+                  "Millets & Grains",
+                  "Broken Grains (Rava)",
+                  "Honey & Ghee"
+                ].map((subcat) => {
+                  const isChecked = selectedSubcategories.includes(subcat);
+                  return (
+                    <label key={subcat} className="flex items-center gap-3 cursor-pointer group text-sm font-semibold text-[#4B594F] hover:text-[#113C27] transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleSubcategoryToggle(subcat)}
+                        className="sr-only"
+                      />
+                      <div
+                        className={`w-5 h-5 rounded border transition-all flex items-center justify-center ${isChecked
+                            ? "bg-[#113C27] border-[#113C27] text-white"
+                            : "border-[#EAE6DB] bg-white"
+                          }`}
+                      >
+                        {isChecked && (
+                          <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="select-none">{subcat}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Price Slider */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold tracking-widest text-[#738276] uppercase">
+                Price Range
+              </h4>
+              <div className="space-y-2">
+                <input
+                  type="range"
+                  min={100}
+                  max={5000}
+                  step={50}
+                  value={priceRange}
+                  onChange={(e) => {
+                    setPriceRange(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="w-full h-1 bg-[#ECE9E0] rounded-lg appearance-none cursor-pointer accent-[#113C27] outline-none"
+                />
+                <div className="flex justify-between text-[11px] text-[#738276] font-extrabold uppercase tracking-wide">
+                  <span>₹100</span>
+                  <span className="text-[#113C27] bg-[#C1F2D0]/40 px-2.5 py-0.5 rounded font-extrabold">₹{priceRange} max</span>
+                  <span>₹5,000</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* In Stock */}
+            <div className="flex items-center justify-between pt-4 border-t border-[#EAE6DB]/60">
+              <span className="text-sm font-semibold text-[#4B594F]">
+                Show in stock only
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={inStockOnly}
+                  onChange={() => {
+                    setInStockOnly(!inStockOnly);
+                    setCurrentPage(1);
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-6 bg-[#ECE9E0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#113C27]"></div>
+              </label>
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="p-6 border-t border-[#EAE6DB]/60 bg-white/40 flex gap-3 flex-shrink-0">
+            <button
+              onClick={() => setIsFilterOpenMobile(false)}
+              className="flex-1 bg-[#113C27] hover:bg-[#2D6A4F] text-white text-sm font-bold py-3 rounded-xl transition-all shadow-sm active:scale-[0.98] text-center"
+            >
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* MOBILE SORT DRAWER */}
+      <div className={`fixed inset-0 z-50 transition-all duration-300 md:hidden ${isSortOpenMobile ? "visible pointer-events-auto" : "invisible pointer-events-none"}`}>
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ${isSortOpenMobile ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setIsSortOpenMobile(false)}
+        />
+        
+        {/* Drawer sheet */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 bg-[#F9F7F2] rounded-t-[2rem] flex flex-col shadow-2xl transition-transform duration-300 transform ${isSortOpenMobile ? "translate-y-0" : "translate-y-full"}`}
+        >
+          {/* Drag Handle */}
+          <div className="w-12 h-1.5 bg-[#EAE6DB] rounded-full mx-auto my-3 flex-shrink-0" />
+          
+          {/* Header */}
+          <div className="px-6 pb-4 border-b border-[#EAE6DB]/60 flex items-center justify-between flex-shrink-0">
+            <h3 className="font-serif text-lg font-extrabold text-[#113C27]">Sort By</h3>
+            <button
+              onClick={() => setIsSortOpenMobile(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-[#EAE6DB]/40 text-[#113C27]"
+            >
+              <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="px-6 py-4 overflow-y-auto flex-1 divide-y divide-[#EAE6DB]/40">
+            {[
+              { value: "Latest", label: "Sort by: Latest" },
+              { value: "Price Low to High", label: "Sort by: Price Low to High" },
+              { value: "Price High to Low", label: "Sort by: Price High to Low" },
+              { value: "Popular", label: "Sort by: Popular" }
+            ].map((opt) => {
+              const isSelected = sortBy === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    setSortBy(opt.value as any);
+                    setIsSortOpenMobile(false);
+                  }}
+                  className="w-full flex items-center justify-between py-3.5 text-left text-sm font-semibold text-[#4B594F] hover:text-[#113C27] transition-colors"
+                >
+                  <span className={isSelected ? "text-[#113C27] font-extrabold" : ""}>{opt.label}</span>
+                  {isSelected && (
+                    <svg className="w-4 h-4 text-[#113C27] stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
     </div>
   );

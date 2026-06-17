@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Flame } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 
 interface HeaderProps {
@@ -36,6 +36,53 @@ export default function Header({
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState(false);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState("Search harvests...");
+
+  useEffect(() => {
+    const words = [
+      "Search 'Kandipappu'...",
+      "Search 'Desi Cow Ghee'...",
+      "Search 'Wild Forest Honey'...",
+      "Search 'Korralu'...",
+      "Search 'Bellam Podi'...",
+      "Search 'Raagi Pindi'...",
+      "Search 'Munaga Podi'...",
+      "Search 'Pachi Karam'...",
+      "Search 'Pottu Minapappu'...",
+      "Search 'Jamun Honey'..."
+    ];
+    let isDeleting = false;
+    let wordIndex = 0;
+    let charIndex = 0;
+    let timeout: any;
+
+    function tick() {
+      const currentWord = words[wordIndex];
+      if (!isDeleting) {
+        setCurrentPlaceholder(currentWord.slice(0, charIndex + 1));
+        charIndex++;
+        if (charIndex === currentWord.length) {
+          isDeleting = true;
+          timeout = setTimeout(tick, 2000);
+        } else {
+          timeout = setTimeout(tick, 80);
+        }
+      } else {
+        setCurrentPlaceholder(currentWord.slice(0, charIndex - 1));
+        charIndex--;
+        if (charIndex === 0) {
+          isDeleting = false;
+          wordIndex = (wordIndex + 1) % words.length;
+          timeout = setTimeout(tick, 500);
+        } else {
+          timeout = setTimeout(tick, 40);
+        }
+      }
+    }
+
+    tick();
+    return () => clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
@@ -158,11 +205,17 @@ export default function Header({
                 <Link
                   key={navItem}
                   href={href}
-                  className={`text-sm font-medium transition-colors relative py-1 ${
-                    activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
-                  }`}
+                  className={`text-sm font-medium transition-colors relative py-1 ${activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
+                    }`}
                 >
-                  {navItem}
+                  {navItem === "Deals" ? (
+                    <span className="bg-[#A84444] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 transition-all duration-200 hover:bg-[#913939] shadow-sm">
+                      {navItem}
+                      <Flame className="w-3.5 h-3.5 text-white fill-white animate-pulse" />
+                    </span>
+                  ) : (
+                    <span>{navItem}</span>
+                  )}
                   {activeNav === navItem && (
                     <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
                   )}
@@ -174,9 +227,8 @@ export default function Header({
                 key={navItem}
                 type="button"
                 onClick={() => onNavChange && onNavChange(navItem)}
-                className={`text-sm font-medium transition-colors relative py-1 ${
-                  activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
-                }`}
+                className={`text-sm font-medium transition-colors relative py-1 ${activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
+                  }`}
               >
                 {navItem}
                 {activeNav === navItem && (
@@ -199,10 +251,10 @@ export default function Header({
               </span>
               <input
                 type="text"
-                placeholder="Search harvests..."
+                placeholder={currentPlaceholder}
                 value={localSearchQuery}
                 onChange={handleInputChange}
-                className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-8 py-2 w-48 lg:w-60 focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
+                className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-8 py-2 w-64 md:w-80 lg:w-[380px] xl:w-[460px] focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
               />
               {localSearchQuery && (
                 <button
@@ -232,233 +284,232 @@ export default function Header({
             </button>
           )}
 
-        {/* Favourites Icon Link */}
-        <button
-          type="button"
-          onClick={onFavoritesClick}
-          className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none"
-          aria-label="Favourites"
-        >
-          <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-          </svg>
-          {favoritesCount > 0 && (
-            <span className="absolute -top-1 -right-1.5 bg-[#A84444] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-all scale-100">
-              {favoritesCount}
-            </span>
-          )}
-        </button>
-
-        {/* Notifications Popover Dropdown */}
-        <div className="relative hidden md:flex items-center" ref={dropdownRef}>
+          {/* Favourites Icon Link */}
           <button
             type="button"
-            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-            className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none flex items-center justify-center"
-            aria-label="Notifications"
+            onClick={onFavoritesClick}
+            className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none"
+            aria-label="Favourites"
           >
             <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
             </svg>
-            {hasUnread && (
-              <span className="absolute top-1.5 right-1.5 bg-[#2D6A4F] w-2 h-2 rounded-full border border-[#F9F7F2]"></span>
+            {favoritesCount > 0 && (
+              <span className="absolute -top-1 -right-1.5 bg-[#A84444] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-all scale-100">
+                {favoritesCount}
+              </span>
             )}
           </button>
 
-          {isNotificationsOpen && (
-            <div className="absolute right-0 top-full mt-3 w-80 sm:w-96 bg-white border border-[#EAE6DB] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] z-50 overflow-hidden font-sans">
-              {/* Popover Header */}
-              <div className="px-4 py-3 border-b border-[#EAE6DB]/60 flex justify-between items-center bg-[#FAF9F5]">
-                <span className="text-sm font-bold text-[#113C27]">Notifications</span>
-                <div className="flex items-center gap-3">
-                  {notifications.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={markAllAsRead}
-                      className="text-[10px] font-extrabold text-[#2D6A4F] hover:text-[#113C27] transition-all tracking-wider uppercase"
-                    >
-                      Mark all as read
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setIsNotificationsOpen(false)}
-                    className="p-1 hover:bg-[#ECE9E0]/50 rounded-lg text-[#738276] hover:text-[#113C27] transition-all"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+          {/* Notifications Popover Dropdown */}
+          <div className="relative hidden md:flex items-center" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none flex items-center justify-center"
+              aria-label="Notifications"
+            >
+              <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+              </svg>
+              {hasUnread && (
+                <span className="absolute top-1.5 right-1.5 bg-[#2D6A4F] w-2 h-2 rounded-full border border-[#F9F7F2]"></span>
+              )}
+            </button>
 
-              {/* Popover Body List */}
-              <div className="max-h-[320px] overflow-y-auto divide-y divide-[#EAE6DB]/40">
-                {notifications.length > 0 ? (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => toggleRead(n.id)}
-                      className={`p-4 flex gap-3 cursor-pointer transition-colors group relative hover:bg-[#FAF9F5]/50 ${
-                        !n.isRead ? "bg-[#FAF9F5]/30" : ""
-                      }`}
-                    >
-                      {/* Unread dot */}
-                      <div className="flex-shrink-0 w-2 pt-1.5">
-                        {!n.isRead && (
-                          <div className="w-2 h-2 bg-[#2D6A4F] rounded-full" />
-                        )}
-                      </div>
-
-                      {/* Content details */}
-                      <div className="flex-grow pr-4">
-                        <h5 className="text-xs font-bold text-[#113C27]">{n.title}</h5>
-                        <p className="text-xs text-[#5C6E61] mt-1 leading-relaxed">{n.description}</p>
-                        <span className="text-[10px] text-[#738276] mt-2 block font-semibold">{n.timestamp}</span>
-                      </div>
-
-                      {/* Delete notification button on hover */}
+            {isNotificationsOpen && (
+              <div className="absolute right-0 top-full mt-3 w-80 sm:w-96 bg-white border border-[#EAE6DB] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] z-50 overflow-hidden font-sans">
+                {/* Popover Header */}
+                <div className="px-4 py-3 border-b border-[#EAE6DB]/60 flex justify-between items-center bg-[#FAF9F5]">
+                  <span className="text-sm font-bold text-[#113C27]">Notifications</span>
+                  <div className="flex items-center gap-3">
+                    {notifications.length > 0 && (
                       <button
                         type="button"
-                        onClick={(e) => deleteNotification(n.id, e)}
-                        className="absolute right-3 top-4 opacity-0 group-hover:opacity-100 p-1 hover:bg-[#ECE9E0] rounded-md text-[#738276] hover:text-[#113C27] transition-all"
-                        aria-label="Delete notification"
+                        onClick={markAllAsRead}
+                        className="text-[10px] font-extrabold text-[#2D6A4F] hover:text-[#113C27] transition-all tracking-wider uppercase"
                       >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                        </svg>
+                        Mark all as read
                       </button>
-                    </div>
-                  ))
-                ) : (
-                  /* Popover Empty State */
-                  <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
-                    <div className="w-12 h-12 rounded-full bg-[#FAF9F5] flex items-center justify-center text-[#EAE6DB] mb-3">
-                      <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="p-1 hover:bg-[#ECE9E0]/50 rounded-lg text-[#738276] hover:text-[#113C27] transition-all"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                       </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Popover Body List */}
+                <div className="max-h-[320px] overflow-y-auto divide-y divide-[#EAE6DB]/40">
+                  {notifications.length > 0 ? (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => toggleRead(n.id)}
+                        className={`p-4 flex gap-3 cursor-pointer transition-colors group relative hover:bg-[#FAF9F5]/50 ${!n.isRead ? "bg-[#FAF9F5]/30" : ""
+                          }`}
+                      >
+                        {/* Unread dot */}
+                        <div className="flex-shrink-0 w-2 pt-1.5">
+                          {!n.isRead && (
+                            <div className="w-2 h-2 bg-[#2D6A4F] rounded-full" />
+                          )}
+                        </div>
+
+                        {/* Content details */}
+                        <div className="flex-grow pr-4">
+                          <h5 className="text-xs font-bold text-[#113C27]">{n.title}</h5>
+                          <p className="text-xs text-[#5C6E61] mt-1 leading-relaxed">{n.description}</p>
+                          <span className="text-[10px] text-[#738276] mt-2 block font-semibold">{n.timestamp}</span>
+                        </div>
+
+                        {/* Delete notification button on hover */}
+                        <button
+                          type="button"
+                          onClick={(e) => deleteNotification(n.id, e)}
+                          className="absolute right-3 top-4 opacity-0 group-hover:opacity-100 p-1 hover:bg-[#ECE9E0] rounded-md text-[#738276] hover:text-[#113C27] transition-all"
+                          aria-label="Delete notification"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    /* Popover Empty State */
+                    <div className="py-12 px-6 flex flex-col items-center justify-center text-center">
+                      <div className="w-12 h-12 rounded-full bg-[#FAF9F5] flex items-center justify-center text-[#EAE6DB] mb-3">
+                        <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-bold text-[#113C27]">No notifications</span>
+                      <span className="text-xs text-[#738276] mt-1 font-semibold">You’re all caught up.</span>
                     </div>
-                    <span className="text-sm font-bold text-[#113C27]">No notifications</span>
-                    <span className="text-xs text-[#738276] mt-1 font-semibold">You’re all caught up.</span>
+                  )}
+                </div>
+
+                {/* Popover Footer */}
+                {notifications.length > 0 && (
+                  <div className="px-4 py-2 bg-[#FAF9F5] border-t border-[#EAE6DB]/60 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={clearAll}
+                      className="text-[10px] font-extrabold text-[#738276] hover:text-[#A84444] transition-all tracking-wider uppercase"
+                    >
+                      Clear All
+                    </button>
                   </div>
                 )}
               </div>
+            )}
+          </div>
 
-              {/* Popover Footer */}
-              {notifications.length > 0 && (
-                <div className="px-4 py-2 bg-[#FAF9F5] border-t border-[#EAE6DB]/60 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={clearAll}
-                    className="text-[10px] font-extrabold text-[#738276] hover:text-[#A84444] transition-all tracking-wider uppercase"
-                  >
-                    Clear All
-                  </button>
+          {/* Cart Icon Link */}
+          <a href="/cart" className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="Shopping Cart">
+            <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+            </svg>
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1.5 bg-[#A84444] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-all scale-100">
+                {cartCount}
+              </span>
+            )}
+          </a>
+
+          {/* User Profile Link */}
+          {_hasHydrated && isAuthenticated ? (
+            <div className="relative hidden md:flex items-center animate-fade-in" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="relative w-8 h-8 rounded-full bg-[#113C27] hover:bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs transition-colors focus:outline-none"
+                aria-label="User Menu"
+              >
+                {user?.profile?.firstName
+                  ? `${user.profile.firstName[0]}${user.profile.lastName ? user.profile.lastName[0] : ""}`.toUpperCase()
+                  : user?.email ? user.email.slice(0, 2).toUpperCase() : "U"}
+              </button>
+              {isUserMenuOpen && (
+                <div className="absolute right-0 top-full mt-3 w-56 bg-white border border-[#EAE6DB] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] z-50 overflow-hidden font-sans">
+                  <div className="px-4 py-3 border-b border-[#EAE6DB]/60 bg-[#FAF9F5]">
+                    <p className="text-[10px] text-[#738276] font-bold uppercase tracking-wider">Signed in as</p>
+                    <p className="text-xs font-bold text-[#113C27] truncate mt-0.5">
+                      {user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ""}` : user?.email}
+                    </p>
+                  </div>
+                  <div className="py-1">
+                    <Link
+                      href="/account/profile"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-2 text-xs font-semibold text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27] transition-colors"
+                    >
+                      My Profile
+                    </Link>
+                    <Link
+                      href="/orders"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-2 text-xs font-semibold text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27] transition-colors"
+                    >
+                      My Orders
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full text-left block px-4 py-2 text-xs font-bold text-[#A84444] hover:bg-[#FAF9F5] transition-colors border-t border-[#EAE6DB]/40"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Cart Icon Link */}
-        <a href="/cart" className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="Shopping Cart">
-          <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-          </svg>
-          {cartCount > 0 && (
-            <span className="absolute -top-1 -right-1.5 bg-[#A84444] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-all scale-100">
-              {cartCount}
-            </span>
-          )}
-        </a>
-
-        {/* User Profile Link */}
-        {_hasHydrated && isAuthenticated ? (
-          <div className="relative hidden md:flex items-center animate-fade-in" ref={userMenuRef}>
-            <button
-              type="button"
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="relative w-8 h-8 rounded-full bg-[#113C27] hover:bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs transition-colors focus:outline-none"
-              aria-label="User Menu"
-            >
-              {user?.profile?.firstName
-                ? `${user.profile.firstName[0]}${user.profile.lastName ? user.profile.lastName[0] : ""}`.toUpperCase()
-                : user?.email ? user.email.slice(0, 2).toUpperCase() : "U"}
-            </button>
-            {isUserMenuOpen && (
-              <div className="absolute right-0 top-full mt-3 w-56 bg-white border border-[#EAE6DB] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] z-50 overflow-hidden font-sans">
-                <div className="px-4 py-3 border-b border-[#EAE6DB]/60 bg-[#FAF9F5]">
-                  <p className="text-[10px] text-[#738276] font-bold uppercase tracking-wider">Signed in as</p>
-                  <p className="text-xs font-bold text-[#113C27] truncate mt-0.5">
-                    {user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ""}` : user?.email}
-                  </p>
-                </div>
-                <div className="py-1">
-                  <Link
-                    href="/account/profile"
-                    onClick={() => setIsUserMenuOpen(false)}
-                    className="block px-4 py-2 text-xs font-semibold text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27] transition-colors"
-                  >
-                    My Profile
-                  </Link>
-                  <Link
-                    href="/orders"
-                    onClick={() => setIsUserMenuOpen(false)}
-                    className="block px-4 py-2 text-xs font-semibold text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27] transition-colors"
-                  >
-                    My Orders
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      logout();
-                    }}
-                    className="w-full text-left block px-4 py-2 text-xs font-bold text-[#A84444] hover:bg-[#FAF9F5] transition-colors border-t border-[#EAE6DB]/40"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="hidden md:flex items-center gap-2">
-            <Link
-              href="/login"
-              id="header-signin-btn"
-              className="px-4 py-1.5 text-xs font-bold text-[#113C27] border border-[#113C27] rounded-full hover:bg-[#113C27] hover:text-white transition-all duration-200 active:scale-95"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/login?mode=register"
-              id="header-signup-btn"
-              className="px-4 py-1.5 text-xs font-bold text-white bg-[#113C27] border border-[#113C27] rounded-full hover:bg-[#2D6A4F] hover:border-[#2D6A4F] transition-all duration-200 active:scale-95"
-            >
-              Sign Up
-            </Link>
-          </div>
-        )}
-
-        {/* Hamburger Menu Icon for Mobile */}
-        <button
-          type="button"
-          onClick={() => {
-            setIsMobileMenuOpen(!isMobileMenuOpen);
-            setIsMobileNotificationsOpen(false);
-          }}
-          className="md:hidden p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none flex items-center justify-center"
-          aria-label="Toggle navigation menu"
-        >
-          {isMobileMenuOpen ? (
-            <X className="w-6 h-6 stroke-2" />
           ) : (
-            <Menu className="w-6 h-6 stroke-2" />
+            <div className="hidden md:flex items-center gap-2">
+              <Link
+                href="/login"
+                id="header-signin-btn"
+                className="px-4 py-1.5 text-xs font-bold text-[#113C27] border border-[#113C27] rounded-full hover:bg-[#113C27] hover:text-white transition-all duration-200 active:scale-95"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/login?mode=register"
+                id="header-signup-btn"
+                className="px-4 py-1.5 text-xs font-bold text-white bg-[#113C27] border border-[#113C27] rounded-full hover:bg-[#2D6A4F] hover:border-[#2D6A4F] transition-all duration-200 active:scale-95"
+              >
+                Sign Up
+              </Link>
+            </div>
           )}
-        </button>
+
+          {/* Hamburger Menu Icon for Mobile */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileMenuOpen(!isMobileMenuOpen);
+              setIsMobileNotificationsOpen(false);
+            }}
+            className="md:hidden p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none flex items-center justify-center"
+            aria-label="Toggle navigation menu"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6 stroke-2" />
+            ) : (
+              <Menu className="w-6 h-6 stroke-2" />
+            )}
+          </button>
+        </div>
       </div>
-    </div>
 
       {/* Mobile Navigation Panel */}
       {isMobileMenuOpen && (
@@ -472,13 +523,21 @@ export default function Header({
                     key={navItem}
                     href={href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className={`text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${
-                      activeNav === navItem 
-                        ? "bg-[#C1F2D0] text-[#113C27]" 
-                        : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
-                    }`}
+                    className={`text-sm font-semibold transition-colors py-2 px-3 rounded-lg flex items-center justify-between ${activeNav === navItem
+                      ? "bg-[#C1F2D0] text-[#113C27]"
+                      : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
+                      }`}
                   >
-                    {navItem}
+                    {navItem === "Deals" ? (
+                      <span className="bg-[#A84444] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                        {navItem}
+                        <Flame className="w-3.5 h-3.5 text-white fill-white animate-pulse" />
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        {navItem}
+                      </span>
+                    )}
                   </Link>
                 );
               }
@@ -490,11 +549,10 @@ export default function Header({
                     setIsMobileMenuOpen(false);
                     onNavChange && onNavChange(navItem);
                   }}
-                  className={`text-left text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${
-                    activeNav === navItem 
-                      ? "bg-[#C1F2D0] text-[#113C27]" 
-                      : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
-                  }`}
+                  className={`text-left text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${activeNav === navItem
+                    ? "bg-[#C1F2D0] text-[#113C27]"
+                    : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
+                    }`}
                 >
                   {navItem}
                 </button>
@@ -509,11 +567,10 @@ export default function Header({
               <button
                 type="button"
                 onClick={() => setIsMobileNotificationsOpen(!isMobileNotificationsOpen)}
-                className={`flex items-center justify-between w-full text-left text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${
-                  isMobileNotificationsOpen
-                    ? "bg-[#C1F2D0]/50 text-[#113C27]"
-                    : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
-                }`}
+                className={`flex items-center justify-between w-full text-left text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${isMobileNotificationsOpen
+                  ? "bg-[#C1F2D0]/50 text-[#113C27]"
+                  : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
+                  }`}
               >
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -574,7 +631,7 @@ export default function Header({
                               <div className="w-1.5 h-1.5 bg-[#2D6A4F] rounded-full" />
                             )}
                           </div>
-                          
+
                           {/* Content details */}
                           <div className="flex-grow pr-6">
                             <h5 className="text-xs font-bold text-[#113C27]">{n.title}</h5>
@@ -671,7 +728,7 @@ export default function Header({
             </span>
             <input
               type="text"
-              placeholder="Search harvests..."
+              placeholder={currentPlaceholder}
               value={localSearchQuery}
               onChange={handleInputChange}
               className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-10 py-2.5 w-full focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
@@ -690,6 +747,15 @@ export default function Header({
           </form>
         </div>
       )}
+
+      {/* Deal Announcement Bar */}
+      <div className="bg-[#113C27] text-white text-[10px] sm:text-xs font-bold py-2 px-4 flex items-center justify-center gap-2 border-t border-[#2D6A4F]/20 select-none shadow-sm">
+        <span className="animate-pulse text-amber-400">⚡</span>
+        <span className="text-center tracking-wide">
+          Flash Sale: Get <span className="text-[#C1F2D0] font-extrabold">15% OFF</span> on Organic Honey & Vedic Cow Ghee today! Use code: <span className="bg-[#2D6A4F] text-[#C1F2D0] px-2 py-0.5 rounded font-black tracking-wider text-[9px] sm:text-[10px]">PURE15</span>
+        </span>
+        <span className="animate-pulse text-amber-400">⚡</span>
+      </div>
     </header>
   );
 }

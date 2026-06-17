@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/authStore";
 import { fetchApi } from "../../lib/api";
+import { LayoutGrid, Leaf, Wheat, Sparkles, Sprout, Layers, Droplet } from "lucide-react";
 
 export interface Product {
   id: string;
@@ -242,6 +243,7 @@ export default function ProductListing({
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
 
   // Zustand Cart Store connection
   const {
@@ -306,13 +308,13 @@ export default function ProductListing({
 
   // List of aggregated category values
   const categories = [
-    { name: "All", label: "All Categories" },
-    { name: "Dals & Pulses", label: "Dals & Pulses" },
-    { name: "Flours", label: "Flours" },
-    { name: "Spices & Powders", label: "Spices & Powders" },
-    { name: "Millets & Grains", label: "Millets & Grains" },
-    { name: "Broken Grains (Rava)", label: "Broken Grains (Rava)" },
-    { name: "Honey & Ghee", label: "Honey & Ghee" }
+    { name: "All", label: "All Categories", icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+    { name: "Dals & Pulses", label: "Dals & Pulses", icon: <Leaf className="w-3.5 h-3.5" /> },
+    { name: "Flours", label: "Flours", icon: <Wheat className="w-3.5 h-3.5" /> },
+    { name: "Spices & Powders", label: "Spices & Powders", icon: <Sparkles className="w-3.5 h-3.5" /> },
+    { name: "Millets & Grains", label: "Millets & Grains", icon: <Sprout className="w-3.5 h-3.5" /> },
+    { name: "Broken Grains (Rava)", label: "Broken Grains (Rava)", icon: <Layers className="w-3.5 h-3.5" /> },
+    { name: "Honey & Ghee", label: "Honey & Ghee", icon: <Droplet className="w-3.5 h-3.5" /> }
   ];
 
   // Filter products based on search input, active category pill, and favorites filter
@@ -366,37 +368,86 @@ export default function ProductListing({
 
   return (
     <div className="space-y-12">
-      {/* CATEGORY PILL FILTER */}
-      <div className="flex items-center space-x-3 overflow-x-auto pb-4 scrollbar-none">
-        {categories.map((cat) => {
-          const isSelected = selectedCategory === cat.name && !showFavoritesOnly;
-          return (
-            <button
-              key={cat.name}
-              onClick={() => {
-                setSelectedCategory(cat.name);
-                setShowFavoritesOnly(false);
-              }}
-              className={`flex items-center space-x-1.5 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold border transition-all duration-200 whitespace-nowrap ${
-                isSelected
-                  ? "bg-[#C1F2D0] border-[#C1F2D0] text-[#113C27]"
-                  : "bg-transparent border-[#EAE6DB] text-[#4B594F] hover:border-[#738276] hover:text-[#113C27]"
+      {/* CATEGORY SELECTION */}
+      <div className="relative">
+        {/* Desktop View: Category Pills (fits, wraps, no scrollbars) */}
+        <div className="hidden md:flex flex-wrap items-center gap-3">
+          {categories.map((cat) => {
+            const isSelected = selectedCategory === cat.name && !showFavoritesOnly;
+            return (
+              <button
+                key={cat.name}
+                onClick={() => {
+                  setSelectedCategory(cat.name);
+                  setShowFavoritesOnly(false);
+                }}
+                className={`flex items-center space-x-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold border transition-all duration-200 whitespace-nowrap ${
+                  isSelected
+                    ? "bg-[#C1F2D0] border-[#C1F2D0] text-[#113C27]"
+                    : "bg-transparent border-[#EAE6DB] text-[#4B594F] hover:border-[#738276] hover:text-[#113C27]"
+                }`}
+              >
+                {cat.icon}
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Mobile View: Custom Dropdown Menu (No scrollbars, premium select list) */}
+        <div className="md:hidden w-full relative">
+          <button
+            type="button"
+            onClick={() => setIsMobileDropdownOpen(!isMobileDropdownOpen)}
+            className="w-full flex items-center justify-between bg-white border border-[#EAE6DB] hover:border-[#738276] rounded-xl px-4 py-3 text-sm font-bold text-[#113C27] shadow-[0_2px_4px_rgba(0,0,0,0.01)] focus:outline-none"
+          >
+            <div className="flex items-center gap-2">
+              {(categories.find((c) => c.name === selectedCategory) || categories[0]).icon}
+              <span>{(categories.find((c) => c.name === selectedCategory) || categories[0]).label}</span>
+            </div>
+            <svg
+              className={`w-4 h-4 transition-transform duration-200 text-[#113C27] ${
+                isMobileDropdownOpen ? "rotate-180" : ""
               }`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
             >
-              {cat.name === "All" && (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-              )}
-              <span>{cat.label}</span>
-              {cat.name === "All" && (
-                <svg className="w-3 h-3 text-[#113C27]" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
-              )}
-            </button>
-          );
-        })}
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+
+          {isMobileDropdownOpen && (
+            <>
+              {/* Click-outside backdrop overlay */}
+              <div 
+                className="fixed inset-0 z-20 bg-transparent" 
+                onClick={() => setIsMobileDropdownOpen(false)} 
+              />
+              <div className="absolute left-0 right-0 mt-2 bg-white border border-[#EAE6DB] rounded-2xl shadow-lg z-30 overflow-hidden py-1 divide-y divide-[#EAE6DB]/20">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.name}
+                    onClick={() => {
+                      setSelectedCategory(cat.name);
+                      setShowFavoritesOnly(false);
+                      setIsMobileDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left text-xs sm:text-sm font-semibold transition-colors ${
+                      selectedCategory === cat.name
+                        ? "bg-[#C1F2D0] text-[#113C27]"
+                        : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
+                    }`}
+                  >
+                    {cat.icon}
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* PRODUCTS LIST */}
