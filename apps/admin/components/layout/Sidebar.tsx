@@ -12,13 +12,14 @@ import {
   FileText,
   ClipboardList,
   Settings,
+  CreditCard,
 } from "lucide-react";
 
 const mainNavItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
   { name: "Inventory", href: "/inventory", icon: ClipboardList },
-  { name: "Orders", href: "/orders", icon: ShoppingCart },
+  { name: "Payments", href: "/payments", icon: CreditCard },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Users", href: "/users", icon: Users },
 ];

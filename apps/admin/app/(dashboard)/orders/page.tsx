@@ -36,6 +36,8 @@ interface Order {
   total: number;
   status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Returned" | "Refunded";
   paymentMethod: string;
+  paymentId?: string; // optional for now
+  bankDetails?: string; // optional string representation
   shippingAddress: string;
 }
 
@@ -53,6 +55,8 @@ export default function OrdersPage() {
       total: 4680,
       status: "Pending",
       paymentMethod: "Razorpay (Online)",
+  paymentId: "PAY-001",
+  bankDetails: "HDFC Bank - 1234567890",
       shippingAddress: "Flat 402, Green Meadows, Hyderabad, TS, 500081"
     },
     {
@@ -67,6 +71,8 @@ export default function OrdersPage() {
       total: 490,
       status: "Delivered",
       paymentMethod: "Cash on Delivery",
+  paymentId: "PAY-002",
+  bankDetails: "Cash Payment - N/A",
       shippingAddress: "Plot 12, Sector 4, Madhapur, Hyderabad, TS, 500081"
     },
     {
@@ -80,6 +86,8 @@ export default function OrdersPage() {
       total: 468,
       status: "Shipped",
       paymentMethod: "UPI (Online)",
+  paymentId: "PAY-003",
+  bankDetails: "Google Pay - 9876543210",
       shippingAddress: "Villas 9, Whispering Palms, Gachibowli, Hyderabad, TS, 500032"
     },
     {
@@ -94,6 +102,8 @@ export default function OrdersPage() {
       total: 860,
       status: "Cancelled",
       paymentMethod: "Razorpay (Online)",
+  paymentId: "PAY-004",
+  bankDetails: "ICICI Bank - 1122334455",
       shippingAddress: "Apartment 1A, Sunrise Towers, Jubilee Hills, Hyderabad, 500033"
     },
     {
@@ -107,6 +117,8 @@ export default function OrdersPage() {
       total: 1060,
       status: "Returned",
       paymentMethod: "Razorpay (Online)",
+  paymentId: "PAY-005",
+  bankDetails: "SBI Bank - 6677889900",
       shippingAddress: "House 4-82, NTR Colony, Vijayawada, AP, 520008"
     }
   ]);
@@ -334,6 +346,27 @@ export default function OrdersPage() {
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Shipping Address</span>
                   <p className="text-xs text-gray-700 font-semibold leading-relaxed">{selectedOrder.shippingAddress}</p>
                 </div>
+<div className="space-y-2 mt-4">
+  <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Details</span>
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+    <div>
+      <span className="font-medium text-gray-600">Payer:</span>
+      <span className="block text-gray-900">{selectedOrder.customerName}</span>
+    </div>
+    <div>
+      <span className="font-medium text-gray-600">Payment ID:</span>
+      <span className="block text-gray-900">{selectedOrder.paymentId || "N/A"}</span>
+    </div>
+    <div>
+      <span className="font-medium text-gray-600">Amount Paid:</span>
+      <span className="block text-gray-900">₹{selectedOrder.total}</span>
+    </div>
+    <div>
+      <span className="font-medium text-gray-600">Bank Details:</span>
+      <span className="block text-gray-900">{selectedOrder.bankDetails || "N/A"}</span>
+    </div>
+  </div>
+</div>
                 <div className="space-y-2 sm:text-right">
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Fulfillment Status</span>
                   <div className="flex sm:justify-end gap-2 items-center">
