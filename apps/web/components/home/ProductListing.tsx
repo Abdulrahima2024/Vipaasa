@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/authStore";
-import productsData from "../../data/products.json";
+import { fetchApi } from "../../lib/api";
 
 export interface Product {
   id: string;
@@ -237,8 +237,11 @@ export default function ProductListing({
   showFavoritesOnly,
   setShowFavoritesOnly,
 }: ProductListingProps) {
-  
-  const products = productsData as Product[];
+
+  // API state
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Zustand Cart Store connection
   const {
@@ -248,7 +251,7 @@ export default function ProductListing({
     toggleFavorite,
   } = useCartStore();
 
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, token } = useAuthStore();
 
   const handleBuyNow = (product: Product, weight: "1kg" | "500g" | "250g") => {
     addToCart(product, weight);
@@ -264,6 +267,42 @@ export default function ProductListing({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch products from real API
+  useEffect(() => {
+    async function loadProducts() {
+      setLoading(true);
+      setApiError(null);
+      try {
+        const data = await fetchApi<{ items: any[]; total: number }>("/api/products?limit=8");
+        if (data && Array.isArray(data.items)) {
+          const mapped: Product[] = data.items.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            category: item.category?.name || "General",
+            prices: {
+              "250g": item.price,
+              "500g": Math.round(item.price * 1.8),
+              "1kg": Math.round(item.price * 3.2),
+            },
+            image: (item.images && item.images[0]) || "/placeholder.jpg",
+            isNew: item.stockStatus === "IN_STOCK",
+            rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
+          }));
+          setProducts(mapped);
+        } else {
+          setProducts([]);
+        }
+      } catch (err: any) {
+        console.error("ProductListing: failed to fetch products", err);
+        setApiError(err?.message || "Failed to load products");
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProducts();
+  }, [token]);
 
   // List of aggregated category values
   const categories = [
@@ -291,15 +330,39 @@ export default function ProductListing({
     return matchesFavorites && matchesCategory && matchesSearch;
   });
 
-  // By default, under "All Categories", display only the best 4 products (when search is empty and favorites only is false)
-  const displayedProducts = (selectedCategory === "All" && searchQuery === "" && !showFavoritesOnly)
-    ? [
-        products.find(p => p.name === "Kandipappu"),
-        products.find(p => p.name === "Korralu"),
-        products.find(p => p.name === "Wild Forest Honey"),
-        products.find(p => p.name === "Desi Cow Ghee")
-      ].filter((p): p is Product => !!p)
-    : filteredProducts;
+  const displayedProducts = filteredProducts;
+
+  // ── LOADING STATE ──────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="space-y-12">
+        <div className="flex items-center space-x-3 overflow-x-auto pb-4 scrollbar-none">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-10 w-28 rounded-full bg-[#EAE6DB]/60 animate-pulse flex-shrink-0" />
+          ))}
+        </div>
+        <section className="space-y-6">
+          <div className="flex justify-between items-end border-b border-[#EAE6DB] pb-4">
+            <div className="space-y-2">
+              <div className="h-7 w-40 rounded-lg bg-[#EAE6DB]/60 animate-pulse" />
+              <div className="h-4 w-64 rounded bg-[#EAE6DB]/40 animate-pulse" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white border border-[#EAE6DB]/30 rounded-2xl p-4 space-y-3 animate-pulse">
+                <div className="w-full aspect-square rounded-xl bg-[#F0EDE5]" />
+                <div className="h-3 w-16 rounded bg-[#EAE6DB]/60" />
+                <div className="h-4 w-3/4 rounded bg-[#EAE6DB]/80" />
+                <div className="h-3 w-1/2 rounded bg-[#EAE6DB]/50" />
+                <div className="h-10 w-full rounded-xl bg-[#EAE6DB]/60" />
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12">
@@ -358,21 +421,51 @@ export default function ProductListing({
           </Link>
         </div>
 
-        {displayedProducts.length === 0 ? (
-          <div className="text-center py-16 bg-[#F6F4EC]/40 rounded-3xl border border-[#EAE6DB]/60">
-            <svg className="w-12 h-12 text-[#738276] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-            </svg>
-            <h4 className="font-serif text-lg font-bold text-[#113C27] mb-1">
-              {showFavoritesOnly ? "No favorites yet" : "No products found"}
+        {/* API ERROR STATE */}
+        {apiError && (
+          <div className="text-center py-6">
+            <p className="text-xs text-red-500 font-medium">{apiError}</p>
+          </div>
+        )}
+
+        {/* EMPTY STATE */}
+        {!apiError && displayedProducts.length === 0 ? (
+          <div className="relative overflow-hidden text-center py-20 rounded-3xl border border-[#EAE6DB]/80 bg-gradient-to-br from-[#F6F4EC] via-[#F9F7F2] to-[#EEF5EB]">
+            {/* Decorative blobs */}
+            <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-[#C1F2D0]/20 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -right-10 w-48 h-48 rounded-full bg-[#D4EDDA]/20 blur-3xl pointer-events-none" />
+
+            {/* Leaf / seedling icon */}
+            <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-[0_8px_24px_rgba(17,60,39,0.08)] mb-6">
+              <svg className="w-9 h-9 text-[#2D6A4F]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M12 9c0 0 3-3 6-3s6 2 6 2-1 5-4 7-8 1-8 1M12 9c0 0-3-3-6-3s-6 2-6 2 1 5 4 7 8 1 8 1" />
+              </svg>
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-[#C1F2D0] text-[#113C27]">
+                <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </span>
+            </div>
+
+            <h4 className="font-serif text-2xl font-extrabold text-[#113C27] mb-2 tracking-tight">
+              {showFavoritesOnly ? "No favorites yet" : "No Products Found"}
             </h4>
-            <p className="text-xs text-[#738276]">
+            <p className="text-sm font-medium text-[#738276] max-w-xs mx-auto leading-relaxed mb-8">
               {showFavoritesOnly
-                ? "Click the heart button on any product card to save it here."
-                : "Try refining your search or choosing another category."}
+                ? "Tap the heart on any product card to save it here."
+                : "Our shelves are being stocked. Fresh harvests from organic farms are on their way — check back soon!"}
             </p>
+
+            {!showFavoritesOnly && (
+              <div className="flex items-center justify-center gap-3">
+                <div className="h-px w-12 bg-[#EAE6DB]" />
+                <span className="text-[10px] font-bold tracking-widest text-[#B0BDB4] uppercase">Coming Soon</span>
+                <div className="h-px w-12 bg-[#EAE6DB]" />
+              </div>
+            )}
           </div>
         ) : (
+          !apiError && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {displayedProducts.map((product) => (
               <ProductCard
@@ -386,6 +479,7 @@ export default function ProductListing({
               />
             ))}
           </div>
+          )
         )}
       </section>
     </div>

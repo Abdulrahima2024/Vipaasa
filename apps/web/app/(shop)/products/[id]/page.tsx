@@ -20,7 +20,7 @@ import Header from "../../../../components/layout/Header";
 import Footer from "../../../../components/layout/Footer";
 import { useCartStore } from "../../../../store/useCartStore";
 import { useAuthStore } from "../../../../store/authStore";
-import productsData from "../../../../data/products.json";
+import { fetchApi } from "../../../../lib/api";
 
 interface Product {
   id: string;
@@ -136,26 +136,61 @@ export default function ProductDetailPage() {
   const router = useRouter();
   
   const { items, favorites, addToCart, toggleFavorite } = useCartStore();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, token } = useAuthStore();
 
   const [mounted, setMounted] = useState(false);
   const [selectedWeight, setSelectedWeight] = useState<"250g" | "500g" | "1kg">("250g");
   const [quantity, setQuantity] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // API state for this product
+  const [product, setProduct] = useState<Product | null>(null);
+  const [apiLoading, setApiLoading] = useState(true);
+  const [apiNotFound, setApiNotFound] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Aggregate all products to search from
-  const products = useMemo(() => {
-    return productsData as Product[];
-  }, []);
-
-  const product = useMemo(() => {
+  // Fetch product from API
+  useEffect(() => {
     const id = params.id as string;
-    return products.find((p) => p.id === id);
-  }, [products, params.id]);
+    if (!id) return;
+
+    async function loadProduct() {
+      setApiLoading(true);
+      setApiNotFound(false);
+      try {
+        const raw = await fetchApi<any>(`/api/products/${id}`);
+        if (!raw || !raw.id) {
+          setApiNotFound(true);
+          setProduct(null);
+          return;
+        }
+        const mapped: Product = {
+          id: raw.id,
+          name: raw.name,
+          category: raw.category?.name || "General",
+          prices: {
+            "250g": raw.price,
+            "500g": Math.round(raw.price * 1.8),
+            "1kg": Math.round(raw.price * 3.2),
+          },
+          image: (raw.images && raw.images[0]) || "https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?auto=format&fit=crop&q=80&w=600",
+          isNew: raw.stockStatus === "IN_STOCK",
+          rating: 4.5 + (parseInt((raw.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
+        };
+        setProduct(mapped);
+      } catch (err: any) {
+        console.error("ProductDetailPage: failed to fetch product", err);
+        setApiNotFound(true);
+        setProduct(null);
+      } finally {
+        setApiLoading(false);
+      }
+    }
+    loadProduct();
+  }, [params.id, token]);
 
   // Gallery Active Image
   const gallery = useMemo(() => {
@@ -182,7 +217,8 @@ export default function ProductDetailPage() {
     return favorites.includes(product.id);
   }, [favorites, product, mounted]);
 
-  if (!mounted) {
+  // Loading state
+  if (!mounted || apiLoading) {
     return (
       <div className="min-h-screen bg-[#F9F7F2] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -193,7 +229,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  if (!product) {
+  if (apiNotFound || !product) {
     return (
       <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">
         <Header showSearch={true} />

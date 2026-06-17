@@ -52,7 +52,7 @@ export default function Hero() {
               Delivered to You
             </h2>
             <p className="text-[10px] sm:text-sm lg:text-base text-gray-600 font-medium leading-relaxed max-w-[170px] sm:max-w-xs md:max-w-md">
-              Discover 100% organic groceries, farm-fresh produce, and wholesome essentials for a healthier, happier you.
+              Discover 200% organic groceries, farm-fresh produce, and wholesome essentials for a healthier, happier you.
             </p>
             <div className="flex gap-2 sm:gap-4 pt-1 sm:pt-2">
               <button className="bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold transition-all duration-300 rounded-full shadow-md hover:shadow-[#2D6A4F]/20 active:scale-95 text-[9px] sm:text-xs md:text-sm lg:text-base px-2.5 py-1.5 sm:px-5 sm:py-2.5 md:px-6 md:py-3 lg:px-8 lg:py-3.5">
@@ -67,7 +67,8 @@ export default function Hero() {
       </div>
 
       {/* Floating Animations CSS */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes float1 {
           0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
           50% { transform: translateY(-15px) rotate(12deg) scale(1.05); }

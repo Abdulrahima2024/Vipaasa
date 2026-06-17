@@ -8,13 +8,12 @@ import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 import { fetchApi } from "../../../lib/api";
 
-import productsData from "../../../data/products.json";
 
-// Mock products representing the curated Pantry Essentials catalog
+// Real API product shape (used only for internal state)
 interface CategoryProduct {
   id: string;
   name: string;
-  category: "Dals & Pulses" | "Flours" | "Spices & Powders" | "Millets & Grains" | "Broken Grains (Rava)" | "Honey & Ghee";
+  category: "Dals & Pulses" | "Flours" | "Spices & Powders" | "Millets & Grains" | "Broken Grains (Rava)" | "Honey & Ghee" | string;
   prices: {
     "1kg": number;
     "500g": number;
@@ -29,30 +28,16 @@ interface CategoryProduct {
   createdAt: string;
 }
 
-export const CATEGORY_PRODUCTS: CategoryProduct[] = (productsData as any[]).map((p) => ({
-  id: p.id,
-  name: p.name,
-  category: p.category as any,
-  prices: p.prices,
-  weight: "1kg",
-  image: p.image,
-  tag: p.isNew ? "New" : undefined,
-  description: `${p.name} - 100% pure organic staple.`,
-  inStock: true,
-  rating: p.rating || 4.7,
-  createdAt: "2026-06-01"
-}));
-
 
 export default function CategoriesClient() {
   const [mounted, setMounted] = useState(false);
   const [apiProducts, setApiProducts] = useState<CategoryProduct[]>([]);
-  const [hasFetched, setHasFetched] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Cart/Favorites store
   const { items, favorites, addToCart, toggleFavorite } = useCartStore();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, token } = useAuthStore();
 
   // Search input query
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,43 +68,42 @@ export default function CategoriesClient() {
     }
 
     async function loadProducts() {
-      if (!useAuthStore.getState().isAuthenticated) {
-        setApiProducts([]);
-        setHasFetched(false);
-        return;
-      }
       setLoading(true);
+      setApiError(null);
       try {
-        const data = await fetchApi<{ items: any[] }>("/api/products");
+        const data = await fetchApi<{ items: any[] }>("/api/products?limit=100");
         if (data && data.items) {
           const mapped: CategoryProduct[] = data.items.map((item: any) => ({
             id: item.id,
             name: item.name,
-            category: item.category.name as any,
+            category: item.category?.name || "General",
             prices: {
               "250g": item.price,
-              "500g": item.price * 2,
-              "1kg": item.price * 4,
+              "500g": Math.round(item.price * 1.8),
+              "1kg": Math.round(item.price * 3.2),
             },
             weight: "250g",
-            image: item.images[0] || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
+            image: (item.images && item.images[0]) || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
             tag: item.stockStatus === "IN_STOCK" ? "In Stock" : "Out of Stock",
-            description: item.description || "",
+            description: item.description || `${item.name} — 100% pure organic staple.`,
             inStock: item.stockStatus === "IN_STOCK",
-            rating: 4.5 + (parseInt(item.id.replace(/\D/g, "") || "0") % 5) * 0.1,
+            rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
             createdAt: new Date().toISOString().split("T")[0],
           }));
           setApiProducts(mapped);
-          setHasFetched(true);
+        } else {
+          setApiProducts([]);
         }
-      } catch (err) {
-        console.error("Failed to load products in categories:", err);
+      } catch (err: any) {
+        console.error("CategoriesClient: failed to load products:", err);
+        setApiError(err?.message || "Failed to load products");
+        setApiProducts([]);
       } finally {
         setLoading(false);
       }
     }
     loadProducts();
-  }, [isAuthenticated]);
+  }, [token]);
 
   // Sync searchQuery to URL query parameter silently
   useEffect(() => {
@@ -153,10 +137,9 @@ export default function CategoriesClient() {
     setCurrentPage(1);
   };
 
-  // Filtered and Sorted products
+  // Filtered and Sorted products — always use apiProducts (real API only)
   const filteredProducts = useMemo(() => {
-    const activeProducts = (isAuthenticated && hasFetched) ? apiProducts : CATEGORY_PRODUCTS;
-    return activeProducts.filter((product) => {
+    return apiProducts.filter((product) => {
       // Subcategories filter
       const matchesSubcategory =
         selectedSubcategories.length === 0 ||
@@ -423,23 +406,62 @@ export default function CategoriesClient() {
 
           {/* PRODUCT GRID SECTION */}
           <div className="flex-1 space-y-10">
-            {paginatedProducts.length === 0 ? (
-              <div className="text-center py-20 bg-white/50 rounded-2xl border border-[#EAE6DB]/60 px-6 max-w-xl mx-auto">
-                <svg className="w-10 h-10 text-[#738276] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                </svg>
-                <h4 className="font-serif text-lg font-bold text-[#113C27] mb-1">
-                  No products found
-                </h4>
-                <p className="text-xs text-[#738276] font-medium max-w-sm mx-auto mb-6">
-                  We couldn't find any staples that match your current filter selections. Try clearing them to see all.
+            {/* LOADING SKELETON */}
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-4 space-y-3 animate-pulse">
+                    <div className="w-full aspect-square rounded-xl bg-[#F0EDE5]" />
+                    <div className="h-3 w-20 rounded bg-[#EAE6DB]/60" />
+                    <div className="h-4 w-3/4 rounded bg-[#EAE6DB]/80" />
+                    <div className="h-3 w-1/2 rounded bg-[#EAE6DB]/50" />
+                    <div className="h-10 w-full rounded-xl bg-[#EAE6DB]/60" />
+                  </div>
+                ))}
+              </div>
+            ) : apiError ? (
+              <div className="text-center py-16 bg-white/50 rounded-2xl border border-red-100 px-6">
+                <p className="text-sm text-red-500 font-medium">{apiError}</p>
+              </div>
+            ) : paginatedProducts.length === 0 ? (
+              <div className="relative overflow-hidden text-center py-24 rounded-3xl border border-[#EAE6DB]/80 bg-gradient-to-br from-[#F6F4EC] via-[#F9F7F2] to-[#EEF5EB] px-6">
+                {/* Decorative blobs */}
+                <div className="absolute -top-12 -left-12 w-56 h-56 rounded-full bg-[#C1F2D0]/20 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-12 -right-12 w-56 h-56 rounded-full bg-[#D4EDDA]/20 blur-3xl pointer-events-none" />
+
+                {/* Icon box */}
+                <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-[0_8px_32px_rgba(17,60,39,0.08)] mb-6">
+                  <svg className="w-9 h-9 text-[#2D6A4F]" fill="none" stroke="currentColor" strokeWidth="1.4" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+                  </svg>
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-[#C1F2D0] text-[#113C27]">
+                    <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  </span>
+                </div>
+
+                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#113C27] mb-3 tracking-tight">
+                  No Products Found
+                </h3>
+                <p className="text-sm font-medium text-[#738276] max-w-sm mx-auto leading-relaxed mb-8">
+                  Our shelves are currently empty. Fresh harvests from organic farms are being prepared — check back soon!
                 </p>
-                <button
-                  onClick={handleResetFilters}
-                  className="bg-[#113C27] text-white hover:bg-[#2D6A4F] text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm"
-                >
-                  Reset All Filters
-                </button>
+
+                <div className="flex items-center justify-center gap-3 mb-8">
+                  <div className="h-px w-16 bg-[#EAE6DB]" />
+                  <span className="text-[10px] font-bold tracking-widest text-[#B0BDB4] uppercase">Coming Soon</span>
+                  <div className="h-px w-16 bg-[#EAE6DB]" />
+                </div>
+
+                {(selectedSubcategories.length > 0 || searchQuery) && (
+                  <button
+                    onClick={handleResetFilters}
+                    className="bg-[#113C27] text-white hover:bg-[#2D6A4F] text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
