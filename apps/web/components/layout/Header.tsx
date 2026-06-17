@@ -35,6 +35,7 @@ export default function Header({
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState(false);
 
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
@@ -150,12 +151,13 @@ export default function Header({
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-10">
-          {["Shop", "Categories", "Ethos", "Deals"].map((navItem) => {
-            if (navItem === "Categories") {
+          {["Shop", "Categories", "Deals"].map((navItem) => {
+            if (navItem === "Categories" || navItem === "Deals" || navItem === "Shop") {
+              const href = navItem === "Shop" ? "/" : navItem === "Categories" ? "/categories" : "/deals";
               return (
                 <Link
                   key={navItem}
-                  href="/categories"
+                  href={href}
                   className={`text-sm font-medium transition-colors relative py-1 ${
                     activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
                   }`}
@@ -248,7 +250,7 @@ export default function Header({
         </button>
 
         {/* Notifications Popover Dropdown */}
-        <div className="relative flex items-center" ref={dropdownRef}>
+        <div className="relative hidden md:flex items-center" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
@@ -442,7 +444,10 @@ export default function Header({
         {/* Hamburger Menu Icon for Mobile */}
         <button
           type="button"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onClick={() => {
+            setIsMobileMenuOpen(!isMobileMenuOpen);
+            setIsMobileNotificationsOpen(false);
+          }}
           className="md:hidden p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none flex items-center justify-center"
           aria-label="Toggle navigation menu"
         >
@@ -459,12 +464,13 @@ export default function Header({
       {isMobileMenuOpen && (
         <div className="px-6 py-4 border-t border-[#EAE6DB]/40 md:hidden bg-[#F9F7F2]/95 animate-fade-in flex flex-col gap-3 shadow-inner">
           <nav className="flex flex-col gap-2">
-            {["Shop", "Categories", "Ethos", "Deals"].map((navItem) => {
-              if (navItem === "Categories") {
+            {["Shop", "Categories", "Deals"].map((navItem) => {
+              if (navItem === "Categories" || navItem === "Deals" || navItem === "Shop") {
+                const href = navItem === "Shop" ? "/" : navItem === "Categories" ? "/categories" : "/deals";
                 return (
                   <Link
                     key={navItem}
-                    href="/categories"
+                    href={href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${
                       activeNav === navItem 
@@ -494,6 +500,112 @@ export default function Header({
                 </button>
               );
             })}
+
+            {/* Divider */}
+            <div className="border-t border-[#EAE6DB]/60 my-2" />
+
+            {/* Mobile Notifications Section */}
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => setIsMobileNotificationsOpen(!isMobileNotificationsOpen)}
+                className={`flex items-center justify-between w-full text-left text-sm font-semibold transition-colors py-2 px-3 rounded-lg ${
+                  isMobileNotificationsOpen
+                    ? "bg-[#C1F2D0]/50 text-[#113C27]"
+                    : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                  </svg>
+                  <span>Notifications</span>
+                  {hasUnread && (
+                    <span className="bg-[#2D6A4F] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      New
+                    </span>
+                  )}
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 text-[#738276] ${isMobileNotificationsOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+
+              {isMobileNotificationsOpen && (
+                <div className="mt-1 mx-1 p-3 bg-white/60 border border-[#EAE6DB] rounded-xl flex flex-col gap-2 max-h-72 overflow-y-auto">
+                  {/* Actions Row */}
+                  {notifications.length > 0 && (
+                    <div className="flex justify-between items-center pb-2 border-b border-[#EAE6DB]/60">
+                      <button
+                        type="button"
+                        onClick={markAllAsRead}
+                        className="text-[10px] font-extrabold text-[#2D6A4F] hover:text-[#113C27] uppercase tracking-wider"
+                      >
+                        Mark all as read
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearAll}
+                        className="text-[10px] font-extrabold text-[#738276] hover:text-[#A84444] uppercase tracking-wider"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Notifications list */}
+                  <div className="divide-y divide-[#EAE6DB]/40">
+                    {notifications.length > 0 ? (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => toggleRead(n.id)}
+                          className="py-2.5 flex gap-2 cursor-pointer transition-colors group relative"
+                        >
+                          {/* Unread indicator */}
+                          <div className="flex-shrink-0 w-1.5 pt-1.5">
+                            {!n.isRead && (
+                              <div className="w-1.5 h-1.5 bg-[#2D6A4F] rounded-full" />
+                            )}
+                          </div>
+                          
+                          {/* Content details */}
+                          <div className="flex-grow pr-6">
+                            <h5 className="text-xs font-bold text-[#113C27]">{n.title}</h5>
+                            <p className="text-[11px] text-[#5C6E61] mt-0.5 leading-relaxed">{n.description}</p>
+                            <span className="text-[9px] text-[#738276] mt-1 block font-semibold">{n.timestamp}</span>
+                          </div>
+
+                          {/* Delete button */}
+                          <button
+                            type="button"
+                            onClick={(e) => deleteNotification(n.id, e)}
+                            className="absolute right-1 top-2.5 p-1 hover:bg-[#ECE9E0] rounded-md text-[#738276] hover:text-[#A84444] transition-all"
+                            aria-label="Delete notification"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      /* Empty state */
+                      <div className="py-6 flex flex-col items-center justify-center text-center">
+                        <span className="text-xs font-bold text-[#113C27]">No notifications</span>
+                        <span className="text-[11px] text-[#738276] mt-0.5 font-semibold">You’re all caught up.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Divider */}
             <div className="border-t border-[#EAE6DB]/60 my-2" />
