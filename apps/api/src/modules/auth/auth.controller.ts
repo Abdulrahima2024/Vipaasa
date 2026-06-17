@@ -25,6 +25,7 @@ export async function login(req: Request, res: Response) {
     return res.status(200).json({
       message: "Login successful",
       token: authResult.token,
+      accessToken: authResult.token,
       user: {
         id: authResult.user.id,
         email: authResult.user.email,
