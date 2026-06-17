@@ -33,7 +33,6 @@ export default function Header({
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState(false);
   const [currentPlaceholder, setCurrentPlaceholder] = useState("Search harvests...");
@@ -185,7 +184,7 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-40 bg-[#F9F7F2]/90 backdrop-blur-md border-b border-[#EAE6DB] w-full">
-      <div className="px-6 lg:px-16 py-4 flex items-center justify-between">
+      <div className="px-6 lg:px-16 py-3 sm:py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Brand Logo */}
           <a
@@ -270,19 +269,7 @@ export default function Header({
             </form>
           )}
 
-          {/* Mobile Search Toggle */}
-          {showSearch && (
-            <button
-              type="button"
-              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-              className="p-1 text-[#113C27] hover:opacity-80 transition-opacity focus:outline-none sm:hidden flex items-center justify-center"
-              aria-label="Toggle search"
-            >
-              <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
-              </svg>
-            </button>
-          )}
+
 
           {/* Favourites Icon Link */}
           <button
@@ -511,6 +498,37 @@ export default function Header({
         </div>
       </div>
 
+      {/* Persistent Mobile Search Bar (Always visible below the main header row on mobile) */}
+      {showSearch && (
+        <div className="px-6 pb-3 pt-0 sm:hidden bg-transparent">
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#738276]">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder={currentPlaceholder}
+              value={localSearchQuery}
+              onChange={handleInputChange}
+              className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-10 py-2 w-full focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
+            />
+            {localSearchQuery && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#738276] hover:text-[#113C27]"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </form>
+        </div>
+      )}
+
       {/* Mobile Navigation Panel */}
       {isMobileMenuOpen && (
         <div className="px-6 py-4 border-t border-[#EAE6DB]/40 md:hidden bg-[#F9F7F2]/95 animate-fade-in flex flex-col gap-3 shadow-inner">
@@ -717,36 +735,7 @@ export default function Header({
         </div>
       )}
 
-      {/* Mobile Search Bar Dropdown */}
-      {showSearch && isMobileSearchOpen && (
-        <div className="px-6 pb-4 pt-1 border-t border-[#EAE6DB]/40 sm:hidden bg-[#F9F7F2]/95 animate-fade-in">
-          <form onSubmit={handleSearchSubmit} className="relative w-full">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#738276]">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              placeholder={currentPlaceholder}
-              value={localSearchQuery}
-              onChange={handleInputChange}
-              className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-10 py-2.5 w-full focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
-            />
-            {localSearchQuery && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#738276] hover:text-[#113C27]"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </form>
-        </div>
-      )}
+
 
       {/* Deal Announcement Bar */}
       <div className="bg-[#113C27] text-white text-[10px] sm:text-xs font-bold py-2 px-4 flex items-center justify-center gap-2 border-t border-[#2D6A4F]/20 select-none shadow-sm">

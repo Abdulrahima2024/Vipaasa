@@ -41,9 +41,14 @@ export default function DealsClient() {
 
   // Filters state
   const [selectedDealTypes, setSelectedDealTypes] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<number>(5000);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<"Latest" | "Price Low to High" | "Price High to Low" | "Popular">("Latest");
+
+  // Mobile drawer states
+  const [isFilterOpenMobile, setIsFilterOpenMobile] = useState<boolean>(false);
+  const [isSortOpenMobile, setIsSortOpenMobile] = useState<boolean>(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -79,6 +84,22 @@ export default function DealsClient() {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [updateTimer]);
+
+  // Lock body scroll when mobile drawers are open
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (isFilterOpenMobile || isSortOpenMobile) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "";
+      }
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        document.body.style.overflow = "";
+      }
+    };
+  }, [isFilterOpenMobile, isSortOpenMobile]);
 
   // Fetch real API products or fallback to local productsData
   useEffect(() => {
@@ -291,12 +312,25 @@ export default function DealsClient() {
     setCurrentPage(1);
   };
 
+  const handleCategoryToggle = (category: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
+    );
+    setCurrentPage(1);
+  };
+
   const handleResetFilters = () => {
     setSelectedDealTypes([]);
+    setSelectedCategories([]);
     setPriceRange(5000);
     setInStockOnly(false);
     setCurrentPage(1);
   };
+
+  // Active filters count for mobile UI
+  const activeFiltersCount = useMemo(() => {
+    return selectedDealTypes.length + selectedCategories.length + (priceRange < 5000 ? 1 : 0) + (inStockOnly ? 1 : 0);
+  }, [selectedDealTypes, selectedCategories, priceRange, inStockOnly]);
 
   // Filtered deals
   const filteredDeals = useMemo(() => {
@@ -304,14 +338,17 @@ export default function DealsClient() {
       const matchesType =
         selectedDealTypes.length === 0 || selectedDealTypes.includes(deal.dealType);
       
+      const matchesCategory =
+        selectedCategories.length === 0 || selectedCategories.includes(deal.category);
+
       const price = deal.prices[deal.weight];
       const matchesPrice = price <= priceRange;
       
       const matchesStock = !inStockOnly || deal.inStock;
 
-      return matchesType && matchesPrice && matchesStock;
+      return matchesType && matchesCategory && matchesPrice && matchesStock;
     });
-  }, [selectedDealTypes, priceRange, inStockOnly, dealsData]);
+  }, [selectedDealTypes, selectedCategories, priceRange, inStockOnly, dealsData]);
 
   // Sorted deals
   const sortedDeals = useMemo(() => {
@@ -425,7 +462,7 @@ export default function DealsClient() {
               Showing {showingFrom}-{showingTo} of {totalItems} results
             </span>
 
-            <div className="relative flex items-center">
+            <div className="relative hidden md:flex items-center">
               <select
                 id="sort-select"
                 value={sortBy}
@@ -446,11 +483,43 @@ export default function DealsClient() {
           </div>
         </div>
 
+        {/* MOBILE FILTER & SORT BAR */}
+        <div className="md:hidden flex items-center justify-between gap-4 py-3 px-4 bg-white/95 backdrop-blur-md border border-[#EAE6DB] rounded-2xl sticky top-[72px] z-30 shadow-md">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpenMobile(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold text-[#113C27] hover:bg-[#FAF9F5] rounded-xl transition-all"
+          >
+            <svg className="w-4 h-4 text-[#113C27]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+            </svg>
+            <span>Filter</span>
+            {activeFiltersCount > 0 && (
+              <span className="w-5 h-5 flex items-center justify-center bg-[#113C27] text-white text-[10px] rounded-full font-bold ml-1">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+          
+          <div className="w-px h-5 bg-[#EAE6DB]" />
+          
+          <button
+            type="button"
+            onClick={() => setIsSortOpenMobile(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold text-[#113C27] hover:bg-[#FAF9F5] rounded-xl transition-all"
+          >
+            <svg className="w-4 h-4 text-[#113C27]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+            </svg>
+            <span className="truncate">Sort: {sortBy}</span>
+          </button>
+        </div>
+
         {/* WORKSPACE CONTENT GRID */}
         <div className="flex flex-col md:flex-row gap-10 mt-2">
           
           {/* LEFT FILTERS SIDEBAR */}
-          <aside className="w-full md:w-64 flex-shrink-0 md:sticky md:top-24 self-start bg-white md:bg-transparent p-5 md:p-0 rounded-2xl border border-[#EAE6DB]/60 md:border-none">
+          <aside className="hidden md:block w-64 flex-shrink-0 md:sticky md:top-24 self-start">
             
             {/* DEAL TYPES SECTION */}
             <div className="space-y-4">
@@ -482,6 +551,48 @@ export default function DealsClient() {
                         )}
                       </div>
                       <span className="select-none">{type}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* CATEGORIES SECTION */}
+            <div className="mt-8 space-y-4">
+              <h4 className="text-xs font-bold tracking-widest text-[#738276] uppercase">
+                Categories
+              </h4>
+              <div className="flex flex-col gap-3">
+                {[
+                  "Dals & Pulses",
+                  "Flours",
+                  "Spices & Powders",
+                  "Millets & Grains",
+                  "Broken Grains (Rava)",
+                  "Honey & Ghee"
+                ].map((subcat) => {
+                  const isChecked = selectedCategories.includes(subcat);
+                  return (
+                    <label key={subcat} className="flex items-center gap-3 cursor-pointer group text-xs sm:text-sm font-semibold text-[#4B594F] hover:text-[#113C27] transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleCategoryToggle(subcat)}
+                        className="sr-only"
+                      />
+                      <div
+                        className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${isChecked
+                          ? "bg-[#113C27] border-[#113C27] text-white"
+                          : "border-[#EAE6DB] bg-white group-hover:border-[#738276]"
+                          }`}
+                      >
+                        {isChecked && (
+                          <svg className="w-2.5 h-2.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="select-none">{subcat}</span>
                     </label>
                   );
                 })}
@@ -540,7 +651,7 @@ export default function DealsClient() {
           {/* PRODUCT GRID SECTION */}
           <div className="flex-1 space-y-10">
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-4 space-y-3 animate-pulse">
                     <div className="w-full aspect-square rounded-xl bg-[#F0EDE5]" />
@@ -569,7 +680,7 @@ export default function DealsClient() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {paginatedDeals.map((deal) => {
                   const isFavorite = mounted && favorites.includes(deal.id);
                   const price = deal.prices[deal.weight];
@@ -578,7 +689,7 @@ export default function DealsClient() {
                   return (
                     <div
                       key={deal.id}
-                      className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-4 flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.04)] hover:border-[#EAE6DB]/80 transition-all duration-300 group relative"
+                      className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.04)] hover:border-[#EAE6DB]/80 transition-all duration-300 group relative"
                     >
                       {/* Product Image and Overlay Labels */}
                       <div className="relative w-full aspect-square bg-[#FAF9F5] rounded-xl overflow-hidden mb-4">
@@ -635,7 +746,7 @@ export default function DealsClient() {
                           </div>
                           
                           <Link href={deal.id.startsWith("bundle") ? "#" : `/products/${deal.id}`} className="block">
-                            <h4 className="font-serif text-base font-extrabold text-[#113C27] tracking-tight mt-1 hover:text-[#2d6a4f] transition-colors leading-tight">
+                            <h4 className="font-serif text-xs sm:text-base font-extrabold text-[#113C27] tracking-tight mt-1 hover:text-[#2d6a4f] transition-colors leading-tight">
                               {deal.name}
                             </h4>
                           </Link>
@@ -678,7 +789,7 @@ export default function DealsClient() {
                         <div className="flex flex-col gap-2.5 pt-2 border-t border-[#EAE6DB]/40">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold text-[#113C27]">
+                              <span className="text-sm sm:text-lg font-bold text-[#113C27]">
                                 ₹{price}
                               </span>
                               <span className="text-xs text-[#738276] line-through">
@@ -695,7 +806,7 @@ export default function DealsClient() {
                             <button
                               onClick={() => handleBuyNow(deal)}
                               disabled={!deal.inStock}
-                              className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-[9px] sm:text-xs font-bold px-1.5 py-2 sm:px-3 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform text-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               Buy Now
                             </button>
@@ -704,7 +815,7 @@ export default function DealsClient() {
                             <button
                               onClick={() => handleAddToCart(deal)}
                               disabled={!deal.inStock || isAdding}
-                              className={`flex items-center justify-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${
+                              className={`flex items-center justify-center gap-1.5 text-xs font-bold px-2 py-2 sm:px-3.5 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${
                                 !deal.inStock
                                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                   : isAdding
@@ -718,14 +829,14 @@ export default function DealsClient() {
                                   <svg className="w-3.5 h-3.5 stroke-[3.5] animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                                   </svg>
-                                  <span>Added!</span>
+                                  <span className="hidden sm:inline">Added!</span>
                                 </>
                               ) : (
                                 <>
                                   <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                                   </svg>
-                                  <span>Add</span>
+                                  <span className="hidden sm:inline">Add</span>
                                 </>
                               )}
                             </button>
@@ -803,6 +914,234 @@ export default function DealsClient() {
         </div>
 
       </main>
+
+      {/* MOBILE FILTER DRAWER */}
+      <div className={`fixed inset-0 z-50 transition-all duration-300 md:hidden ${isFilterOpenMobile ? "visible pointer-events-auto" : "invisible pointer-events-none"}`}>
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ${isFilterOpenMobile ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setIsFilterOpenMobile(false)}
+        />
+        
+        {/* Drawer sheet */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 max-h-[85vh] bg-[#F9F7F2] rounded-t-[2rem] flex flex-col shadow-2xl transition-transform duration-300 transform ${isFilterOpenMobile ? "translate-y-0" : "translate-y-full"}`}
+        >
+          {/* Drag Handle */}
+          <div className="w-12 h-1.5 bg-[#EAE6DB] rounded-full mx-auto my-3 flex-shrink-0" />
+          
+          {/* Header */}
+          <div className="px-6 pb-4 border-b border-[#EAE6DB]/60 flex items-center justify-between flex-shrink-0">
+            <h3 className="font-serif text-lg font-extrabold text-[#113C27]">Filters</h3>
+            <div className="flex items-center gap-4">
+              {activeFiltersCount > 0 && (
+                <button
+                  onClick={handleResetFilters}
+                  className="text-xs font-bold text-[#A84444] hover:underline"
+                >
+                  Clear All
+                </button>
+              )}
+              <button
+                onClick={() => setIsFilterOpenMobile(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#EAE6DB]/40 text-[#113C27]"
+              >
+                <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="px-6 py-6 overflow-y-auto space-y-8 flex-1">
+            {/* Deal Types */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold tracking-widest text-[#738276] uppercase">
+                Deal Types
+              </h4>
+              <div className="flex flex-col gap-3.5">
+                {["Flash Sales", "Combo Bundles", "Bulk Savings"].map((type) => {
+                  const isChecked = selectedDealTypes.includes(type);
+                  return (
+                    <label key={type} className="flex items-center gap-3 cursor-pointer group text-sm font-semibold text-[#4B594F] hover:text-[#113C27] transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleDealTypeToggle(type)}
+                        className="sr-only"
+                      />
+                      <div
+                        className={`w-5 h-5 rounded border transition-all flex items-center justify-center ${isChecked
+                            ? "bg-[#113C27] border-[#113C27] text-white"
+                            : "border-[#EAE6DB] bg-white"
+                          }`}
+                      >
+                        {isChecked && (
+                          <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="select-none">{type}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold tracking-widest text-[#738276] uppercase">
+                Categories
+              </h4>
+              <div className="flex flex-col gap-3.5">
+                {[
+                  "Dals & Pulses",
+                  "Flours",
+                  "Spices & Powders",
+                  "Millets & Grains",
+                  "Broken Grains (Rava)",
+                  "Honey & Ghee"
+                ].map((subcat) => {
+                  const isChecked = selectedCategories.includes(subcat);
+                  return (
+                    <label key={subcat} className="flex items-center gap-3 cursor-pointer group text-sm font-semibold text-[#4B594F] hover:text-[#113C27] transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleCategoryToggle(subcat)}
+                        className="sr-only"
+                      />
+                      <div
+                        className={`w-5 h-5 rounded border transition-all flex items-center justify-center ${isChecked
+                            ? "bg-[#113C27] border-[#113C27] text-white"
+                            : "border-[#EAE6DB] bg-white"
+                          }`}
+                      >
+                        {isChecked && (
+                          <svg className="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="select-none">{subcat}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Price Slider */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold tracking-widest text-[#738276] uppercase">
+                Price Range
+              </h4>
+              <div className="space-y-2">
+                <input
+                  type="range"
+                  min={100}
+                  max={5000}
+                  step={50}
+                  value={priceRange}
+                  onChange={(e) => {
+                    setPriceRange(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="w-full h-1 bg-[#ECE9E0] rounded-lg appearance-none cursor-pointer accent-[#113C27] outline-none"
+                />
+                <div className="flex justify-between text-[11px] text-[#738276] font-extrabold uppercase tracking-wide">
+                  <span>₹100</span>
+                  <span className="text-[#113C27] bg-[#C1F2D0]/40 px-2.5 py-0.5 rounded font-extrabold">₹{priceRange} max</span>
+                  <span>₹5,000</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* In Stock */}
+            <div className="flex items-center justify-between pt-4 border-t border-[#EAE6DB]/60">
+              <span className="text-sm font-semibold text-[#4B594F]">
+                Show in stock only
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={inStockOnly}
+                  onChange={() => {
+                    setInStockOnly(!inStockOnly);
+                    setCurrentPage(1);
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-6 bg-[#ECE9E0] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#113C27]"></div>
+              </label>
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="p-6 border-t border-[#EAE6DB]/60 bg-white/40 flex gap-3 flex-shrink-0">
+            <button
+              onClick={() => setIsFilterOpenMobile(false)}
+              className="flex-1 bg-[#113C27] hover:bg-[#2D6A4F] text-white text-sm font-bold py-3 rounded-xl transition-all shadow-sm active:scale-[0.98] text-center"
+            >
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* MOBILE SORT DRAWER */}
+      <div className={`fixed inset-0 z-50 transition-all duration-300 md:hidden ${isSortOpenMobile ? "visible pointer-events-auto" : "invisible pointer-events-none"}`}>
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-300 ${isSortOpenMobile ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setIsSortOpenMobile(false)}
+        />
+        
+        {/* Drawer sheet */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 bg-[#F9F7F2] rounded-t-[2rem] flex flex-col shadow-2xl transition-transform duration-300 transform ${isSortOpenMobile ? "translate-y-0" : "translate-y-full"}`}
+        >
+          {/* Drag Handle */}
+          <div className="w-12 h-1.5 bg-[#EAE6DB] rounded-full mx-auto my-3 flex-shrink-0" />
+          
+          {/* Header */}
+          <div className="px-6 pb-4 border-b border-[#EAE6DB]/60 flex items-center justify-between flex-shrink-0">
+            <h3 className="font-serif text-lg font-extrabold text-[#113C27]">Sort By</h3>
+            <button
+              onClick={() => setIsSortOpenMobile(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-[#EAE6DB]/40 text-[#113C27]"
+            >
+              <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="px-6 py-6 overflow-y-auto flex flex-col gap-1.5 divide-y divide-[#EAE6DB]/10">
+            {(["Latest", "Price Low to High", "Price High to Low", "Popular"] as const).map((option) => (
+              <button
+                key={option}
+                onClick={() => {
+                  setSortBy(option);
+                  setIsSortOpenMobile(false);
+                }}
+                className={`w-full text-left py-4 text-sm font-semibold transition-colors flex items-center justify-between ${
+                  sortBy === option ? "text-[#113C27] font-bold" : "text-[#5C6E61]"
+                }`}
+              >
+                <span>Sort by: {option}</span>
+                {sortBy === option && (
+                  <svg className="w-4 h-4 text-[#113C27] stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* FOOTER SECTION */}
       <Footer />

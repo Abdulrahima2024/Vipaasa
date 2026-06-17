@@ -1,6 +1,7 @@
 'use client';
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Leaf, Sprout, Wheat } from "lucide-react";
 
 export default function Hero() {
@@ -55,12 +56,16 @@ export default function Hero() {
               Discover 200% organic groceries, farm-fresh produce, and wholesome essentials for a healthier, happier you.
             </p>
             <div className="flex gap-2 sm:gap-4 pt-1 sm:pt-2">
-              <button className="bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold transition-all duration-300 rounded-full shadow-md hover:shadow-[#2D6A4F]/20 active:scale-95 text-[9px] sm:text-xs md:text-sm lg:text-base px-2.5 py-1.5 sm:px-5 sm:py-2.5 md:px-6 md:py-3 lg:px-8 lg:py-3.5">
-                Shop Fresh
-              </button>
-              <button className="border border-gray-300 hover:border-gray-400 bg-white/95 backdrop-blur-sm hover:bg-white text-gray-800 font-bold transition-all duration-300 rounded-full active:scale-95 text-[9px] sm:text-xs md:text-sm lg:text-base px-2.5 py-1.5 sm:px-5 sm:py-2.5 md:px-6 md:py-3 lg:px-8 lg:py-3.5">
-                Our Story
-              </button>
+              <Link href="/categories" className="inline-block">
+                <button className="bg-[#2D6A4F] hover:bg-[#1B4332] text-white font-bold transition-all duration-300 rounded-full shadow-md hover:shadow-[#2D6A4F]/20 active:scale-95 text-[9px] sm:text-xs md:text-sm lg:text-base px-2.5 py-1.5 sm:px-5 sm:py-2.5 md:px-6 md:py-3 lg:px-8 lg:py-3.5">
+                  Shop Fresh
+                </button>
+              </Link>
+              <Link href="/about" className="inline-block">
+                <button className="border border-gray-300 hover:border-gray-400 bg-white/95 backdrop-blur-sm hover:bg-white text-gray-800 font-bold transition-all duration-300 rounded-full active:scale-95 text-[9px] sm:text-xs md:text-sm lg:text-base px-2.5 py-1.5 sm:px-5 sm:py-2.5 md:px-6 md:py-3 lg:px-8 lg:py-3.5">
+                  Our Story
+                </button>
+              </Link>
             </div>
           </div>
         </div>

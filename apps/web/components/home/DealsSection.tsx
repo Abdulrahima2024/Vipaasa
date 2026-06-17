@@ -111,65 +111,65 @@ export default function DealsSection() {
   const formatNumber = (num: number) => (num < 10 ? `0${num}` : num);
 
   return (
-    <section className="bg-gradient-to-br from-[#FFEBEB] via-[#FFF8F0] to-[#FFFBF5] border border-[#FFD2D2] rounded-3xl p-6 sm:p-10 relative overflow-hidden shadow-md">
+    <section className="bg-gradient-to-br from-[#FFEBEB] via-[#FFF8F0] to-[#FFFBF5] border border-[#FFD2D2] rounded-3xl py-5 px-4 sm:py-7 sm:px-8 relative overflow-hidden shadow-md">
       {/* Decorative background elements for Amazon-like pop */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-red-400/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-400/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header Row */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[#FFD2D2]/60">
-        <div className="space-y-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-[#FFD2D2]/60">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="bg-[#A84444] text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
-              <Flame className="w-3.5 h-3.5 fill-white text-white" /> Lightning Deals
+            <span className="bg-[#A84444] text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
+              <Flame className="w-3 h-3 fill-white text-white" /> Lightning Deals
             </span>
-            <span className="text-amber-700 bg-amber-100 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+            <span className="text-amber-700 bg-amber-100 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200">
               Limited-Time Offers
             </span>
           </div>
           
-          <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#7C1A1A] leading-tight">
+          <h3 className="font-serif text-xl sm:text-2xl font-extrabold text-[#7C1A1A] leading-tight">
             Super Saver Harvest Sale
           </h3>
-          <p className="text-xs sm:text-sm text-gray-600 font-semibold">
+          <p className="text-[11px] text-gray-600 font-semibold leading-relaxed">
             Pure organic essentials at unmatched prices. Real-time stock alerts & hourly deals.
           </p>
         </div>
 
         {/* Live Timer Countdown */}
         {mounted && (
-          <div className="flex items-center gap-3 bg-[#8C2323] text-white px-4 py-2.5 rounded-2xl shadow-inner border border-[#A84444]">
-            <Clock className="w-4 h-4 text-amber-200 animate-spin" style={{ animationDuration: '4s' }} />
-            <span className="text-[10px] font-extrabold uppercase text-amber-100 tracking-wider">Ends In:</span>
-            <div className="flex items-center gap-1 font-mono text-sm font-extrabold text-white">
-              <span className="bg-[#5C1515] px-2 py-0.5 rounded shadow-sm">{formatNumber(timeLeft.hours)}</span>
+          <div className="flex items-center gap-2 bg-[#8C2323] text-white px-3 py-1.5 rounded-xl shadow-inner border border-[#A84444]">
+            <Clock className="w-3.5 h-3.5 text-amber-200 animate-spin" style={{ animationDuration: '4s' }} />
+            <span className="text-[9px] font-extrabold uppercase text-amber-100 tracking-wider">Ends In:</span>
+            <div className="flex items-center gap-1 font-mono text-xs font-extrabold text-white">
+              <span className="bg-[#5C1515] px-1.5 py-0.5 rounded shadow-sm">{formatNumber(timeLeft.hours)}</span>
               <span>:</span>
-              <span className="bg-[#5C1515] px-2 py-0.5 rounded shadow-sm">{formatNumber(timeLeft.minutes)}</span>
+              <span className="bg-[#5C1515] px-1.5 py-0.5 rounded shadow-sm">{formatNumber(timeLeft.minutes)}</span>
               <span>:</span>
-              <span className="bg-[#5C1515] px-2 py-0.5 rounded shadow-sm">{formatNumber(timeLeft.seconds)}</span>
+              <span className="bg-[#5C1515] px-1.5 py-0.5 rounded shadow-sm">{formatNumber(timeLeft.seconds)}</span>
             </div>
           </div>
         )}
       </div>
 
       {/* Deals Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mt-5">
         {deals.map((deal) => {
           const discount = Math.round(((deal.originalPrice - deal.dealPrice) / deal.originalPrice) * 100);
           return (
             <div
               key={deal.id}
-              className="bg-white border-2 border-[#FFD2D2]/40 rounded-2xl p-5 flex flex-col justify-between hover:shadow-xl hover:border-[#A84444]/40 transition-all duration-300 group relative overflow-hidden"
+              className="bg-white border-2 border-[#FFD2D2]/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between hover:shadow-xl hover:border-[#A84444]/40 transition-all duration-300 group relative overflow-hidden"
             >
               {/* Product Badge Tag */}
-              <div className="absolute top-4 left-4 z-10">
-                <span className="bg-[#A84444] text-white text-[9px] font-extrabold uppercase px-2 py-1 rounded-md tracking-wider flex items-center gap-1 shadow-sm">
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
+                <span className="bg-[#A84444] text-white text-[8px] sm:text-[9px] font-extrabold uppercase px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md tracking-wider flex items-center gap-1 shadow-sm">
                   {deal.badge}
                 </span>
               </div>
 
               {/* Product Image Wrapper */}
-              <div className="relative w-full aspect-square bg-[#FAF9F5] rounded-xl overflow-hidden mb-4 border border-gray-100">
+              <div className="relative w-full aspect-[1.4] bg-[#FAF9F5] rounded-xl overflow-hidden mb-3 border border-gray-100">
                 <Link href={`/products/${deal.id}`} className="block w-full h-full relative">
                   <Image
                     src={deal.image}
@@ -185,14 +185,14 @@ export default function DealsSection() {
               </div>
 
               {/* Details & Controls */}
-              <div className="space-y-4 flex-1 flex flex-col justify-between">
+              <div className="space-y-2.5 flex-1 flex flex-col justify-between">
                 <div>
                   <span className="text-[9px] font-bold text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
                     {deal.category}
                   </span>
                   
-                  <Link href={`/products/${deal.id}`} className="block mt-2">
-                    <h4 className="font-sans text-sm sm:text-base font-bold text-[#113C27] hover:text-[#A84444] transition-colors leading-snug">
+                  <Link href={`/products/${deal.id}`} className="block mt-1 sm:mt-2">
+                    <h4 className="font-sans text-xs sm:text-base font-bold text-[#113C27] hover:text-[#A84444] transition-colors leading-snug">
                       {deal.name}
                     </h4>
                   </Link>
@@ -201,7 +201,7 @@ export default function DealsSection() {
                   <div className="flex items-center gap-1 mt-1.5">
                     <div className="flex items-center text-amber-500">
                       {[...Array(5)].map((_, i) => (
-                        <svg key={i} className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                        <svg key={i} className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-current" viewBox="0 0 24 24">
                           <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                         </svg>
                       ))}
@@ -209,34 +209,34 @@ export default function DealsSection() {
                     <span className="text-[10px] font-extrabold text-[#A84444] leading-none mt-0.5 ml-1">
                       {deal.stars.toFixed(1)}
                     </span>
-                    <span className="text-[9px] text-gray-400 font-semibold">
+                    <span className="text-[9px] text-gray-400 font-semibold hidden sm:inline">
                       ({deal.reviewsCount} reviews)
                     </span>
                   </div>
                 </div>
 
                 {/* Price Box with Savings tag */}
-                <div className="flex items-end justify-between bg-[#FFF5F5] border border-[#FFD2D2]/30 p-3 rounded-xl">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between bg-[#FFF5F5] border border-[#FFD2D2]/30 p-2 sm:p-2.5 rounded-xl gap-1.5">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-[#A84444] font-extrabold uppercase tracking-wide">
+                    <span className="text-[8px] sm:text-[10px] text-[#A84444] font-extrabold uppercase tracking-wide">
                       Deal Price ({deal.weight})
                     </span>
-                    <div className="flex items-baseline gap-2 mt-0.5">
-                      <span className="text-xl font-black text-red-600">
+                    <div className="flex items-baseline gap-1 sm:gap-2 mt-0.5">
+                      <span className="text-sm sm:text-xl font-black text-red-600">
                         ₹{deal.dealPrice}
                       </span>
-                      <span className="text-xs text-gray-400 line-through font-semibold">
+                      <span className="text-[10px] sm:text-xs text-gray-400 line-through font-semibold">
                         ₹{deal.originalPrice}
                       </span>
                     </div>
                   </div>
-                  <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-sm">
+                  <span className="bg-red-600 text-white text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg shadow-sm self-start sm:self-auto">
                     {discount}% OFF
                   </span>
                 </div>
 
                 {/* Claimed Progress Bar */}
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <div className="flex justify-between text-[10px] font-bold text-gray-600">
                     <span className="flex items-center gap-1 text-red-700">
                       <Sparkles className="w-3 h-3 text-amber-500" />
@@ -244,7 +244,7 @@ export default function DealsSection() {
                     </span>
                     <span className="text-[#A84444]">Limited Stock Left</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-200/50">
+                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200/50">
                     <div
                       className="h-full bg-gradient-to-r from-red-500 to-amber-500 rounded-full transition-all duration-500"
                       style={{ width: `${deal.claimedPercentage}%` }}
@@ -256,7 +256,7 @@ export default function DealsSection() {
                 <button
                   type="button"
                   onClick={() => handleAddDealToCart(deal)}
-                  className="w-full bg-gradient-to-r from-[#B93C3C] to-[#8C2323] hover:from-[#A12E2E] hover:to-[#731919] text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-red-700/10 active:scale-[0.98] transition-all"
+                  className="w-full bg-gradient-to-r from-[#B93C3C] to-[#8C2323] hover:from-[#A12E2E] hover:to-[#731919] text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-red-700/10 active:scale-[0.98] transition-all"
                 >
                   <ShoppingCart className="w-4 h-4 text-white" />
                   Add Deal to Cart
@@ -268,10 +268,10 @@ export default function DealsSection() {
       </div>
 
       {/* Mobile-friendly bottom "View All" button */}
-      <div className="flex justify-center mt-8">
+      <div className="flex justify-center mt-5">
         <Link
           href="/deals"
-          className="bg-[#7C1A1A] hover:bg-[#A84444] text-white font-extrabold text-xs tracking-wider uppercase px-8 py-3.5 rounded-full shadow-md hover:shadow-[#A84444]/20 active:scale-95 transition-all flex items-center gap-2 border border-[#FFD2D2]/30"
+          className="bg-[#7C1A1A] hover:bg-[#A84444] text-white font-extrabold text-xs tracking-wider uppercase px-6 py-2.5 rounded-full shadow-md hover:shadow-[#A84444]/20 active:scale-95 transition-all flex items-center gap-2 border border-[#FFD2D2]/30"
         >
           <span>View All Deals</span>
           <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

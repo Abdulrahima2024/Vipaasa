@@ -464,7 +464,7 @@ export default function CategoriesClient() {
           <div className="flex-1 space-y-10">
             {/* LOADING SKELETON */}
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-4 space-y-3 animate-pulse">
                     <div className="w-full aspect-square rounded-xl bg-[#F0EDE5]" />
@@ -520,7 +520,7 @@ export default function CategoriesClient() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {paginatedProducts.map((product) => {
                   const isFavorite = mounted && favorites.includes(product.id);
                   const price = product.prices[product.weight];
@@ -529,7 +529,7 @@ export default function CategoriesClient() {
                   return (
                     <div
                       key={product.id}
-                      className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-4 flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.04)] hover:border-[#EAE6DB]/80 transition-all duration-300 group relative"
+                      className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.04)] hover:border-[#EAE6DB]/80 transition-all duration-300 group relative"
                     >
                       {/* Product Image and Overlay Labels */}
                       <div className="relative w-full aspect-square bg-[#FAF9F5] rounded-xl overflow-hidden mb-4">
@@ -587,7 +587,7 @@ export default function CategoriesClient() {
                           </div>
 
                           <Link href={`/products/${product.id}`} className="block">
-                            <h4 className="font-serif text-base font-extrabold text-[#113C27] tracking-tight mt-1 hover:text-[#2d6a4f] transition-colors leading-tight">
+                            <h4 className="font-serif text-xs sm:text-base font-extrabold text-[#113C27] tracking-tight mt-1 hover:text-[#2d6a4f] transition-colors leading-tight">
                               {product.name}
                             </h4>
                           </Link>
@@ -629,7 +629,7 @@ export default function CategoriesClient() {
                         {/* Price & Action Buttons */}
                         <div className="flex flex-col gap-2.5 pt-1">
                           <div className="flex items-center justify-between">
-                            <span className="text-base sm:text-lg font-bold text-[#113C27]">
+                            <span className="text-xs sm:text-lg font-bold text-[#113C27]">
                               ₹{price}
                             </span>
                             <span className="text-[10px] text-[#738276] font-bold uppercase tracking-wider bg-[#FAF8F5] px-2 py-0.5 rounded-md border border-[#EAE6DB]/60">
@@ -642,7 +642,7 @@ export default function CategoriesClient() {
                             <button
                               onClick={() => handleBuyNow(product)}
                               disabled={!product.inStock}
-                              className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-[9px] sm:text-xs font-bold px-1.5 py-2 sm:px-3 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform text-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               Buy Now
                             </button>
@@ -651,7 +651,7 @@ export default function CategoriesClient() {
                             <button
                               onClick={() => handleAddToCart(product)}
                               disabled={!product.inStock || isAdding}
-                              className={`flex items-center justify-center gap-1.5 text-xs font-bold px-3.5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${!product.inStock
+                              className={`flex items-center justify-center gap-1.5 text-xs font-bold px-2 py-2 sm:px-3.5 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${!product.inStock
                                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                 : isAdding
                                   ? "bg-[#2D6A4F] text-white"
@@ -664,14 +664,14 @@ export default function CategoriesClient() {
                                   <svg className="w-3.5 h-3.5 stroke-[3.5] animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                                   </svg>
-                                  <span>Added!</span>
+                                  <span className="hidden sm:inline">Added!</span>
                                 </>
                               ) : (
                                 <>
                                   <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                                   </svg>
-                                  <span>Add</span>
+                                  <span className="hidden sm:inline">Add</span>
                                 </>
                               )}
                             </button>

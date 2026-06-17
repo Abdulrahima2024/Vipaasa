@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Chatbot from "../components/layout/Chatbot";
 
 export const metadata: Metadata = {
   title: "Vipaasa Organics",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="relative">
+        {children}
+        <Chatbot />
+      </body>
     </html>
   );
 }
