@@ -133,9 +133,9 @@ async function main() {
 
   // 4. Create Default Users (Pre-computed BCrypt hashes for 'Password123!')
   console.log('Seeding Users...');
-  const adminPasswordHash = "$2b$10$EPY9LjgGcORW5YZWufPDjO1ElrWr2sW962GP.MnyqGpH1r2QphKyC";
-  const execPasswordHash = "$2b$10$EPY9LjgGcORW5YZWufPDjO1ElrWr2sW962GP.MnyqGpH1r2QphKyC";
-  const custPasswordHash = "$2b$10$EPY9LjgGcORW5YZWufPDjO1ElrWr2sW962GP.MnyqGpH1r2QphKyC";
+  const adminPasswordHash = "$2a$10$ka/DoBLmP82dZRR.ItmY6.fbdftjHo.kcwBcV8ZpV2rIs2Af.NfGm";
+  const execPasswordHash = "$2a$10$ka/DoBLmP82dZRR.ItmY6.fbdftjHo.kcwBcV8ZpV2rIs2Af.NfGm";
+  const custPasswordHash = "$2a$10$ka/DoBLmP82dZRR.ItmY6.fbdftjHo.kcwBcV8ZpV2rIs2Af.NfGm";
 
   // Super Admin
   await prisma.user.upsert({
