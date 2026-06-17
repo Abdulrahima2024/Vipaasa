@@ -5,7 +5,6 @@ import {
   ChevronRight, 
   BarChart3, 
   TrendingUp, 
-  TrendingDown, 
   Download, 
   Calendar,
   Package,

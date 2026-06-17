@@ -12,14 +12,8 @@ export default function ProductsPage() {
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Product Inventory</h1>
-        </div>
-        <button className="flex items-center gap-2 bg-[var(--primary-green)] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--primary-hover)] transition-colors shadow-sm">
-          <Plus className="h-4 w-4" />
-          Add Product
-        </button>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Product Inventory</h1>
       </div>
 
       {/* Stats Cards */}
