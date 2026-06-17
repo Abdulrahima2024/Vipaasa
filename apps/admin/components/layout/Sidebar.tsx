@@ -6,13 +6,12 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  LifeBuoy,
   BarChart3,
   Users,
-  Settings,
   LogOut,
   FileText,
   ClipboardList,
+  Settings,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -20,7 +19,6 @@ const mainNavItems = [
   { name: "Products", href: "/products", icon: Package },
   { name: "Inventory", href: "/inventory", icon: ClipboardList },
   { name: "Orders", href: "/orders", icon: ShoppingCart },
-  { name: "Support", href: "/support", icon: LifeBuoy },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Users", href: "/users", icon: Users },
 ];
@@ -65,16 +63,17 @@ export default function Sidebar() {
 
         <Link
           href="/settings"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+          className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
         >
-          <Settings className="h-5 w-5 text-gray-500" />
+          <Settings className="h-4 w-4" />
           Settings
         </Link>
+
         <Link
           href="/login"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-800 transition-colors"
         >
-          <LogOut className="h-5 w-5 text-gray-500" />
+          <LogOut className="h-5 w-5 text-red-600" />
           Logout
         </Link>
       </div>

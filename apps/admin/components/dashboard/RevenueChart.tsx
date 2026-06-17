@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { TrendingUp } from "lucide-react";
 
 interface RevenueChartProps {
   filter: "today" | "week" | "month";
@@ -14,173 +15,131 @@ export default function RevenueChart({ filter }: RevenueChartProps) {
           labels: ["9AM", "12PM", "3PM", "6PM", "9PM"],
           values: [20, 50, 45, 80, 60],
           amounts: ["₹2.0k", "₹5.0k", "₹4.5k", "₹8.0k", "₹6.0k"],
-          yAxis: ["₹8k", "₹6k", "₹4k", "₹2k", "₹0"],
+          maxValue: 100,
           title: "Today's Revenue Trend",
           subtext: "Hourly sales analysis",
+          totalRevenue: "₹25.5k",
         };
       case "week":
         return {
           labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
           values: [30, 45, 40, 60, 75, 90, 85],
           amounts: ["₹12k", "₹18k", "₹16k", "₹24k", "₹30k", "₹36k", "₹34k"],
-          yAxis: ["₹40k", "₹30k", "₹20k", "₹10k", "₹0"],
+          maxValue: 100,
           title: "Weekly Revenue Trend",
           subtext: "Daily sales analysis",
+          totalRevenue: "₹170k",
         };
       case "month":
       default:
         return {
-          labels: ["Wk 1", "Wk 2", "Wk 3", "Wk 4"],
-          values: [40, 60, 55, 85],
-          amounts: ["₹80k", "₹120k", "₹110k", "₹170k"],
-          yAxis: ["₹200k", "₹150k", "₹100k", "₹50k", "₹0"],
+          labels: ["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5"],
+          values: [35, 50, 68, 58, 80],
+          amounts: ["₹70k", "₹100k", "₹135k", "₹116k", "₹160k"],
+          maxValue: 100,
           title: "Monthly Revenue Trend",
           subtext: "Weekly aggregated sales",
+          totalRevenue: "₹581k",
         };
     }
   }, [filter]);
 
-  // Points list coordinates
-  const points = useMemo(() => {
-    const totalPoints = chartData.values.length;
-    return chartData.values.map((val, idx) => ({
-      x: (idx / (totalPoints - 1)) * 100,
-      y: 100 - val
-    }));
-  }, [chartData]);
-
-  // Generate smooth cubic bezier spline path
-  const svgPath = useMemo(() => {
-    if (points.length === 0) return "";
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
-      // Tangents calculated as horizontal control points (smooth ease-in-out)
-      const cpX1 = p0.x + (p1.x - p0.x) / 3;
-      const cpY1 = p0.y;
-      const cpX2 = p0.x + (2 * (p1.x - p0.x)) / 3;
-      const cpY2 = p1.y;
-      d += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p1.x} ${p1.y}`;
-    }
-    return d;
-  }, [points]);
-
-  // Generate smooth area fill path
-  const svgFillPath = useMemo(() => {
-    if (points.length === 0) return "";
-    return `${svgPath} L 100 100 L 0 100 Z`;
-  }, [points, svgPath]);
+  const maxValue = Math.max(...chartData.values);
+  const totalRevenue = chartData.values.reduce((a, b) => a + b, 0);
+  const avgRevenue = (totalRevenue / chartData.values.length).toFixed(1);
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full min-h-[24rem]">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 tracking-tight">{chartData.title}</h2>
-          <p className="text-sm text-gray-500">{chartData.subtext}</p>
+          <h2 className="text-lg font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-[var(--primary-green)]" />
+            {chartData.title}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">{chartData.subtext}</p>
         </div>
-        <div className="text-right">
-          <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Gross Revenue</span>
+        <div className="text-right bg-green-50 rounded-lg p-3">
+          <div className="text-xs text-gray-500 font-semibold">Total Revenue</div>
+          <div className="text-lg font-bold text-[var(--primary-green)] mt-1">{chartData.totalRevenue}</div>
         </div>
       </div>
 
-      {/* Main Chart Container with Y-Axis column and Chart space */}
-      <div className="flex-grow flex gap-4 mt-6">
-        
-        {/* Y-Axis Labels Column */}
-        <div className="flex flex-col justify-between text-[10px] font-bold text-gray-400 h-48 select-none text-right w-10 pb-4">
-          {chartData.yAxis.map((val, idx) => (
-            <span key={idx}>{val}</span>
-          ))}
-        </div>
-
-        {/* Chart Viewport Wrapper */}
-        <div className="flex-grow relative h-48">
+      {/* Bar Chart */}
+      <div className="flex-grow flex items-end justify-between gap-2 mb-6 px-2">
+        {chartData.values.map((value, idx) => {
+          const heightPercent = (value / maxValue) * 100;
+          const isHighest = value === maxValue;
           
-          {/* SVG Canvas */}
-          <svg
-            viewBox="0 0 100 100"
-            className="w-full h-full overflow-visible"
-            preserveAspectRatio="none"
-          >
-            {/* Grid horizontal lines */}
-            <line x1="0" y1="0" x2="100" y2="0" stroke="#f9fafb" strokeWidth="0.5" />
-            <line x1="0" y1="25" x2="100" y2="25" stroke="#f3f4f6" strokeWidth="0.5" />
-            <line x1="0" y1="50" x2="100" y2="50" stroke="#f3f4f6" strokeWidth="0.5" />
-            <line x1="0" y1="75" x2="100" y2="75" stroke="#f3f4f6" strokeWidth="0.5" />
-            <line x1="0" y1="100" x2="100" y2="100" stroke="#e5e7eb" strokeWidth="1" />
-
-            {/* Area Fill */}
-            <path d={svgFillPath} fill="url(#greenGrad)" className="transition-all duration-700 ease-in-out" />
-
-            {/* Line Path */}
-            <path
-              d={svgPath}
-              fill="none"
-              stroke="var(--primary-green)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              className="transition-all duration-700 ease-in-out"
-            />
-
-            {/* Gradient Definition */}
-            <defs>
-              <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#1f5c43" stopOpacity="0.22" />
-                <stop offset="100%" stopColor="#1f5c43" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-
-            {/* Data Points */}
-            {points.map((pt, idx) => (
-              <g key={idx} className="group cursor-pointer">
-                <circle
-                  cx={pt.x}
-                  cy={pt.y}
-                  r="3.5"
-                  fill="white"
-                  stroke="var(--primary-green)"
-                  strokeWidth="2.5"
-                  className="transition-all duration-500 hover:scale-125 focus:outline-none"
-                />
-                <circle cx={pt.x} cy={pt.y} r="8" fill="transparent" />
-              </g>
-            ))}
-          </svg>
-
-          {/* Floating Amount Tooltips aligned with point positions */}
-          <div className="absolute inset-0 pointer-events-none">
-            {points.map((pt, idx) => (
-              <div
-                key={idx}
-                className="absolute flex flex-col items-center select-none"
-                style={{
-                  left: `${pt.x}%`,
-                  top: `${pt.y}%`,
-                  transform: "translate(-50%, -125%)",
-                }}
-              >
-                <span className="text-[10px] font-bold text-gray-700 bg-white border border-gray-150 rounded px-1.5 py-0.5 shadow-sm whitespace-nowrap animate-in fade-in duration-300">
-                  {chartData.amounts[idx]}
-                </span>
-                {/* Arrow */}
-                <div className="w-1.5 h-1.5 bg-white border-r border-b border-gray-150 transform rotate-45 -mt-1" />
+          return (
+            <div
+              key={idx}
+              className="flex-1 flex flex-col items-center group cursor-pointer"
+            >
+              {/* Value Label */}
+              <div className="text-[10px] font-bold text-gray-600 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                {chartData.amounts[idx]}
               </div>
-            ))}
-          </div>
 
+              {/* Bar Container */}
+              <div className="w-full bg-gray-100 rounded-t-lg overflow-hidden hover:shadow-md transition-all duration-300 relative"
+                style={{
+                  height: `${Math.max(heightPercent * 3, 8)}px`,
+                  backgroundColor: "#f3f4f6",
+                }}>
+                {/* Animated Bar Fill */}
+                <div
+                  className={`h-full rounded-t-lg transition-all duration-500 ease-out ${
+                    isHighest
+                      ? "bg-gradient-to-t from-[var(--primary-green)] to-[#4ade80]"
+                      : "bg-gradient-to-t from-[var(--primary-green)] to-[#86efac]"
+                  } hover:shadow-lg transform group-hover:scale-y-110 origin-bottom`}
+                  style={{
+                    height: "100%",
+                    animation: `slideUp${idx} 0.6s ease-out ${idx * 80}ms backwards`,
+                  }}
+                >
+                  {/* Shine Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-pulse" />
+                </div>
+              </div>
+
+              {/* Label */}
+              <div className="text-[11px] font-semibold text-gray-600 mt-2 text-center">
+                {chartData.labels[idx]}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Stats Footer */}
+      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+        <div className="flex flex-col">
+          <span className="text-xs text-gray-500 font-semibold">Average Revenue</span>
+          <span className="text-sm font-bold text-gray-900 mt-1">₹{(totalRevenue / chartData.values.length).toFixed(0)}k</span>
         </div>
-
+        <div className="flex flex-col">
+          <span className="text-xs text-gray-500 font-semibold">Peak Revenue</span>
+          <span className="text-sm font-bold text-[var(--primary-green)] mt-1">{chartData.amounts[chartData.values.indexOf(maxValue)]}</span>
+        </div>
       </div>
 
-      {/* X-Axis Labels aligned with the chart viewport */}
-      <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-50 text-[11px] font-semibold text-gray-400 pl-14">
-        {chartData.labels.map((lbl, idx) => (
-          <span key={idx} className="w-12 text-center select-none">
-            {lbl}
-          </span>
-        ))}
-      </div>
+      {/* Animation Styles */}
+      <style jsx>{`
+        ${chartData.values.map((_, idx) => `
+          @keyframes slideUp${idx} {
+            from {
+              height: 0;
+              opacity: 0;
+            }
+            to {
+              height: 100%;
+              opacity: 1;
+            }
+          }
+        `).join('\n')}
+      `}</style>
     </div>
   );
 }
