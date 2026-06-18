@@ -52,6 +52,7 @@ export async function addToCart(req: AuthenticatedRequest, res: Response, next: 
     const { productId, quantity } = bodyValidation.data;
     const cart = await cartService.addToCart(userId, productId, quantity);
     return res.status(200).json(cart);
+    console.log("added to cart")
   } catch (error) {
     next(error);
   }
