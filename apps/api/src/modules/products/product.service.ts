@@ -1,6 +1,6 @@
 import * as productRepository from "./product.repository";
 import { slugify } from "../../shared/utils/slugify";
-import { CreateProductInput } from "./product.validation";
+import { CreateProductInput, UpdateProductInput } from "./product.validation";
 import {
   CategoryTreeItem,
   ProductFilter,
@@ -97,6 +97,8 @@ function mapProductToItem(prod: any): ProductItem {
       slug: prod.category.slug,
     },
     stockStatus,
+    isActive: prod.isActive,
+    variants: prod.variants,
   };
 }
 
@@ -134,8 +136,8 @@ export async function getProductsList(
 /**
  * Gets detailed product view by ID
  */
-export async function getProductDetails(id: string): Promise<ProductDetail | null> {
-  const prod = await productRepository.findProductById(id);
+export async function getProductDetails(id: string, includeInactive: boolean = false): Promise<ProductDetail | null> {
+  const prod = await productRepository.findProductById(id, includeInactive);
   if (!prod) return null;
 
   // Find lowest price
@@ -179,6 +181,8 @@ export async function getProductDetails(id: string): Promise<ProductDetail | nul
       slug: prod.category.slug,
     },
     stockStatus,
+    isActive: prod.isActive,
+    variants: prod.variants,
   };
 }
 
@@ -219,3 +223,16 @@ export async function createProduct(input: CreateProductInput) {
   });
 }
 
+/**
+ * Deletes a product by ID
+ */
+export async function deleteProduct(id: string) {
+  return productRepository.deleteProduct(id);
+}
+
+/**
+ * Updates a product by ID
+ */
+export async function updateProduct(id: string, input: UpdateProductInput) {
+  return productRepository.updateProduct(id, input);
+}

@@ -24,6 +24,10 @@ export const GetProductsQuerySchema = z.object({
     .refine((val) => val === undefined || val >= 0, { message: "Maximum price cannot be negative" }),
   sortBy: z.enum(["price", "createdAt", "name"]).default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  includeInactive: z
+    .string()
+    .optional()
+    .transform((val) => val === "true"),
 }).refine(
   (data) => {
     if (data.minPrice !== undefined && data.maxPrice !== undefined) {
@@ -79,7 +83,27 @@ export const CreateProductSchema = z.object({
   ).min(1, { message: "At least one variant must be configured" }),
 });
 
+export const UpdateProductSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters long" }).optional(),
+  categoryId: z.string().uuid({ message: "Invalid category ID format" }).optional(),
+  description: z.string().min(5, { message: "Description must be at least 5 characters long" }).optional(),
+  isActive: z.boolean().optional(),
+  images: z.array(z.string()).optional(),
+  variants: z.array(
+    z.object({
+      name: z.string().min(1).optional(),
+      sku: z.string().optional(),
+      weightGrams: z.number().int().positive().optional(),
+      skuStatus: z.enum(["IN_STOCK", "OUT_OF_STOCK", "DISCONTINUED"]).default("IN_STOCK").optional(),
+      price: z.number().positive().optional(),
+      compareAtPrice: z.number().nonnegative().optional(),
+      stock: z.number().int().nonnegative().optional(),
+    })
+  ).optional(),
+});
+
 export type GetProductsQuery = z.infer<typeof GetProductsQuerySchema>;
 export type SearchProductsQuery = z.infer<typeof SearchProductsQuerySchema>;
 export type CreateProductInput = z.infer<typeof CreateProductSchema>;
+export type UpdateProductInput = z.infer<typeof UpdateProductSchema>;
 

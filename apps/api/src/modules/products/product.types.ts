@@ -15,6 +15,7 @@ export interface ProductFilter {
   maxPrice?: number;
   sortBy?: 'price' | 'createdAt' | 'name';
   sortOrder?: 'asc' | 'desc';
+  includeInactive?: boolean;
 }
 
 export interface SearchFilter {
@@ -35,6 +36,8 @@ export interface ProductItem {
     slug: string;
   };
   stockStatus: 'IN_STOCK' | 'OUT_OF_STOCK';
+  isActive?: boolean;
+  variants?: any[];
 }
 
 export interface ProductDetail {
@@ -53,6 +56,8 @@ export interface ProductDetail {
     slug: string;
   };
   stockStatus: 'IN_STOCK' | 'OUT_OF_STOCK';
+  isActive?: boolean;
+  variants?: any[];
 }
 
 export interface PaginatedResult<T> {

@@ -35,3 +35,33 @@ export function authenticate(req: AuthenticatedRequest, res: Response, next: Nex
     return res.status(401).json({ error: "Access denied. Invalid or expired token." });
   }
 }
+
+export function optionalAuthenticate(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return next();
+    }
+
+    const secret = process.env.JWT_ACCESS_SECRET || "vipaasa_default_jwt_access_secret_key_1234567890";
+    try {
+      const decoded = jwt.verify(token, secret) as {
+        userId: string;
+        email: string;
+        role: string;
+      };
+      req.user = decoded;
+    } catch (err) {
+      console.warn("Optional authentication token verify failed:", err);
+    }
+    next();
+  } catch (error) {
+    console.error("Optional authentication middleware error:", error);
+    next();
+  }
+}

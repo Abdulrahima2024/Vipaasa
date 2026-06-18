@@ -115,6 +115,12 @@ export default function InventoryTable() {
     loadProducts();
   }, [currentPage, selectedCategoryFilter, searchQuery]);
 
+  const getProductImageUrl = (img: any) => {
+    if (!img) return "";
+    if (typeof img === "string") return img;
+    return img.url || "";
+  };
+
   const loadCategories = async () => {
     try {
       const data = await fetchAPI("/api/categories");
@@ -145,6 +151,7 @@ export default function InventoryTable() {
       const params: Record<string, any> = {
         page: currentPage,
         limit: 10,
+        includeInactive: true,
       };
       if (selectedCategoryFilter !== "All") {
         params.categoryId = selectedCategoryFilter;
@@ -170,15 +177,14 @@ export default function InventoryTable() {
   };
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
-    // In production we send a PATCH to update isActive
     try {
-      // Mock update local state first for instant response
+      // Optimistic local update
       setProducts(products.map(p => p.id === id ? { ...p, isActive: !currentStatus } : p));
-      // Then send update to backend
-      // await fetchAPI(`/api/products/${id}`, {
-      //   method: "PATCH",
-      //   body: JSON.stringify({ isActive: !currentStatus })
-      // });
+      // Send update to backend
+      await fetchAPI(`/api/products/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive: !currentStatus })
+      });
     } catch (err) {
       console.error(err);
       loadProducts();
@@ -208,8 +214,7 @@ export default function InventoryTable() {
   const handleDeleteProduct = async (id: string) => {
     if (confirm("Are you sure you want to delete this product?")) {
       try {
-        // In production we trigger a DELETE API call
-        // await fetchAPI(`/api/products/${id}`, { method: "DELETE" });
+        await fetchAPI(`/api/products/${id}`, { method: "DELETE" });
         setProducts(products.filter(p => p.id !== id));
       } catch (err: any) {
         alert(err.message || "Failed to delete product");
@@ -271,11 +276,11 @@ export default function InventoryTable() {
 
     try {
       if (editingProduct) {
-        // Edit mode (Not fully implemented in the current backend routing, but structured for correctness)
-        // await fetchAPI(`/api/products/${editingProduct.id}`, {
-        //   method: "PUT",
-        //   body: JSON.stringify(payload)
-        // });
+        // Edit mode — send PATCH to update existing product
+        await fetchAPI(`/api/products/${editingProduct.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload)
+        });
       } else {
         // Add mode
         await fetchAPI("/api/products", {
@@ -317,9 +322,10 @@ export default function InventoryTable() {
 
   // Extract display emoji and style from product image URL mock if exists
   const getProductStyle = (product: BackendProduct) => {
-    const firstImg = product.images?.[0]?.url || "";
-    if (firstImg.startsWith("emoji://")) {
-      const match = firstImg.match(/emoji:\/\/([^?]+)\?bg=(.+)/);
+    const firstImg = product.images?.[0];
+    const url = getProductImageUrl(firstImg);
+    if (url.startsWith("emoji://")) {
+      const match = url.match(/emoji:\/\/([^?]+)\?bg=(.+)/);
       if (match) {
         return {
           emoji: decodeURIComponent(match[1]),
@@ -451,8 +457,8 @@ export default function InventoryTable() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden text-lg bg-gray-50 shadow-sm border border-gray-100">
-                          {product.images && product.images[0]?.url && !product.images[0].url.startsWith("emoji://") ? (
-                            <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover" />
+                          {product.images && product.images[0] && !getProductImageUrl(product.images[0]).startsWith("emoji://") ? (
+                            <img src={getProductImageUrl(product.images[0])} alt={product.name} className="w-full h-full object-cover" />
                           ) : (
                             <span>{emoji}</span>
                           )}
@@ -511,14 +517,14 @@ export default function InventoryTable() {
                             setFormPrice1kg(p1 ? parseFloat(p1) : 0);
                             setFormPrice500g(p2 ? parseFloat(p2) : 0);
                             setFormPrice250g(p3 ? parseFloat(p3) : 0);
-                            const productImages = product.images || [];
-                            if (productImages.length > 0) {
-                              setFormImageUrl(productImages[0].url);
-                              setUploadedImages(productImages.map(img => img.url));
-                            } else {
-                              setFormImageUrl("");
-                              setUploadedImages([]);
-                            }
+                             const productImages = product.images || [];
+                             if (productImages.length > 0) {
+                               setFormImageUrl(typeof productImages[0] === 'string' ? productImages[0] : getProductImageUrl(productImages[0]));
+                               setUploadedImages(productImages.map(img => typeof img === 'string' ? img : getProductImageUrl(img)));
+                             } else {
+                               setFormImageUrl("");
+                               setUploadedImages([]);
+                             }
                             setIsProductModalOpen(true);
                           }}
                           className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all active:scale-95"

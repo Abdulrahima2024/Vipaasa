@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate } from "../../shared/middleware/authenticate";
+import { authenticate, optionalAuthenticate } from "../../shared/middleware/authenticate";
 import { authorize } from "../../shared/middleware/authorize";
 import {
   getCategories,
@@ -7,24 +7,32 @@ import {
   getProductById,
   searchProducts,
   createProduct,
+  deleteProduct,
+  updateProduct,
 } from "./product.controller";
 
 const router = Router();
 
 // Retrieve all active hierarchical categories
-router.get("/categories", authenticate, getCategories);
+router.get("/categories", optionalAuthenticate, getCategories);
 
 // Retrieve all active, priced, paginated products
-router.get("/products", authenticate, getProducts);
+router.get("/products", optionalAuthenticate, getProducts);
 
 // Search active, priced, paginated products (registered before /products/:id to prevent conflicts)
-router.get("/products/search", authenticate, searchProducts);
+router.get("/products/search", optionalAuthenticate, searchProducts);
 
 // Retrieve detailed information of a single active product
-router.get("/products/:id", authenticate, getProductById);
+router.get("/products/:id", optionalAuthenticate, getProductById);
 
 // Create a new product with variants and pricing (Admin only)
 router.post("/products", authenticate, authorize(["SUPER_ADMIN"]), createProduct);
+
+// Delete a product (Admin only)
+router.delete("/products/:id", authenticate, authorize(["SUPER_ADMIN"]), deleteProduct);
+
+// Update a product (Admin only)
+router.patch("/products/:id", authenticate, authorize(["SUPER_ADMIN"]), updateProduct);
 
 export default router;
 

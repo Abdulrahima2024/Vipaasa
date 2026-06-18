@@ -34,6 +34,14 @@ export default function CategoriesClient() {
   const [apiProducts, setApiProducts] = useState<CategoryProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([
+    "Dals & Pulses",
+    "Flours",
+    "Spices & Powders",
+    "Millets & Grains",
+    "Broken Grains (Rava)",
+    "Honey & Ghee"
+  ]);
 
   // Cart/Favorites store
   const { items, favorites, addToCart, toggleFavorite } = useCartStore();
@@ -106,6 +114,32 @@ export default function CategoriesClient() {
         setLoading(false);
       }
     }
+    async function loadCategories() {
+      try {
+        const data = await fetchApi<any[]>("/api/categories");
+        if (data && Array.isArray(data)) {
+          const list: string[] = [];
+          const traverse = (nodes: any[]) => {
+            nodes.forEach(node => {
+              if (node.name) {
+                list.push(node.name);
+              }
+              if (node.children && node.children.length > 0) {
+                traverse(node.children);
+              }
+            });
+          };
+          traverse(data);
+          if (list.length > 0) {
+            setCategories(list);
+          }
+        }
+      } catch (err: any) {
+        console.error("CategoriesClient: failed to load categories:", err);
+      }
+    }
+
+    loadCategories();
     loadProducts();
   }, [token]);
 
@@ -184,7 +218,7 @@ export default function CategoriesClient() {
 
       return matchesSubcategory && matchesPrice && matchesStock && matchesSearch;
     });
-  }, [selectedSubcategories, priceRange, inStockOnly, searchQuery]);
+  }, [apiProducts, selectedSubcategories, priceRange, inStockOnly, searchQuery]);
 
   // Sort products
   const sortedProducts = useMemo(() => {
@@ -366,14 +400,7 @@ export default function CategoriesClient() {
                 Subcategories
               </h4>
               <div className="flex flex-col gap-3">
-                {[
-                  "Dals & Pulses",
-                  "Flours",
-                  "Spices & Powders",
-                  "Millets & Grains",
-                  "Broken Grains (Rava)",
-                  "Honey & Ghee"
-                ].map((subcat) => {
+                {categories.map((subcat) => {
                   const isChecked = selectedSubcategories.includes(subcat);
                   return (
                     <label key={subcat} className="flex items-center gap-3 cursor-pointer group text-xs sm:text-sm font-semibold text-[#4B594F] hover:text-[#113C27] transition-colors">
@@ -796,14 +823,7 @@ export default function CategoriesClient() {
                 Subcategories
               </h4>
               <div className="flex flex-col gap-3.5">
-                {[
-                  "Dals & Pulses",
-                  "Flours",
-                  "Spices & Powders",
-                  "Millets & Grains",
-                  "Broken Grains (Rava)",
-                  "Honey & Ghee"
-                ].map((subcat) => {
+                {categories.map((subcat) => {
                   const isChecked = selectedSubcategories.includes(subcat);
                   return (
                     <label key={subcat} className="flex items-center gap-3 cursor-pointer group text-sm font-semibold text-[#4B594F] hover:text-[#113C27] transition-colors">

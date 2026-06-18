@@ -167,16 +167,36 @@ export default function ProductDetailPage() {
           setProduct(null);
           return;
         }
+        const prices: { "1kg": number; "500g": number; "250g": number } = {
+          "250g": Math.round(raw.price),
+          "500g": Math.round(raw.price * 1.8),
+          "1kg": Math.round(raw.price * 3.2),
+        };
+
+        if (raw.variants && raw.variants.length > 0) {
+          raw.variants.forEach((v: any) => {
+            if (v.pricing && v.pricing.basePrice) {
+              const basePriceNum = Math.round(parseFloat(v.pricing.basePrice.toString()));
+              if (v.weightGrams === 250) {
+                prices["250g"] = basePriceNum;
+              } else if (v.weightGrams === 500) {
+                prices["500g"] = basePriceNum;
+              } else if (v.weightGrams === 1000) {
+                prices["1kg"] = basePriceNum;
+              }
+            }
+          });
+        }
+
+        const rawImg = raw.images && raw.images[0];
+        const imageUrl = rawImg ? (typeof rawImg === "string" ? rawImg : rawImg.url) : "https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?auto=format&fit=crop&q=80&w=600";
+
         const mapped: Product = {
           id: raw.id,
           name: raw.name,
           category: raw.category?.name || "General",
-          prices: {
-            "250g": raw.price,
-            "500g": Math.round(raw.price * 1.8),
-            "1kg": Math.round(raw.price * 3.2),
-          },
-          image: (raw.images && raw.images[0]) || "https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?auto=format&fit=crop&q=80&w=600",
+          prices,
+          image: imageUrl,
           isNew: raw.stockStatus === "IN_STOCK",
           rating: 4.5 + (parseInt((raw.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
         };
