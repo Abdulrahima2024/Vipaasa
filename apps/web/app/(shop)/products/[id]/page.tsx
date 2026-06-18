@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { parseEmojiImage } from "../../../../lib/image";
 import { 
   Plus, 
   Minus, 
@@ -341,6 +342,7 @@ export default function ProductDetailPage() {
             <div className="flex flex-row md:flex-col gap-3 order-2 md:order-1 justify-center md:justify-start">
               {gallery.map((imgUrl, index) => {
                 const isActive = imgUrl === activeImage;
+                const emojiInfo = parseEmojiImage(imgUrl);
                 return (
                   <button
                     key={index}
@@ -352,12 +354,21 @@ export default function ProductDetailPage() {
                         : "border-[#EAE6DB] hover:border-[#738276]/60"
                     }`}
                   >
-                    <img
-                      src={imgUrl}
-                      alt={`${product.name} view ${index + 1}`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                    {emojiInfo.isEmoji ? (
+                      <div
+                        className="w-full h-full flex items-center justify-center text-3xl select-none"
+                        style={{ backgroundColor: emojiInfo.bgColor }}
+                      >
+                        {emojiInfo.emoji}
+                      </div>
+                    ) : (
+                      <img
+                        src={imgUrl}
+                        alt={`${product.name} view ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    )}
                   </button>
                 );
               })}
@@ -365,13 +376,23 @@ export default function ProductDetailPage() {
 
             {/* Main Interactive Screen Viewport */}
             <div className="relative flex-1 aspect-square rounded-3xl overflow-hidden border border-[#EAE6DB]/40 shadow-sm order-1 md:order-2 bg-white">
-              {activeImage && (
-                <img
-                  src={activeImage}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                />
-              )}
+              {activeImage && (() => {
+                const emojiInfo = parseEmojiImage(activeImage);
+                return emojiInfo.isEmoji ? (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-7xl select-none transition-transform duration-700 hover:scale-105"
+                    style={{ backgroundColor: emojiInfo.bgColor }}
+                  >
+                    {emojiInfo.emoji}
+                  </div>
+                ) : (
+                  <img
+                    src={activeImage}
+                    alt={product.name}
+                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                  />
+                );
+              })()}
 
               {/* Heart/Favorite Toggle Overlay */}
               <button

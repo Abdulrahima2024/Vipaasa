@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Address } from "./AddressSelector";
 import { CartItem } from "../../store/useCartStore";
+import { parseEmojiImage } from "../../lib/image";
 
 interface OrderReviewProps {
   address: Address;
@@ -86,11 +87,23 @@ export default function OrderReview({ address, items, onProceed, onBack }: Order
         <div className="divide-y divide-[#EAE6DB]/60">
           {activeItems.map((item) => (
             <div key={item.id} className="py-4 flex gap-4 first:pt-0 last:pb-0">
-              <img
-                src={item.image}
-                alt={item.name}
-                className="w-16 h-16 object-cover rounded-lg border border-[#EAE6DB]/40 bg-[#FAF8F5]"
-              />
+              {(() => {
+                const emojiInfo = parseEmojiImage(item.image);
+                return emojiInfo.isEmoji ? (
+                  <div
+                    className="w-16 h-16 flex items-center justify-center text-3xl rounded-lg border border-[#EAE6DB]/40 bg-[#FAF8F5] select-none"
+                    style={{ backgroundColor: emojiInfo.bgColor }}
+                  >
+                    {emojiInfo.emoji}
+                  </div>
+                ) : (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-16 h-16 object-cover rounded-lg border border-[#EAE6DB]/40 bg-[#FAF8F5]"
+                  />
+                );
+              })()}
               <div className="flex-1 flex justify-between items-start">
                 <div>
                   <h4 className="font-bold text-[#1F3E2F] text-[15px]">{item.name}</h4>

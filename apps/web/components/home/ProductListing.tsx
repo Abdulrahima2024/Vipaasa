@@ -7,6 +7,7 @@ import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/authStore";
 import { fetchApi } from "../../lib/api";
 import { LayoutGrid, Leaf, Wheat, Sparkles, Sprout, Layers, Droplet } from "lucide-react";
+import { parseEmojiImage } from "../../lib/image";
 
 export interface Product {
   id: string;
@@ -41,6 +42,7 @@ export function ProductCard({
   onRemoveFavorite?: () => void;
 }) {
   const [selectedWeight, setSelectedWeight] = useState<"1kg" | "500g" | "250g">("1kg");
+  const emojiInfo = parseEmojiImage(product.image);
 
   return (
     <div className="bg-white border border-[#EAE6DB]/30 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.02)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.05)] hover:border-[#EAE6DB]/60 transition-all duration-300 group relative">
@@ -48,14 +50,23 @@ export function ProductCard({
       {/* Product Image using next/image */}
       <div className="relative w-full aspect-square bg-white rounded-xl overflow-hidden mb-4">
         <Link href={`/products/${product.id}`} className="block w-full h-full relative">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
+          {emojiInfo.isEmoji ? (
+            <div
+              className="w-full h-full flex items-center justify-center text-5xl transition-transform duration-500 group-hover:scale-105 select-none"
+              style={{ backgroundColor: emojiInfo.bgColor }}
+            >
+              {emojiInfo.emoji}
+            </div>
+          ) : (
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+          )}
           {product.isNew && (
             <span className="absolute top-2.5 left-2.5 bg-[#A84444] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full z-10">
               New

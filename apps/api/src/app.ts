@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import authRoutes from "./modules/auth/auth.routes";
 import userRoutes from "./modules/users/user.routes";
 import productRoutes from "./modules/products/product.routes";
+import reportRoutes from "./modules/reports/report.routes";
 import { requestLogger } from "./shared/middleware/requestLogger";
 import { rateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
@@ -30,6 +31,7 @@ app.use("/api", rateLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api", productRoutes);
+app.use("/api", reportRoutes);
 
 // Health Check
 app.get("/health", (req, res) => {

@@ -6,6 +6,7 @@ import Link from "next/link";
 import Header from "../../components/layout/Header";
 import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/authStore";
+import { parseEmojiImage } from "../../lib/image";
 
 export default function CartPage() {
   const {
@@ -162,12 +163,24 @@ export default function CartPage() {
                   {/* Product Image */}
                   <div className="relative w-full sm:w-32 h-32 rounded-xl overflow-hidden bg-[#FAF8F5] flex-shrink-0">
                     <Link href={`/products/${item.productId}`} className="block w-full h-full">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                        loading="lazy"
-                      />
+                      {(() => {
+                        const emojiInfo = parseEmojiImage(item.image);
+                        return emojiInfo.isEmoji ? (
+                          <div
+                            className="w-full h-full flex items-center justify-center text-4xl select-none"
+                            style={{ backgroundColor: emojiInfo.bgColor }}
+                          >
+                            {emojiInfo.emoji}
+                          </div>
+                        ) : (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                            loading="lazy"
+                          />
+                        );
+                      })()}
                     </Link>
                   </div>
 
@@ -359,11 +372,23 @@ export default function CartPage() {
                   key={item.id}
                   className="bg-[#F6F4EC]/60 border border-[#EAE6DB]/40 rounded-xl p-4 flex gap-4 shadow-sm"
                 >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-20 h-20 object-cover rounded-lg bg-[#FAF8F5] flex-shrink-0"
-                  />
+                  {(() => {
+                    const emojiInfo = parseEmojiImage(item.image);
+                    return emojiInfo.isEmoji ? (
+                      <div
+                        className="w-20 h-20 flex items-center justify-center text-3xl rounded-lg bg-[#FAF8F5] flex-shrink-0 select-none"
+                        style={{ backgroundColor: emojiInfo.bgColor }}
+                      >
+                        {emojiInfo.emoji}
+                      </div>
+                    ) : (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-20 h-20 object-cover rounded-lg bg-[#FAF8F5] flex-shrink-0"
+                      />
+                    );
+                  })()}
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start gap-2">

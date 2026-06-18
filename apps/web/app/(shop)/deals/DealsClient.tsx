@@ -9,6 +9,7 @@ import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 import { fetchApi } from "../../../lib/api";
 import productsData from "../../../data/products.json";
+import { parseEmojiImage } from "../../../lib/image";
 
 interface DealProduct {
   id: string;
@@ -694,12 +695,24 @@ export default function DealsClient() {
                       {/* Product Image and Overlay Labels */}
                       <div className="relative w-full aspect-square bg-[#FAF9F5] rounded-xl overflow-hidden mb-4">
                         <Link href={deal.id.startsWith("bundle") ? "#" : `/products/${deal.id}`} className="block w-full h-full relative">
-                          <img
-                            src={deal.image}
-                            alt={deal.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
+                          {(() => {
+                            const emojiInfo = parseEmojiImage(deal.image);
+                            return emojiInfo.isEmoji ? (
+                              <div
+                                className="w-full h-full flex items-center justify-center text-5xl transition-transform duration-500 group-hover:scale-105 select-none"
+                                style={{ backgroundColor: emojiInfo.bgColor }}
+                              >
+                                {emojiInfo.emoji}
+                              </div>
+                            ) : (
+                              <img
+                                src={deal.image}
+                                alt={deal.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                              />
+                            );
+                          })()}
                         </Link>
                         
                         {/* Organic Label / Custom tag */}

@@ -8,6 +8,7 @@ import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useAuthStore } from "../../store/authStore";
 import { useCartStore } from "../../store/useCartStore";
+import { parseEmojiImage } from "../../lib/image";
 
 interface OrderItem {
   id: string;
@@ -234,11 +235,23 @@ export default function MyOrdersPage() {
                       key={idx}
                       className="w-16 h-16 rounded-xl border border-[#EAE6DB]/60 overflow-hidden bg-[#F9F7F2] flex-shrink-0"
                     >
-                      <img
-                        src={img}
-                        alt="Product thumbnail"
-                        className="w-full h-full object-cover"
-                      />
+                      {(() => {
+                        const emojiInfo = parseEmojiImage(img);
+                        return emojiInfo.isEmoji ? (
+                          <div
+                            className="w-full h-full flex items-center justify-center text-3xl select-none"
+                            style={{ backgroundColor: emojiInfo.bgColor }}
+                          >
+                            {emojiInfo.emoji}
+                          </div>
+                        ) : (
+                          <img
+                            src={img}
+                            alt="Product thumbnail"
+                            className="w-full h-full object-cover"
+                          />
+                        );
+                      })()}
                     </div>
                   ))}
                   {order.extraItemsCount && order.extraItemsCount > 0 && (

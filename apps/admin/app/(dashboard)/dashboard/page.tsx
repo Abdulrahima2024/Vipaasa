@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/layout/Header";
 import StatCard from "@/components/dashboard/StatCard";
 import CustomerGrowthChart from "@/components/dashboard/CustomerGrowthChart";
@@ -10,18 +10,40 @@ import LowStockAlert from "@/components/dashboard/LowStockAlert";
 import RevenueChart from "@/components/dashboard/RevenueChart";
 import OrderStatusPie from "@/components/dashboard/OrderStatusPie";
 import { Package, Banknote, Truck, Calendar, ShoppingBag, Eye, Users2 } from "lucide-react";
+import { fetchAPI } from "@/lib/api";
 
 export default function DashboardPage() {
   const [filter, setFilter] = useState<"today" | "week" | "month">("month");
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        setLoading(true);
+        const res = await fetchAPI("/api/reports/dashboard", {
+          params: { filter }
+        });
+        setData(res);
+      } catch (err) {
+        console.error("Failed to load dashboard stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadStats();
+  }, [filter]);
 
   // Dynamic values depending on filter selection
-  const totalOrders = filter === "today" ? "42" : filter === "week" ? "294" : "1,284";
-  const revenueVal = filter === "today" ? "₹14,500.00" : filter === "week" ? "₹105,400.00" : "₹428,500.00";
-  const pendingDeliveries = filter === "today" ? "8" : filter === "week" ? "24" : "56";
-  const todayOrders = filter === "today" ? "42" : filter === "week" ? "38 (avg)" : "43 (avg)";
+  const totalOrders = loading ? "..." : String(data?.kpis?.totalOrders ?? 0);
+  const revenueVal = loading ? "..." : String(data?.kpis?.revenue ?? "₹0");
+  const pendingDeliveries = loading ? "..." : String(data?.kpis?.pendingDeliveries ?? 0);
+  const todayOrders = loading ? "..." : String(data?.kpis?.todayOrders ?? 0);
   
-  const customerCount = filter === "today" ? "412" : filter === "week" ? "452" : "1,284";
-  const customerTrend = filter === "today" ? "+1.2%" : filter === "week" ? "+5.6%" : "+12.4%";
+  const customerCount = loading ? "..." : String(data?.customerStats?.totalCustomers ?? 0);
+  const customerTrend = loading ? "..." : String(data?.customerStats?.growthTrend ?? "+0.0%");
+  const activeRate = loading ? "..." : String(data?.customerStats?.activeRate ?? "0%");
+  const satisfactionScore = loading ? "..." : String(data?.customerStats?.satisfactionScore ?? "0.0 / 5.0");
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -74,15 +96,15 @@ export default function DashboardPage() {
           value={totalOrders}
           subtext="vs last period"
           icon={Package}
-          trend={filter === "today" ? "+4%" : filter === "week" ? "+8%" : "+12%"}
+          trend={loading ? undefined : (filter === "today" ? "+4%" : filter === "week" ? "+8%" : "+12%")}
           trendUp={true}
         />
         <StatCard
-          title="Today's Orders"
+          title={filter === "today" ? "Today's Orders" : "Average Orders"}
           value={todayOrders}
           subtext="Direct order influx"
           icon={ShoppingBag}
-          trend="+1.4%"
+          trend={loading ? undefined : "+1.4%"}
           trendUp={true}
         />
         <StatCard
@@ -90,7 +112,7 @@ export default function DashboardPage() {
           value={revenueVal}
           subtext="Aggregated value"
           icon={Banknote}
-          trend={filter === "today" ? "+3.5%" : filter === "week" ? "+6.2%" : "+8.4%"}
+          trend={loading ? undefined : (filter === "today" ? "+3.5%" : filter === "week" ? "+6.2%" : "+8.4%")}
           trendUp={true}
         />
         <StatCard
@@ -98,17 +120,17 @@ export default function DashboardPage() {
           value={pendingDeliveries}
           subtext="Unfulfilled shipments"
           icon={Truck}
-          alertText={filter === "today" ? "2 Urgent" : filter === "week" ? "6 Urgent" : "14 Urgent"}
+          alertText={loading ? undefined : (filter === "today" ? "2 Urgent" : filter === "week" ? "6 Urgent" : "14 Urgent")}
         />
       </div>
 
       {/* Middle Grid: Dynamic Charts and Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2">
-          <RevenueChart filter={filter} />
+          <RevenueChart filter={filter} data={data?.revenueChart} loading={loading} />
         </div>
         <div className="lg:col-span-1">
-          <LowStockAlert />
+          <LowStockAlert items={data?.lowStockItems} loading={loading} />
         </div>
       </div>
 
@@ -130,7 +152,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center justify-between border-b border-gray-50 pb-2">
               <span className="text-xs text-gray-500 font-semibold">Active Rate</span>
-              <span className="text-sm font-bold text-gray-900">92.4%</span>
+              <span className="text-sm font-bold text-gray-900">{activeRate}</span>
             </div>
             <div className="flex items-center justify-between border-b border-gray-50 pb-2">
               <span className="text-xs text-gray-500 font-semibold">Growth Trend</span>
@@ -140,7 +162,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 font-semibold">Satisfaction Score</span>
-              <span className="text-sm font-bold text-emerald-600">4.85 / 5.0</span>
+              <span className="text-sm font-bold text-emerald-600">{satisfactionScore}</span>
             </div>
           </div>
           <div className="pt-2">
@@ -152,17 +174,17 @@ export default function DashboardPage() {
 
         {/* Donut Order Status Widget */}
         <div>
-          <OrderStatusPie filter={filter} />
+          <OrderStatusPie filter={filter} data={data?.orderStatusPie} loading={loading} />
         </div>
 
         {/* Best Sellers */}
         <div>
-          <BestSellersList />
+          <BestSellersList data={data?.bestSellers} loading={loading} />
         </div>
       </div>
 
       {/* Detailed Orders Table */}
-      <RecentOrdersTable />
+      <RecentOrdersTable orders={data?.recentOrders} loading={loading} />
 
       <footer className="mt-12 flex items-center justify-between text-xs text-gray-500 pb-8">
         <p>© 2024 Vipaasa Organics. Artisanal. Ethical. Pure.</p>

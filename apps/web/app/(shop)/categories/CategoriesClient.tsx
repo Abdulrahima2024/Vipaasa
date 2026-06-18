@@ -7,6 +7,7 @@ import Footer from "../../../components/layout/Footer";
 import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 import { fetchApi } from "../../../lib/api";
+import { parseEmojiImage } from "../../../lib/image";
 
 
 // Real API product shape (used only for internal state)
@@ -561,12 +562,24 @@ export default function CategoriesClient() {
                       {/* Product Image and Overlay Labels */}
                       <div className="relative w-full aspect-square bg-[#FAF9F5] rounded-xl overflow-hidden mb-4">
                         <Link href={`/products/${product.id}`} className="block w-full h-full relative">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
+                          {(() => {
+                            const emojiInfo = parseEmojiImage(product.image);
+                            return emojiInfo.isEmoji ? (
+                              <div
+                                className="w-full h-full flex items-center justify-center text-5xl transition-transform duration-500 group-hover:scale-105 select-none"
+                                style={{ backgroundColor: emojiInfo.bgColor }}
+                              >
+                                {emojiInfo.emoji}
+                              </div>
+                            ) : (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                              />
+                            );
+                          })()}
                         </Link>
 
                         {/* Organic Label / Custom tag */}

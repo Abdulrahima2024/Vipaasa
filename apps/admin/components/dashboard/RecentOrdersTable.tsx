@@ -1,13 +1,22 @@
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Package } from "lucide-react";
 
-export default function RecentOrdersTable() {
-  const orders = [
-    { id: "#VIP-9920", customer: "Elena Dubois", initials: "ED", color: "bg-green-100 text-green-700", date: "Oct 24, 2024", total: "$142.00", status: "Shipped", statusColor: "bg-green-100 text-green-700" },
-    { id: "#VIP-9919", customer: "Marcus Sterling", initials: "MS", color: "bg-pink-100 text-pink-700", date: "Oct 24, 2024", total: "$89.50", status: "Processing", statusColor: "bg-gray-100 text-gray-700" },
-    { id: "#VIP-9918", customer: "Sarah Jenkins", avatar: "SJ", color: "bg-orange-100 text-orange-700", date: "Oct 23, 2024", total: "$210.30", status: "Delivered", statusColor: "bg-green-100 text-green-700" },
-    { id: "#VIP-9917", customer: "Arthur Lowen", initials: "AL", color: "bg-gray-200 text-gray-700", date: "Oct 23, 2024", total: "$55.00", status: "Canceled", statusColor: "bg-red-100 text-red-700" },
-  ];
+interface RecentOrder {
+  id: string;
+  customer: string;
+  initials: string;
+  color: string;
+  date: string;
+  total: string;
+  status: string;
+  statusColor: string;
+}
 
+interface RecentOrdersTableProps {
+  orders?: RecentOrder[];
+  loading?: boolean;
+}
+
+export default function RecentOrdersTable({ orders = [], loading }: RecentOrdersTableProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-6 flex items-center justify-between border-b border-gray-100">
@@ -35,31 +44,48 @@ export default function RecentOrdersTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {orders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 font-medium text-gray-900">{order.id}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${order.color}`}>
-                      {order.initials || order.avatar}
-                    </div>
-                    <span className="font-medium text-gray-900">{order.customer}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-gray-500">{order.date}</td>
-                <td className="px-6 py-4 text-gray-900">{order.total}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${order.statusColor}`}>
-                    {order.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                    <MoreHorizontal className="h-5 w-5" />
-                  </button>
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-400 text-sm">
+                  Loading recent orders...
                 </td>
               </tr>
-            ))}
+            ) : orders.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-400 text-sm">
+                  <div className="flex flex-col items-center justify-center">
+                    <Package className="h-8 w-8 mb-2 text-gray-300" />
+                    No recent orders found.
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              orders.map((order) => (
+                <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-gray-900">{order.id}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${order.color || "bg-gray-100 text-gray-700"}`}>
+                        {order.initials}
+                      </div>
+                      <span className="font-medium text-gray-900">{order.customer}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-gray-500">{order.date}</td>
+                  <td className="px-6 py-4 text-gray-900">{order.total}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${order.statusColor}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                      <MoreHorizontal className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -72,3 +98,4 @@ export default function RecentOrdersTable() {
     </div>
   );
 }
+
