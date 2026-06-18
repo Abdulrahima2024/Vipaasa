@@ -273,7 +273,7 @@ export default function InventoryTable() {
   // Helper helper to get pricing details for display
   const getProductPrices = (product: BackendProduct) => {
     const prices: Record<string, string> = { "1kg": "-", "500g": "-", "250g": "-" };
-    product.variants.forEach((v) => {
+    (product.variants || []).forEach((v) => {
       const priceStr = v.pricing ? `₹${parseFloat(v.pricing.basePrice).toFixed(0)}` : "-";
       if (v.weightGrams === 1000) prices["1kg"] = priceStr;
       else if (v.weightGrams === 500) prices["500g"] = priceStr;
@@ -285,7 +285,7 @@ export default function InventoryTable() {
   // Helper helper to get stock levels
   const getProductStock = (product: BackendProduct) => {
     let totalStock = 0;
-    product.variants.forEach(v => {
+    (product.variants || []).forEach(v => {
       if (v.inventories) {
         v.inventories.forEach(inv => {
           totalStock += (inv.quantityOnHand - inv.quantityReserved);
@@ -480,9 +480,10 @@ export default function InventoryTable() {
                             setFormCategoryId(product.category?.id || "");
                             setFormStatus(product.isActive);
                             // Setup prefilled prices
-                            const p1 = product.variants.find(v => v.weightGrams === 1000)?.pricing?.basePrice;
-                            const p2 = product.variants.find(v => v.weightGrams === 500)?.pricing?.basePrice;
-                            const p3 = product.variants.find(v => v.weightGrams === 250)?.pricing?.basePrice;
+                            const variantsList = product.variants || [];
+                            const p1 = variantsList.find(v => v.weightGrams === 1000)?.pricing?.basePrice;
+                            const p2 = variantsList.find(v => v.weightGrams === 500)?.pricing?.basePrice;
+                            const p3 = variantsList.find(v => v.weightGrams === 250)?.pricing?.basePrice;
                             setFormPrice1kg(p1 ? parseFloat(p1) : 0);
                             setFormPrice500g(p2 ? parseFloat(p2) : 0);
                             setFormPrice250g(p3 ? parseFloat(p3) : 0);
