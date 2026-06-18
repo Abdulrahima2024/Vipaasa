@@ -87,8 +87,24 @@ export default function InventoryTable() {
   const [formDiscount, setFormDiscount] = useState(0);
   const [formStock, setFormStock] = useState(10);
   const [formStatus, setFormStatus] = useState(true);
-  const [formEmoji, setFormEmoji] = useState("🌿");
-  const [formBg, setFormBg] = useState("bg-[#edf6ee]");
+  const [formImageUrl, setFormImageUrl] = useState("");
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB limit.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setUploadedImages(prev => [...prev, base64String]);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Load categories and products on mount
   useEffect(() => {
@@ -184,8 +200,8 @@ export default function InventoryTable() {
     setFormDiscount(0);
     setFormStock(10);
     setFormStatus(true);
-    setFormEmoji("🌿");
-    setFormBg("bg-[#edf6ee]");
+    setFormImageUrl("");
+    setUploadedImages([]);
     setIsProductModalOpen(true);
   };
 
@@ -239,13 +255,17 @@ export default function InventoryTable() {
       return;
     }
 
+    const allImages = [...uploadedImages];
+    if (formImageUrl.trim() !== "") {
+      allImages.unshift(formImageUrl.trim());
+    }
+
     const payload = {
       name: formName,
       description: formDescription,
       categoryId: formCategoryId,
       isActive: formStatus,
-      imageEmoji: formEmoji,
-      imageBg: formBg,
+      images: allImages,
       variants,
     };
 
@@ -430,8 +450,12 @@ export default function InventoryTable() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg ${bg} shadow-sm border border-gray-100`}>
-                          {emoji}
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden text-lg bg-gray-50 shadow-sm border border-gray-100">
+                          {product.images && product.images[0]?.url && !product.images[0].url.startsWith("emoji://") ? (
+                            <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{emoji}</span>
+                          )}
                         </div>
                         <div>
                           <div className="font-bold text-gray-900 leading-tight">{product.name}</div>
@@ -487,6 +511,14 @@ export default function InventoryTable() {
                             setFormPrice1kg(p1 ? parseFloat(p1) : 0);
                             setFormPrice500g(p2 ? parseFloat(p2) : 0);
                             setFormPrice250g(p3 ? parseFloat(p3) : 0);
+                            const productImages = product.images || [];
+                            if (productImages.length > 0) {
+                              setFormImageUrl(productImages[0].url);
+                              setUploadedImages(productImages.map(img => img.url));
+                            } else {
+                              setFormImageUrl("");
+                              setUploadedImages([]);
+                            }
                             setIsProductModalOpen(true);
                           }}
                           className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all active:scale-95"
@@ -689,53 +721,70 @@ export default function InventoryTable() {
                 </div>
               </div>
 
-              {/* Aesthetics: Image Emoji, Background, & Active toggle */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              {/* Product Activation Status */}
+              <div className="pt-2">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formStatus}
+                    onChange={(e) => setFormStatus(e.target.checked)}
+                    className="rounded border-gray-300 text-[var(--primary-green)] focus:ring-[var(--primary-green)] w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Product Activated</span>
+                </label>
+              </div>
+
+              {/* Image Input Configuration */}
+              <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Image / Emoji Icon</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Product Image URL</label>
                   <input
                     type="text"
-                    value={formEmoji}
-                    onChange={(e) => setFormEmoji(e.target.value)}
+                    value={formImageUrl}
+                    onChange={(e) => setFormImageUrl(e.target.value)}
+                    placeholder="e.g. https://images.unsplash.com/photo-..."
                     className="block w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary-green)]"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Color Style</label>
-                  <select
-                    value={formBg}
-                    onChange={(e) => setFormBg(e.target.value)}
-                    className="block w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary-green)] bg-white"
-                  >
-                    <option value="bg-[#f3ece0]">Gold Cream</option>
-                    <option value="bg-[#edf6ee]">Mint Green</option>
-                    <option value="bg-[#fbebee]">Rose Pink</option>
-                    <option value="bg-gray-100">Classic Grey</option>
-                  </select>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Or Upload Image File</label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold text-gray-600 bg-white">
+                      <Upload className="w-4 h-4 text-gray-500" />
+                      Choose File
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {uploadedImages.length > 0 && (
+                      <span className="text-xs text-gray-500 font-semibold">
+                        {uploadedImages.length} image(s) selected
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex flex-col justify-end pb-3">
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={formStatus}
-                      onChange={(e) => setFormStatus(e.target.checked)}
-                      className="rounded border-gray-300 text-[var(--primary-green)] focus:ring-[var(--primary-green)] w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Product Activated</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Drag and Drop Image upload mockup */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Upload Product Images</label>
-                <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-[var(--primary-green)]/40 transition-colors cursor-pointer bg-gray-50/30">
-                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs text-gray-600 font-bold">Drag and drop files here, or click to upload</p>
-                  <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, WEBP up to 5MB</p>
-                </div>
+                {/* Image Previews */}
+                {uploadedImages.length > 0 && (
+                  <div className="flex gap-2 flex-wrap pt-2">
+                    {uploadedImages.map((img, idx) => (
+                      <div key={idx} className="relative w-16 h-16 border border-gray-100 rounded-lg overflow-hidden bg-gray-50">
+                        <img src={img} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

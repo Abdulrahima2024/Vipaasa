@@ -37,7 +37,8 @@ export async function fetchAPI<T = any>(endpoint: string, options: RequestOption
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    const errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+    throw new Error(typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : errorMessage);
   }
 
   return response.json();

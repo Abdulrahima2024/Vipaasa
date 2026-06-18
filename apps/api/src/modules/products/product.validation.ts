@@ -65,7 +65,7 @@ export const CreateProductSchema = z.object({
   isActive: z.boolean().default(true),
   imageEmoji: z.string().optional(),
   imageBg: z.string().optional(),
-  images: z.array(z.string().url()).optional(),
+  images: z.array(z.string()).optional(),
   variants: z.array(
     z.object({
       name: z.string().min(1),
