@@ -14,61 +14,62 @@ export default function ProductsPage() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadStats() {
-      try {
-        setLoading(true);
-        // Fetch up to 1000 products to compute dashboard statistics
-        const data = await fetchAPI("/api/products", {
-          params: { limit: 1000, includeInactive: true },
-        });
-        const items = data.items || [];
-        const total = items.length;
+  async function loadStats() {
+    try {
+      setLoading(true);
+      // Fetch up to 1000 products to compute dashboard statistics
+      const data = await fetchAPI("/api/products", {
+        params: { limit: 1000, includeInactive: true },
+      });
+      const items = data.items || [];
+      const total = items.length;
+      
+      let activeCount = 0;
+      let lowStockCount = 0;
+      let totalValuation = 0;
+
+      items.forEach((product: any) => {
+        if (product.isActive) {
+          activeCount++;
+        }
         
-        let activeCount = 0;
-        let lowStockCount = 0;
-        let totalValuation = 0;
-
-        items.forEach((product: any) => {
-          if (product.isActive) {
-            activeCount++;
+        let productStock = 0;
+        (product.variants || []).forEach((v: any) => {
+          let variantStock = 0;
+          if (v.inventories) {
+            v.inventories.forEach((inv: any) => {
+              variantStock += (inv.quantityOnHand - inv.quantityReserved);
+            });
           }
+          productStock += variantStock;
           
-          let productStock = 0;
-          (product.variants || []).forEach((v: any) => {
-            let variantStock = 0;
-            if (v.inventories) {
-              v.inventories.forEach((inv: any) => {
-                variantStock += (inv.quantityOnHand - inv.quantityReserved);
-              });
-            }
-            productStock += variantStock;
-            
-            if (v.pricing) {
-              const price = parseFloat(v.pricing.basePrice);
-              totalValuation += price * variantStock;
-            }
-          });
-          
-          if (productStock <= 15) {
-            lowStockCount++;
+          if (v.pricing) {
+            const price = parseFloat(v.pricing.basePrice);
+            totalValuation += price * variantStock;
           }
         });
+        
+        if (productStock <= 15) {
+          lowStockCount++;
+        }
+      });
 
-        const activePercent = total > 0 ? `${((activeCount / total) * 100).toFixed(1)}%` : "0%";
+      const activePercent = total > 0 ? `${((activeCount / total) * 100).toFixed(1)}%` : "0%";
 
-        setStats({
-          total,
-          activePercent,
-          lowStock: lowStockCount,
-          valuation: `₹${totalValuation.toLocaleString("en-IN")}`,
-        });
-      } catch (err) {
-        console.error("Failed to load dashboard stats:", err);
-      } finally {
-        setLoading(false);
-      }
+      setStats({
+        total,
+        activePercent,
+        lowStock: lowStockCount,
+        valuation: `₹${totalValuation.toLocaleString("en-IN")}`,
+      });
+    } catch (err) {
+      console.error("Failed to load dashboard stats:", err);
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadStats();
   }, []);
 
@@ -146,7 +147,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Main Inventory Table */}
-      <InventoryTable />
+      <InventoryTable onProductChange={loadStats} />
 
       <footer className="mt-12 flex items-center justify-between text-xs text-gray-500 pb-8">
         <p>© 2024 Vipaasa Organics. Artisanal. Ethical. Pure.</p>

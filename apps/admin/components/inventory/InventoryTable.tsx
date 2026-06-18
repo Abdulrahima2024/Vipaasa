@@ -58,7 +58,11 @@ interface CategoryItem {
   description?: string;
 }
 
-export default function InventoryTable() {
+interface InventoryTableProps {
+  onProductChange?: () => void;
+}
+
+export default function InventoryTable({ onProductChange }: InventoryTableProps) {
   const [products, setProducts] = useState<BackendProduct[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,6 +189,7 @@ export default function InventoryTable() {
         method: "PATCH",
         body: JSON.stringify({ isActive: !currentStatus })
       });
+      if (onProductChange) onProductChange();
     } catch (err) {
       console.error(err);
       loadProducts();
@@ -216,6 +221,7 @@ export default function InventoryTable() {
       try {
         await fetchAPI(`/api/products/${id}`, { method: "DELETE" });
         setProducts(products.filter(p => p.id !== id));
+        if (onProductChange) onProductChange();
       } catch (err: any) {
         alert(err.message || "Failed to delete product");
       }
@@ -290,6 +296,7 @@ export default function InventoryTable() {
       }
       setIsProductModalOpen(false);
       loadProducts();
+      if (onProductChange) onProductChange();
     } catch (err: any) {
       alert(err.message || "Failed to save product");
     }

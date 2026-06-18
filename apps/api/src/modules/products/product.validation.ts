@@ -10,7 +10,7 @@ export const GetProductsQuerySchema = z.object({
     .string()
     .optional()
     .transform((val) => (val ? parseInt(val, 10) : 20))
-    .refine((val) => val >= 1 && val <= 100, { message: "Limit must be between 1 and 100" }),
+    .refine((val) => val >= 1 && val <= 1000, { message: "Limit must be between 1 and 1000" }),
   categoryId: z.string().uuid({ message: "Invalid category ID format" }).optional(),
   minPrice: z
     .string()
@@ -55,7 +55,7 @@ export const SearchProductsQuerySchema = z.object({
     .string()
     .optional()
     .transform((val) => (val ? parseInt(val, 10) : 20))
-    .refine((val) => val >= 1 && val <= 100, { message: "Limit must be between 1 and 100" }),
+    .refine((val) => val >= 1 && val <= 1000, { message: "Limit must be between 1 and 1000" }),
 });
 
 export const GetProductParamsSchema = z.object({
