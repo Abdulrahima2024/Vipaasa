@@ -75,7 +75,7 @@ const mapBackendCartToFrontend = (backendCart: any, allProducts: any[]): CartIte
     const spec = `${weight} • Pure Organic`;
 
     return {
-      id: item.productId, // Use variantId as frontend ID
+      id: item.id, // Use actual database CartItem ID for update/delete
       productId: parentProduct?.id || item.productId,
       variantId: item.productId,
       name: parentProduct?.name || item.productName || "Product",
