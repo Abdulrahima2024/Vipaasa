@@ -50,35 +50,19 @@ interface CartStore {
   clearCart: () => Promise<void>;
 }
 
-const mapBackendCartToFrontend = (backendCart: any, allProducts: any[]): CartItem[] => {
+const mapBackendCartToFrontend = (backendCart: any): CartItem[] => {
   return (backendCart?.items || []).map((item: any) => {
-    let parentProduct = null;
-    let variant = null;
-
-    if (allProducts && Array.isArray(allProducts)) {
-      for (const p of allProducts) {
-        if (p.variants && Array.isArray(p.variants)) {
-          const v = p.variants.find((vItem: any) => vItem.id === item.productId);
-          if (v) {
-            parentProduct = p;
-            variant = v;
-            break;
-          }
-        }
-      }
-    }
-
-    const grams = variant?.weightGrams || 250;
+    const grams = item.weightGrams || 250;
     const weight: "1kg" | "500g" | "250g" = grams === 1000 ? "1kg" : grams === 500 ? "500g" : "250g";
-    const image = parentProduct?.images?.[0] || parentProduct?.image || "/placeholder.jpg";
-    const description = parentProduct?.category?.name || parentProduct?.category || "General";
+    const image = item.image || "/placeholder.jpg";
+    const description = item.categoryName || "General";
     const spec = `${weight} • Pure Organic`;
 
     return {
       id: item.id, // Use actual database CartItem ID for update/delete
-      productId: parentProduct?.id || item.productId,
+      productId: item.productId,
       variantId: item.productId,
-      name: parentProduct?.name || item.productName || "Product",
+      name: item.productName || "Product",
       description,
       spec,
       price: item.unitPrice,
@@ -127,9 +111,8 @@ export const useCartStore = create<CartStore>()(
         if (user) {
           try {
             const data = await fetchApi<any>("/api/cart");
-            const allProducts = await getCachedProducts();
-            if (data && allProducts) {
-              set({ items: mapBackendCartToFrontend(data, allProducts) });
+            if (data) {
+              set({ items: mapBackendCartToFrontend(data) });
             }
           } catch (e) {
             console.error("Error fetching cart from backend", e);
@@ -143,7 +126,7 @@ export const useCartStore = create<CartStore>()(
           const productsData = await fetchApi<any>("/api/products?limit=100");
           const allProducts = productsData?.items || [];
           const userCart = await fetchApi<any>("/api/cart");
-          const userItemsMapped = mapBackendCartToFrontend(userCart, allProducts);
+          const userItemsMapped = mapBackendCartToFrontend(userCart);
 
           // Merge guest items into user items
           const mergedItems = [...userItemsMapped];
@@ -223,8 +206,7 @@ export const useCartStore = create<CartStore>()(
               });
               console.log("[useCartStore] Backend response for adding item to cart (returned updated cart):", res);
               
-              const allProducts = await getCachedProducts();
-              const mapped = mapBackendCartToFrontend(res, allProducts);
+              const mapped = mapBackendCartToFrontend(res);
               console.log("[useCartStore] Client-side mapped cart items for rendering:", mapped);
               set({ items: mapped });
             } catch (e: any) {
@@ -273,23 +255,34 @@ export const useCartStore = create<CartStore>()(
       updateQuantity: async (id, delta) => {
         const user = useAuthStore.getState().user;
         if (user) {
+          const state = useCartStore.getState();
+          const currentItem = state.items.find(item => item.id === id);
+          if (!currentItem) return;
+
+          const oldQty = currentItem.quantity;
+          const newQty = Math.max(1, currentItem.quantity + delta);
+
+          // Optimistically update frontend state
+          set((state) => ({
+            items: state.items.map((item) =>
+              item.id === id ? { ...item, quantity: newQty } : item
+            ),
+          }));
+
           try {
-            const state = useCartStore.getState();
-            const currentItem = state.items.find(item => item.id === id);
-            if (!currentItem) return;
-
-            const newQty = Math.max(1, currentItem.quantity + delta);
-
-            // Fast API call: update quantity of a specific cartItem using PUT route
             const res = await fetchApi<any>(`/api/cart/items/${id}`, {
               method: "PUT",
               body: JSON.stringify({ quantity: newQty }),
             });
-
-            const allProducts = await getCachedProducts();
-            set({ items: mapBackendCartToFrontend(res, allProducts) });
+            set({ items: mapBackendCartToFrontend(res) });
           } catch (e) {
             console.error("Error updating quantity in backend cart:", e);
+            // Rollback on error
+            set((state) => ({
+              items: state.items.map((item) =>
+                item.id === id ? { ...item, quantity: oldQty } : item
+              ),
+            }));
           }
         } else {
           set((state) => ({
@@ -302,17 +295,27 @@ export const useCartStore = create<CartStore>()(
 
       removeItem: async (id) => {
         const user = useAuthStore.getState().user;
+        const state = useCartStore.getState();
+        const itemToRemove = state.items.find(item => item.id === id);
+        if (!itemToRemove) return;
+
         if (user) {
+          // Optimistically update frontend state
+          set((state) => ({
+            items: state.items.filter((item) => item.id !== id),
+          }));
+
           try {
-            // Fast API call: delete only this cartItem using DELETE route
             const res = await fetchApi<any>(`/api/cart/items/${id}`, {
               method: "DELETE",
             });
-
-            const allProducts = await getCachedProducts();
-            set({ items: mapBackendCartToFrontend(res, allProducts) });
+            set({ items: mapBackendCartToFrontend(res) });
           } catch (e) {
             console.error("Error removing item from backend cart:", e);
+            // Rollback on error
+            set((state) => ({
+              items: [...state.items, itemToRemove],
+            }));
           }
         } else {
           set((state) => ({

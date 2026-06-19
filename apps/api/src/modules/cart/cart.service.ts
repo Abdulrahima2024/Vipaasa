@@ -19,6 +19,10 @@ export function mapCartResponse(cart: any): CartResponse {
       productName = `${parentName} - ${productName}`;
     }
 
+    const image = variant?.product?.images?.[0]?.url || variant?.product?.image || "/placeholder.jpg";
+    const categoryName = variant?.product?.category?.name || "General";
+    const grams = variant?.weightGrams || 250;
+
     return {
       id: item.id,
       productId: item.variantId,
@@ -26,6 +30,9 @@ export function mapCartResponse(cart: any): CartResponse {
       quantity: item.quantity,
       unitPrice,
       subtotal,
+      image,
+      categoryName,
+      weightGrams: grams,
     };
   });
 

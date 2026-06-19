@@ -21,7 +21,12 @@ export async function findCartByUserId(userId: string, tx?: Tx) {
         include: {
           variant: {
             include: {
-              product: true,
+              product: {
+                include: {
+                  images: true,
+                  category: true,
+                },
+              },
               pricing: true,
               inventories: true,
             },
@@ -45,7 +50,12 @@ export async function createCart(userId: string, tx?: Tx) {
         include: {
           variant: {
             include: {
-              product: true,
+              product: {
+                include: {
+                  images: true,
+                  category: true,
+                },
+              },
               pricing: true,
               inventories: true,
             },
