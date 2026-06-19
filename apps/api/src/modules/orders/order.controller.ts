@@ -157,3 +157,34 @@ export async function getAdminOrders(req: AuthenticatedRequest, res: Response, n
   }
 }
 
+/**
+ * Handles updating an order status by admin.
+ * PATCH /admin/orders/:id/status
+ */
+export async function updateOrderStatus(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError("Unauthorized. User session not found.", 401);
+    }
+
+    const { id: orderId } = req.params;
+    const { status, notes } = req.body;
+
+    if (!status) {
+      throw new AppError("Status is required.", 400);
+    }
+
+    const updatedOrder = await orderService.updateOrderStatusAdmin(orderId, status, notes, userId);
+
+    return res.status(200).json({
+      status: "success",
+      message: `Order status successfully updated to ${status}.`,
+      data: updatedOrder,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+

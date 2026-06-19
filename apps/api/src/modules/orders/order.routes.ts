@@ -7,6 +7,7 @@ import {
   getOrderById,
   cancelOrder,
   getAdminOrders,
+  updateOrderStatus,
 } from "./order.controller";
 
 const router = Router();
@@ -21,6 +22,6 @@ router.patch("/orders/:id/cancel", authenticate, cancelOrder);
 
 // Admin Orders management
 router.get("/admin/orders", authenticate, authorize(["SUPER_ADMIN"]), getAdminOrders);
+router.patch("/admin/orders/:id/status", authenticate, authorize(["SUPER_ADMIN"]), updateOrderStatus);
 
 export default router;
-

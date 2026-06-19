@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CreditCard, Calendar, User, DollarSign } from "lucide-react";
+import { CreditCard, Calendar, User, DollarSign, ChevronRight } from "lucide-react";
 
 interface Payment {
   id: string;
@@ -57,8 +57,15 @@ export default function PaymentsPage() {
   ]);
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Payments</h1>
+    <div className="max-w-7xl mx-auto">
+      {/* Breadcrumbs */}
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 mb-2">
+        <span>Dashboard</span>
+        <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
+        <span className="text-[var(--primary-green)]">Payments</span>
+      </div>
+
+      <h1 className="text-3xl font-bold text-gray-900 mb-6 font-serif">Payments</h1>
       <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100 bg-white">
         <table className="min-w-full text-sm text-left text-gray-600">
           <thead className="bg-gray-50 uppercase text-xs text-gray-500 border-b border-gray-100">

@@ -494,3 +494,135 @@ export async function getAdminOrders() {
   });
 }
 
+/**
+ * Updates an order status, payment status, and delivery status by admin.
+ */
+export async function updateOrderStatusAdmin(
+  orderId: string,
+  newStatus: string,
+  notes: string | undefined,
+  changedByUserId: string
+) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        reservations: true,
+      },
+    });
+
+    if (!order) {
+      throw new AppError("Order not found.", 404);
+    }
+
+    let dbOrderStatus: OrderStatus = order.status;
+    let dbPaymentStatus: PaymentStatus = order.paymentStatus;
+    let dbDeliveryStatus: DeliveryStatus = order.deliveryStatus;
+
+    const inputStatusLower = newStatus.toLowerCase();
+
+    if (inputStatusLower === "pending") {
+      dbOrderStatus = OrderStatus.PENDING;
+      dbDeliveryStatus = DeliveryStatus.PENDING;
+    } else if (inputStatusLower === "processing") {
+      dbOrderStatus = OrderStatus.PROCESSING;
+      dbDeliveryStatus = DeliveryStatus.PENDING;
+    } else if (inputStatusLower === "shipped") {
+      dbOrderStatus = OrderStatus.SHIPPED;
+      dbDeliveryStatus = DeliveryStatus.IN_TRANSIT;
+    } else if (inputStatusLower === "delivered") {
+      dbOrderStatus = OrderStatus.DELIVERED;
+      dbDeliveryStatus = DeliveryStatus.DELIVERED;
+      dbPaymentStatus = PaymentStatus.PAID;
+    } else if (inputStatusLower === "cancelled") {
+      dbOrderStatus = OrderStatus.CANCELLED;
+      dbDeliveryStatus = DeliveryStatus.FAILED;
+    } else if (inputStatusLower === "returned") {
+      dbOrderStatus = OrderStatus.RETURNED;
+      dbDeliveryStatus = DeliveryStatus.RETURNED;
+    } else if (inputStatusLower === "refunded") {
+      if (order.status === OrderStatus.CANCELLED) {
+        dbOrderStatus = OrderStatus.CANCELLED;
+      } else {
+        dbOrderStatus = OrderStatus.RETURNED;
+      }
+      dbPaymentStatus = PaymentStatus.REFUNDED;
+      dbDeliveryStatus = DeliveryStatus.RETURNED;
+    } else {
+      throw new AppError(`Invalid order status: ${newStatus}`, 400);
+    }
+
+    const updatedOrder = await tx.order.update({
+      where: { id: orderId },
+      data: {
+        status: dbOrderStatus,
+        paymentStatus: dbPaymentStatus,
+        deliveryStatus: dbDeliveryStatus,
+      },
+    });
+
+    if (
+      dbOrderStatus === OrderStatus.CANCELLED ||
+      dbOrderStatus === OrderStatus.RETURNED ||
+      dbPaymentStatus === PaymentStatus.REFUNDED
+    ) {
+      const reservations = await tx.stockReservation.findMany({
+        where: {
+          orderId,
+          status: ReservationStatus.PENDING,
+        },
+      });
+
+      for (const reservation of reservations) {
+        await tx.inventory.update({
+          where: { id: reservation.inventoryId },
+          data: {
+            quantityReserved: { decrement: reservation.quantity },
+          },
+        });
+
+        await tx.stockReservation.update({
+          where: { id: reservation.id },
+          data: {
+            status: ReservationStatus.CANCELLED,
+          },
+        });
+      }
+    }
+
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        status: dbOrderStatus,
+        changedByUserId,
+        notes: notes || `Order status updated to ${newStatus} by admin.`,
+      },
+    });
+
+    return tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
+        },
+        items: {
+          include: {
+            variant: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+        statusHistory: true,
+        payments: true,
+      },
+    });
+  }, {
+    timeout: 15000,
+  });
+}
+
+

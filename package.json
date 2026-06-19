@@ -17,6 +17,7 @@
     "turbo": "^1.12.4"
   },
   "dependencies": {
-    "@prisma/client": "^5.18.0"
+    "@prisma/client": "^5.18.0",
+    "ioredis": "^5.11.1"
   }
 }

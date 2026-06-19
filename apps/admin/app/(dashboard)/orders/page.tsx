@@ -5,20 +5,14 @@ import { fetchAPI } from "../../../lib/api";
 import { 
   ChevronRight, 
   Search, 
-  SlidersHorizontal, 
   ChevronDown, 
   Download, 
   RefreshCw, 
-  ChevronLeft, 
-  ChevronRight as ChevronRightIcon,
   X,
   Printer,
-  CheckCircle,
-  Truck,
-  RotateCcw,
   Ban,
-  CircleDollarSign,
-  FileText
+  RotateCcw,
+  CircleDollarSign
 } from "lucide-react";
 
 interface OrderItem {
@@ -29,7 +23,8 @@ interface OrderItem {
 }
 
 interface Order {
-  id: string;
+  id: string; // Database UUID
+  orderNumber: string; // Human readable ID e.g., ORD-...
   customerName: string;
   email: string;
   date: string;
@@ -37,8 +32,8 @@ interface Order {
   total: number;
   status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Returned" | "Refunded";
   paymentMethod: string;
-  paymentId?: string; // optional for now
-  bankDetails?: string; // optional string representation
+  paymentId?: string; 
+  bankDetails?: string; 
   shippingAddress: string;
 }
 
@@ -50,7 +45,8 @@ export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
 
-  useEffect(() => {
+  const fetchOrders = () => {
+    setIsLoading(true);
     fetchAPI("/api/admin/orders")
       .then((res) => {
         if (res && res.data) {
@@ -64,17 +60,21 @@ export default function OrdersPage() {
 
             const addr = `${o.shippingAddressLine1}${o.shippingAddressLine2 ? ', ' + o.shippingAddressLine2 : ''}, ${o.shippingCity}, ${o.shippingState}, ${o.shippingPostalCode}`;
 
-            // Map backend PENDING/PROCESSING/SHIPPED/DELIVERED/CANCELLED to title case
+            // Map backend status to title case
             let status: Order["status"] = "Pending";
             if (o.status === "PROCESSING") status = "Processing";
             else if (o.status === "SHIPPED") status = "Shipped";
             else if (o.status === "DELIVERED") status = "Delivered";
             else if (o.status === "CANCELLED") status = "Cancelled";
             else if (o.status === "RETURNED") status = "Returned";
-            else if (o.status === "REFUNDED") status = "Refunded";
+            
+            if (o.paymentStatus === "REFUNDED") {
+              status = "Refunded";
+            }
 
             return {
-              id: o.orderNumber || o.id,
+              id: o.id,
+              orderNumber: o.orderNumber || o.id,
               customerName: o.user?.profile ? `${o.user.profile.firstName} ${o.user.profile.lastName}`.trim() : "Customer",
               email: o.user?.email || "",
               date: new Date(o.createdAt).toISOString().split("T")[0],
@@ -96,17 +96,31 @@ export default function OrdersPage() {
       .finally(() => {
         setIsLoading(false);
       });
-  }, []);
+  };
 
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   // Selected Order Detail View State
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // Status handler helpers
-  const handleUpdateStatus = (id: string, newStatus: Order["status"]) => {
-    setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
-    if (selectedOrder && selectedOrder.id === id) {
-      setSelectedOrder({ ...selectedOrder, status: newStatus });
+  const handleUpdateStatus = async (id: string, newStatus: Order["status"]) => {
+    try {
+      const response = await fetchAPI(`/api/admin/orders/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (response && response.status === "success") {
+        setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+        if (selectedOrder && selectedOrder.id === id) {
+          setSelectedOrder({ ...selectedOrder, status: newStatus });
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to update order status:", err);
+      alert(err.message || "Failed to update order status.");
     }
   };
 
@@ -129,12 +143,12 @@ export default function OrdersPage() {
   };
 
   const handleSimulateInvoiceDownload = (order: Order) => {
-    alert(`Downloading Invoice_${order.id}.pdf\nReceipt Total: ₹${order.total}\nCustomer: ${order.customerName}`);
+    alert(`Downloading Invoice_${order.orderNumber}.pdf\nReceipt Total: ₹${order.total}\nCustomer: ${order.customerName}`);
   };
 
   // Filter calculations
   const filteredOrders = orders.filter((o) => {
-    const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           o.customerName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = selectedStatusFilter === "All" || o.status === selectedStatusFilter;
     return matchesSearch && matchesStatus;
@@ -198,7 +212,7 @@ export default function OrdersPage() {
             </div>
 
             <button 
-              onClick={() => { setSearchQuery(""); setSelectedStatusFilter("All"); }}
+              onClick={() => { setSearchQuery(""); setSelectedStatusFilter("All"); fetchOrders(); }}
               className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
               title="Reset Filters"
             >
@@ -209,87 +223,98 @@ export default function OrdersPage() {
 
         {/* Orders Table Grid */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-gray-50/50 text-xs uppercase text-gray-500 border-b border-gray-100">
-              <tr>
-                <th className="px-6 py-4 font-bold">Order ID</th>
-                <th className="px-6 py-4 font-bold">Customer</th>
-                <th className="px-6 py-4 font-bold">Date</th>
-                <th className="px-6 py-4 font-bold">Items Count</th>
-                <th className="px-6 py-4 font-bold">Total Amount</th>
-                <th className="px-6 py-4 font-bold text-center">Status</th>
-                <th className="px-6 py-4 font-bold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 font-medium">
-              {filteredOrders.map((order) => {
-                // Status styles
-                let statusClass = "bg-gray-100 text-gray-800 border-gray-200";
-                switch (order.status) {
-                  case "Pending":
-                    statusClass = "bg-amber-50 text-amber-700 border-amber-100";
-                    break;
-                  case "Processing":
-                    statusClass = "bg-blue-50 text-blue-700 border-blue-100";
-                    break;
-                  case "Shipped":
-                    statusClass = "bg-indigo-50 text-indigo-700 border-indigo-100";
-                    break;
-                  case "Delivered":
-                    statusClass = "bg-green-50 text-green-700 border-green-100";
-                    break;
-                  case "Cancelled":
-                    statusClass = "bg-red-50 text-red-700 border-red-100";
-                    break;
-                  case "Returned":
-                    statusClass = "bg-purple-50 text-purple-700 border-purple-100";
-                    break;
-                  case "Refunded":
-                    statusClass = "bg-emerald-50 text-emerald-700 border-emerald-100";
-                    break;
-                }
+          {isLoading ? (
+            <div className="p-12 text-center text-gray-500 font-semibold flex items-center justify-center gap-2">
+              <RefreshCw className="h-5 w-5 animate-spin text-[var(--primary-green)]" />
+              Loading orders...
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="p-12 text-center text-gray-500 font-semibold">
+              No orders found matching the criteria.
+            </div>
+          ) : (
+            <table className="w-full text-left text-sm text-gray-600">
+              <thead className="bg-gray-50/50 text-xs uppercase text-gray-500 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-4 font-bold">Order ID</th>
+                  <th className="px-6 py-4 font-bold">Customer</th>
+                  <th className="px-6 py-4 font-bold">Date</th>
+                  <th className="px-6 py-4 font-bold">Items Count</th>
+                  <th className="px-6 py-4 font-bold">Total Amount</th>
+                  <th className="px-6 py-4 font-bold text-center">Status</th>
+                  <th className="px-6 py-4 font-bold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 font-medium">
+                {filteredOrders.map((order) => {
+                  // Status styles
+                  let statusClass = "bg-gray-100 text-gray-800 border-gray-200";
+                  switch (order.status) {
+                    case "Pending":
+                      statusClass = "bg-amber-50 text-amber-700 border-amber-100";
+                      break;
+                    case "Processing":
+                      statusClass = "bg-blue-50 text-blue-700 border-blue-100";
+                      break;
+                    case "Shipped":
+                      statusClass = "bg-indigo-50 text-indigo-700 border-indigo-100";
+                      break;
+                    case "Delivered":
+                      statusClass = "bg-green-50 text-green-700 border-green-100";
+                      break;
+                    case "Cancelled":
+                      statusClass = "bg-red-50 text-red-700 border-red-100";
+                      break;
+                    case "Returned":
+                      statusClass = "bg-purple-50 text-purple-700 border-purple-100";
+                      break;
+                    case "Refunded":
+                      statusClass = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                      break;
+                  }
 
-                return (
-                  <tr key={order.id} className="hover:bg-gray-50/30 transition-colors">
-                    <td className="px-6 py-4 font-mono font-bold text-gray-900">{order.id}</td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-gray-900 font-bold">{order.customerName}</div>
-                        <div className="text-xs text-gray-400 font-semibold">{order.email}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-semibold text-gray-500">{order.date}</td>
-                    <td className="px-6 py-4 text-xs">
-                      {order.items.reduce((acc, item) => acc + item.qty, 0)} units ({order.items.length} unique)
-                    </td>
-                    <td className="px-6 py-4 font-bold text-gray-900">₹{order.total}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${statusClass}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                          className="px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 text-xs font-bold border border-gray-200 rounded-lg text-gray-700"
-                        >
-                          Details
-                        </button>
-                        <button
-                          onClick={() => handleSimulateInvoiceDownload(order)}
-                          className="p-2 text-gray-400 hover:text-[var(--primary-green)] hover:bg-gray-50 rounded-lg transition-colors"
-                          title="Download Invoice"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={order.id} className="hover:bg-gray-50/30 transition-colors">
+                      <td className="px-6 py-4 font-mono font-bold text-gray-900">{order.orderNumber}</td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="text-gray-900 font-bold">{order.customerName}</div>
+                          <div className="text-xs text-gray-400 font-semibold">{order.email}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-semibold text-gray-500">{order.date}</td>
+                      <td className="px-6 py-4 text-xs">
+                        {order.items.reduce((acc, item) => acc + item.qty, 0)} units ({order.items.length} unique)
+                      </td>
+                      <td className="px-6 py-4 font-bold text-gray-900">₹{order.total}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${statusClass}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className="px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 text-xs font-bold border border-gray-200 rounded-lg text-gray-700"
+                          >
+                            Details
+                          </button>
+                          <button
+                            onClick={() => handleSimulateInvoiceDownload(order)}
+                            className="p-2 text-gray-400 hover:text-[var(--primary-green)] hover:bg-gray-50 rounded-lg transition-colors"
+                            title="Download Invoice"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -301,7 +326,7 @@ export default function OrdersPage() {
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Order Details - {selectedOrder.id}</h3>
+                <h3 className="text-lg font-bold text-gray-900">Order Details - {selectedOrder.orderNumber}</h3>
                 <p className="text-xs text-gray-400 font-semibold mt-0.5">Placed on {selectedOrder.date}</p>
               </div>
               <button onClick={() => setSelectedOrder(null)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400">
@@ -318,28 +343,7 @@ export default function OrdersPage() {
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Shipping Address</span>
                   <p className="text-xs text-gray-700 font-semibold leading-relaxed">{selectedOrder.shippingAddress}</p>
                 </div>
-<div className="space-y-2 mt-4">
-  <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Details</span>
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-    <div>
-      <span className="font-medium text-gray-600">Payer:</span>
-      <span className="block text-gray-900">{selectedOrder.customerName}</span>
-    </div>
-    <div>
-      <span className="font-medium text-gray-600">Payment ID:</span>
-      <span className="block text-gray-900">{selectedOrder.paymentId || "N/A"}</span>
-    </div>
-    <div>
-      <span className="font-medium text-gray-600">Amount Paid:</span>
-      <span className="block text-gray-900">₹{selectedOrder.total}</span>
-    </div>
-    <div>
-      <span className="font-medium text-gray-600">Bank Details:</span>
-      <span className="block text-gray-900">{selectedOrder.bankDetails || "N/A"}</span>
-    </div>
-  </div>
-</div>
-                <div className="space-y-2 sm:text-right">
+                <div className="space-y-2">
                   <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Fulfillment Status</span>
                   <div className="flex sm:justify-end gap-2 items-center">
                     <span className="text-sm font-bold text-gray-800 mr-2">{selectedOrder.status}</span>
@@ -356,6 +360,29 @@ export default function OrdersPage() {
                       <option value="Returned">Returned</option>
                       <option value="Refunded">Refunded</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Details */}
+              <div className="space-y-2 border-b border-gray-100 pb-6">
+                <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Details</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
+                  <div>
+                    <span className="text-gray-400">Payer:</span>
+                    <span className="block text-gray-900 mt-0.5">{selectedOrder.customerName}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Payment ID:</span>
+                    <span className="block text-gray-900 mt-0.5">{selectedOrder.paymentId || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Amount Paid:</span>
+                    <span className="block text-gray-900 mt-0.5">₹{selectedOrder.total}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Bank/Gateway Details:</span>
+                    <span className="block text-gray-900 mt-0.5">{selectedOrder.bankDetails || "N/A"}</span>
                   </div>
                 </div>
               </div>
@@ -382,7 +409,7 @@ export default function OrdersPage() {
 
               {/* Quick Actions Panel */}
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3">
-                <span className="block text-xs font-extrabold text-[var(--primary-green)] uppercase tracking-wider border-b border-gray-250 pb-1.5">
+                <span className="block text-xs font-extrabold text-[var(--primary-green)] uppercase tracking-wider border-b border-gray-200 pb-1.5">
                   Fulfillment Actions
                 </span>
                 
@@ -392,7 +419,7 @@ export default function OrdersPage() {
                   <button
                     disabled={selectedOrder.status === "Cancelled" || selectedOrder.status === "Refunded"}
                     onClick={() => handleCancelOrder(selectedOrder.id)}
-                    className="flex items-center gap-1.5 bg-red-50 border border-red-150 hover:bg-red-100 text-red-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-1.5 bg-red-50 border border-red-100 hover:bg-red-200 text-red-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <Ban className="w-3.5 h-3.5" />
                     Cancel Order
@@ -402,7 +429,7 @@ export default function OrdersPage() {
                   <button
                     disabled={selectedOrder.status === "Returned" || selectedOrder.status !== "Delivered"}
                     onClick={() => handleProcessReturn(selectedOrder.id)}
-                    className="flex items-center gap-1.5 bg-purple-50 border border-purple-150 hover:bg-purple-100 text-purple-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-1.5 bg-purple-50 border border-purple-100 hover:bg-purple-200 text-purple-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     Process Return
@@ -412,7 +439,7 @@ export default function OrdersPage() {
                   <button
                     disabled={selectedOrder.status === "Refunded" || (selectedOrder.status !== "Cancelled" && selectedOrder.status !== "Returned")}
                     onClick={() => handleProcessRefund(selectedOrder.id)}
-                    className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-150 hover:bg-emerald-100 text-emerald-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <CircleDollarSign className="w-3.5 h-3.5" />
                     Process Refund
@@ -421,7 +448,7 @@ export default function OrdersPage() {
                   {/* Print Invoice */}
                   <button
                     onClick={() => handleSimulateInvoiceDownload(selectedOrder)}
-                    className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ml-auto"
+                    className="flex items-center gap-1.5 bg-gray-150 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ml-auto"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     Print Receipt
@@ -433,7 +460,7 @@ export default function OrdersPage() {
               <div className="border-t border-gray-100 pt-4 flex justify-end">
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-bold text-gray-700 transition-colors"
+                  className="px-5 py-2.5 bg-gray-150 hover:bg-gray-250 rounded-xl text-xs font-bold text-gray-700 transition-colors"
                 >
                   Close Window
                 </button>

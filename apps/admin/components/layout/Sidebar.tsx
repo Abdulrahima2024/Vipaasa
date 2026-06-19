@@ -17,6 +17,7 @@ import {
 
 const mainNavItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Orders", href: "/orders", icon: ShoppingCart },
   { name: "Products", href: "/products", icon: Package },
   { name: "Inventory", href: "/inventory", icon: ClipboardList },
   { name: "Payments", href: "/payments", icon: CreditCard },

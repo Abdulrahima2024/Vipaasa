@@ -5,7 +5,6 @@ import Header from "@/components/layout/Header";
 import StatCard from "@/components/dashboard/StatCard";
 import CustomerGrowthChart from "@/components/dashboard/CustomerGrowthChart";
 import BestSellersList from "@/components/dashboard/BestSellersList";
-import RecentOrdersTable from "@/components/dashboard/RecentOrdersTable";
 import LowStockAlert from "@/components/dashboard/LowStockAlert";
 import RevenueChart from "@/components/dashboard/RevenueChart";
 import OrderStatusPie from "@/components/dashboard/OrderStatusPie";
@@ -182,9 +181,6 @@ export default function DashboardPage() {
           <BestSellersList data={data?.bestSellers} loading={loading} />
         </div>
       </div>
-
-      {/* Detailed Orders Table */}
-      <RecentOrdersTable orders={data?.recentOrders} loading={loading} />
 
       <footer className="mt-12 flex items-center justify-between text-xs text-gray-500 pb-8">
         <p>© 2024 Vipaasa Organics. Artisanal. Ethical. Pure.</p>
