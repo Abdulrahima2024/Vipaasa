@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, ArrowRight, Loader2, RefreshCw, Truck } from "lucide-react";
+import { FileText, ArrowRight, Loader2, RefreshCw, Truck, X, User as UserIcon, CreditCard, ShoppingBag } from "lucide-react";
 import Header from "../../components/layout/Header";
 import Footer from "../../components/layout/Footer";
 import { useAuthStore } from "../../store/authStore";
 import { useCartStore } from "../../store/useCartStore";
 import { parseEmojiImage } from "../../lib/image";
+import { fetchApi } from "../../lib/api";
 
 interface OrderItem {
   id: string;
@@ -18,6 +19,14 @@ interface OrderItem {
   status: "Processing" | "Shipped" | "Delivered" | "Cancelled";
   images: string[];
   extraItemsCount?: number;
+  shippingAddress?: string;
+  paymentStatus?: string;
+  deliveryStatus?: string;
+  paymentMethod?: string;
+  itemsList?: any[];
+  subtotal?: number;
+  shippingFee?: number;
+  taxAmount?: number;
 }
 
 const MOCK_ORDERS: OrderItem[] = [
@@ -60,15 +69,18 @@ const MOCK_ORDERS: OrderItem[] = [
     id: "ord-4",
     orderId: "#VO-87221",
     placedOn: "Sep 15, 2023",
-  shippingAddress?: string;
-  paymentStatus?: string;
-  deliveryStatus?: string;
-  paymentMethod?: string;
-  itemsList?: any[];
-  subtotal?: number;
-  shippingFee?: number;
-  taxAmount?: number;
-}
+    total: 0,
+    status: "Cancelled",
+    images: [],
+    shippingAddress: "",
+    paymentStatus: "",
+    deliveryStatus: "",
+    paymentMethod: "",
+    itemsList: [],
+    subtotal: 0,
+    shippingFee: 0,
+  }
+];
 
 type StatusFilter = "All Orders" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
