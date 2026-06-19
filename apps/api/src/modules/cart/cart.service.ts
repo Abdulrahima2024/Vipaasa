@@ -20,6 +20,7 @@ export function mapCartResponse(cart: any): CartResponse {
     }
 
     return {
+      id: item.id,
       productId: item.variantId,
       productName,
       quantity: item.quantity,
@@ -27,6 +28,7 @@ export function mapCartResponse(cart: any): CartResponse {
       subtotal,
     };
   });
+
 
   const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
 

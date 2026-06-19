@@ -33,6 +33,10 @@ export async function checkout(
 ) {
   return prisma.$transaction(async (tx) => {
     // 1. Prevent duplicate checkout by row-locking the user's cart
+    console.log(`\n========================================`);
+    console.log(`[BACKEND] Starting Checkout Transaction for User: ${userId}`);
+    console.log(`========================================`);
+    
     const cart = await tx.cart.findUnique({
       where: { userId },
     });
@@ -46,6 +50,7 @@ export async function checkout(
       where: { id: cart.id },
       data: { updatedAt: new Date() },
     });
+    console.log(`[BACKEND] Step 1: User Cart row-locked successfully.`);
 
     // 2. Validate Cart and items
     const cartWithItems = await tx.cart.findUnique({
@@ -79,6 +84,7 @@ export async function checkout(
         );
       }
     }
+    console.log(`[BACKEND] Step 2: Validated Cart: contains ${cartWithItems.items.length} items. All items are active and valid.`);
 
     // 3. Resolve / Create Addresses
     let profile = await tx.customerProfile.findUnique({
@@ -149,6 +155,9 @@ export async function checkout(
         },
       });
     }
+    console.log(`[BACKEND] Step 3: Resolved Delivery Addresses successfully.`);
+    console.log(`          - Shipping Address: ${shippingAddress.addressLine1}, ${shippingAddress.city}`);
+    console.log(`          - Billing Address: ${billingAddress.addressLine1}, ${billingAddress.city}`);
 
     // 4. Validate Inventory availability
     for (const item of cartWithItems.items) {
@@ -165,6 +174,7 @@ export async function checkout(
         );
       }
     }
+    console.log(`[BACKEND] Step 4: Validated inventory stock. Sufficient quantities available in warehouses.`);
 
     // 5. Calculate Order Totals
     let totalItemsPrice = 0;
@@ -185,6 +195,12 @@ export async function checkout(
     const shippingFee = totalItemsPrice >= 1000 ? 0 : 100; // Free shipping above 1000
     const discountAmount = 0;
     const totalPayable = totalItemsPrice + taxAmount + shippingFee - discountAmount;
+
+    console.log(`[BACKEND] Step 5: Calculated Order Totals:`);
+    console.log(`          - Items Subtotal: INR ${totalItemsPrice}`);
+    console.log(`          - Shipping Fee:   INR ${shippingFee}`);
+    console.log(`          - GST Tax (18%):  INR ${taxAmount}`);
+    console.log(`          - Total Payable:  INR ${totalPayable}`);
 
     // 6. Create Order
     const order = await tx.order.create({
@@ -212,6 +228,9 @@ export async function checkout(
         deliveryStatus: DeliveryStatus.PENDING,
       },
     });
+    console.log(`[BACKEND] Step 6: Order successfully created in Database.`);
+    console.log(`          - Database ID:  ${order.id}`);
+    console.log(`          - Order Number: ${order.orderNumber}`);
 
     // 7. Create Order Items & Reserve Inventory
     for (const item of cartWithItems.items) {
@@ -261,6 +280,7 @@ export async function checkout(
 
         remainingToReserve -= reserveAmount;
       }
+      console.log(`[BACKEND] Step 7: Created OrderItem and reserved ${item.quantity} units for variant ID ${item.variantId}`);
     }
 
     // 8. Create Order Status History
@@ -272,11 +292,13 @@ export async function checkout(
         notes: "Order created successfully via checkout.",
       },
     });
+    console.log(`[BACKEND] Step 8: Logged Order Status History entry.`);
 
     // 9. Clear Cart Items
     await tx.cartItem.deleteMany({
       where: { cartId: cart.id },
     });
+    console.log(`[BACKEND] Step 9: Cleared user cart items.`);
 
     // Fetch and return the fully populated order details
     const finalizedOrder = await tx.order.findUnique({
@@ -294,6 +316,9 @@ export async function checkout(
         statusHistory: true,
       },
     });
+
+    console.log(`[BACKEND] Order finalized successfully. Visible in Admin Dashboard Orders.`);
+    console.log(`========================================\n`);
 
     return finalizedOrder;
   }, {
@@ -433,3 +458,31 @@ export async function cancelOrder(userId: string, orderId: string) {
     timeout: 15000,
   });
 }
+
+/**
+ * Retrieves all orders for the administration dashboard.
+ */
+export async function getAdminOrders() {
+  return prisma.order.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: {
+        include: {
+          profile: true,
+        },
+      },
+      items: {
+        include: {
+          variant: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      },
+      statusHistory: true,
+      payments: true,
+    },
+  });
+}
+

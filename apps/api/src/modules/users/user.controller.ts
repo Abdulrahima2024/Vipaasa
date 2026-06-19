@@ -130,3 +130,159 @@ export async function getEcoImpact(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+
+export async function getAddresses(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await userService.getUserProfile(userId);
+    const fullName = user?.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : "Customer User";
+
+    const addresses = await userService.getUserAddresses(userId);
+    const mapped = addresses.map(addr => ({
+      id: addr.id,
+      type: addr.addressType === "HOME" ? "Home" : addr.addressType === "WORK" ? "Work" : "Other",
+      name: fullName,
+      addressLine1: addr.addressLine1,
+      addressLine2: addr.addressLine2 || "",
+      city: addr.city,
+      state: addr.state,
+      postalCode: addr.postalCode,
+      country: addr.country,
+      phone: addr.phone || "",
+      isDefault: addr.isDefault
+    }));
+
+    return res.status(200).json({ status: "success", data: mapped });
+  } catch (error) {
+    console.error("GetAddresses controller error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function createAddress(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { type, addressType: bodyAddressType, addressLine1, addressLine2, city, state, postalCode, country, phone, isDefault } = req.body;
+
+    const rawType = bodyAddressType || type;
+    const addressType = (rawType === "Home" || rawType === "HOME") ? "HOME" : (rawType === "Work" || rawType === "WORK") ? "WORK" : "SHIPPING";
+
+    if (!addressLine1 || !city || !state || !postalCode || !country) {
+      return res.status(400).json({ error: "All required fields must be provided" });
+    }
+
+    const newAddress = await userService.createUserAddress(userId, {
+      addressType,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      postalCode,
+      country,
+      phone,
+      isDefault
+    });
+
+    const user = await userService.getUserProfile(userId);
+    const fullName = user?.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : "Customer User";
+
+    return res.status(201).json({
+      status: "success",
+      data: {
+        id: newAddress.id,
+        type: newAddress.addressType === "HOME" ? "Home" : newAddress.addressType === "WORK" ? "Work" : "Other",
+        name: fullName,
+        addressLine1: newAddress.addressLine1,
+        addressLine2: newAddress.addressLine2 || "",
+        city: newAddress.city,
+        state: newAddress.state,
+        postalCode: newAddress.postalCode,
+        country: newAddress.country,
+        phone: newAddress.phone || "",
+        isDefault: newAddress.isDefault
+      }
+    });
+  } catch (error: any) {
+    console.error("CreateAddress controller error:", error);
+    return res.status(400).json({ error: error.message || "Bad request" });
+  }
+}
+
+export async function updateAddress(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { id } = req.params;
+    const { type, addressType: bodyAddressType, addressLine1, addressLine2, city, state, postalCode, country, phone, isDefault } = req.body;
+
+    const rawType = bodyAddressType || type;
+    let addressType: "HOME" | "WORK" | "SHIPPING" | undefined = undefined;
+    if (rawType) {
+      addressType = (rawType === "Home" || rawType === "HOME") ? "HOME" : (rawType === "Work" || rawType === "WORK") ? "WORK" : "SHIPPING";
+    }
+
+    const updatedAddress = await userService.updateUserAddress(userId, id, {
+      addressType,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      postalCode,
+      country,
+      phone,
+      isDefault
+    });
+
+    const user = await userService.getUserProfile(userId);
+    const fullName = user?.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : "Customer User";
+
+    return res.status(200).json({
+      status: "success",
+      data: {
+        id: updatedAddress.id,
+        type: updatedAddress.addressType === "HOME" ? "Home" : updatedAddress.addressType === "WORK" ? "Work" : "Other",
+        name: fullName,
+        addressLine1: updatedAddress.addressLine1,
+        addressLine2: updatedAddress.addressLine2 || "",
+        city: updatedAddress.city,
+        state: updatedAddress.state,
+        postalCode: updatedAddress.postalCode,
+        country: updatedAddress.country,
+        phone: updatedAddress.phone || "",
+        isDefault: updatedAddress.isDefault
+      }
+    });
+  } catch (error: any) {
+    console.error("UpdateAddress controller error:", error);
+    return res.status(400).json({ error: error.message || "Bad request" });
+  }
+}
+
+
+export async function deleteAddress(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { id } = req.params;
+    await userService.deleteUserAddress(userId, id);
+
+    return res.status(200).json({ status: "success", message: "Address deleted successfully" });
+  } catch (error: any) {
+    console.error("DeleteAddress controller error:", error);
+    return res.status(400).json({ error: error.message || "Bad request" });
+  }
+}

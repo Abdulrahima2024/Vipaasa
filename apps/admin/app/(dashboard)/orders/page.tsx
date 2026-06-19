@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchAPI } from "../../../lib/api";
 import { 
   ChevronRight, 
   Search, 
@@ -42,90 +43,61 @@ interface Order {
 }
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: "VIP-9481",
-      customerName: "Tejesh Kumar",
-      email: "tejesh@vipaasa.com",
-      date: "2026-06-16",
-      items: [
-        { name: "Kandipappu", qty: 2, weight: "1kg", price: 240 },
-        { name: "Desi Cow Ghee", qty: 1, weight: "1kg", price: 4200 }
-      ],
-      total: 4680,
-      status: "Pending",
-      paymentMethod: "Razorpay (Online)",
-  paymentId: "PAY-001",
-  bankDetails: "HDFC Bank - 1234567890",
-      shippingAddress: "Flat 402, Green Meadows, Hyderabad, TS, 500081"
-    },
-    {
-      id: "VIP-9475",
-      customerName: "Sai Kiran",
-      email: "sai.kiran@gmail.com",
-      date: "2026-06-15",
-      items: [
-        { name: "Wild Forest Honey", qty: 1, weight: "500g", price: 210 },
-        { name: "Pachi Karam", qty: 2, weight: "250g", price: 140 }
-      ],
-      total: 490,
-      status: "Delivered",
-      paymentMethod: "Cash on Delivery",
-  paymentId: "PAY-002",
-  bankDetails: "Cash Payment - N/A",
-      shippingAddress: "Plot 12, Sector 4, Madhapur, Hyderabad, TS, 500081"
-    },
-    {
-      id: "VIP-9470",
-      customerName: "Ananya Rao",
-      email: "ananya.rao@yahoo.com",
-      date: "2026-06-14",
-      items: [
-        { name: "Pesalu", qty: 3, weight: "1kg", price: 156 }
-      ],
-      total: 468,
-      status: "Shipped",
-      paymentMethod: "UPI (Online)",
-  paymentId: "PAY-003",
-  bankDetails: "Google Pay - 9876543210",
-      shippingAddress: "Villas 9, Whispering Palms, Gachibowli, Hyderabad, TS, 500032"
-    },
-    {
-      id: "VIP-9462",
-      customerName: "Mohan Lal",
-      email: "mohan.lal@outlook.com",
-      date: "2026-06-13",
-      items: [
-        { name: "Sambar Karam", qty: 1, weight: "500g", price: 320 },
-        { name: "Korralu", qty: 5, weight: "1kg", price: 108 }
-      ],
-      total: 860,
-      status: "Cancelled",
-      paymentMethod: "Razorpay (Online)",
-  paymentId: "PAY-004",
-  bankDetails: "ICICI Bank - 1122334455",
-      shippingAddress: "Apartment 1A, Sunrise Towers, Jubilee Hills, Hyderabad, 500033"
-    },
-    {
-      id: "VIP-9455",
-      customerName: "Kavitha Reddy",
-      email: "kavitha.reddy@gmail.com",
-      date: "2026-06-12",
-      items: [
-        { name: "Jamun Honey", qty: 2, weight: "1kg", price: 530 }
-      ],
-      total: 1060,
-      status: "Returned",
-      paymentMethod: "Razorpay (Online)",
-  paymentId: "PAY-005",
-  bankDetails: "SBI Bank - 6677889900",
-      shippingAddress: "House 4-82, NTR Colony, Vijayawada, AP, 520008"
-    }
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
+
+  useEffect(() => {
+    fetchAPI("/api/admin/orders")
+      .then((res) => {
+        if (res && res.data) {
+          const mapped: Order[] = res.data.map((o: any) => {
+            const formattedItems = (o.items || []).map((item: any) => ({
+              name: item.variant?.product?.name || "Product",
+              qty: item.quantity,
+              weight: item.variant?.weightGrams ? `${item.variant.weightGrams}g` : "250g",
+              price: Number(item.unitPrice),
+            }));
+
+            const addr = `${o.shippingAddressLine1}${o.shippingAddressLine2 ? ', ' + o.shippingAddressLine2 : ''}, ${o.shippingCity}, ${o.shippingState}, ${o.shippingPostalCode}`;
+
+            // Map backend PENDING/PROCESSING/SHIPPED/DELIVERED/CANCELLED to title case
+            let status: Order["status"] = "Pending";
+            if (o.status === "PROCESSING") status = "Processing";
+            else if (o.status === "SHIPPED") status = "Shipped";
+            else if (o.status === "DELIVERED") status = "Delivered";
+            else if (o.status === "CANCELLED") status = "Cancelled";
+            else if (o.status === "RETURNED") status = "Returned";
+            else if (o.status === "REFUNDED") status = "Refunded";
+
+            return {
+              id: o.orderNumber || o.id,
+              customerName: o.user?.profile ? `${o.user.profile.firstName} ${o.user.profile.lastName}`.trim() : "Customer",
+              email: o.user?.email || "",
+              date: new Date(o.createdAt).toISOString().split("T")[0],
+              items: formattedItems,
+              total: Number(o.totalPayable),
+              status,
+              paymentMethod: o.paymentStatus === "PAID" ? "Paid" : "Cash on Delivery",
+              paymentId: o.payments?.[0]?.gatewayPaymentIntentId || "",
+              bankDetails: o.payments?.[0]?.gatewayName || "COD",
+              shippingAddress: addr,
+            };
+          });
+          setOrders(mapped);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch admin orders:", err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
 
   // Selected Order Detail View State
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);

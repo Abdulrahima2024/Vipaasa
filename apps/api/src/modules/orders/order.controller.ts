@@ -129,3 +129,21 @@ export async function cancelOrder(req: AuthenticatedRequest, res: Response, next
     next(error);
   }
 }
+
+/**
+ * Handles fetching all orders for admin dashboard.
+ * GET /admin/orders
+ */
+export async function getAdminOrders(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const orders = await orderService.getAdminOrders();
+    return res.status(200).json({
+      status: "success",
+      results: orders.length,
+      data: orders,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+

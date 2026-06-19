@@ -200,3 +200,172 @@ export async function getUserEcoImpact(userId: string) {
     organicPercentage: 100
   };
 }
+
+export async function getUserAddresses(userId: string) {
+  console.log(`[BACKEND] getUserAddresses: Fetching all addresses for User: ${userId}`);
+  let profile = await prisma.customerProfile.findUnique({
+    where: { userId },
+  });
+  if (!profile) {
+    const userObj = await prisma.user.findUnique({ where: { id: userId } });
+    profile = await prisma.customerProfile.create({
+      data: {
+        userId,
+        firstName: userObj?.email.split("@")[0] || "Customer",
+        lastName: "User",
+      },
+    });
+  }
+
+  return prisma.customerAddress.findMany({
+    where: { profileId: profile.id },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function createUserAddress(
+  userId: string,
+  data: {
+    addressType: "HOME" | "WORK" | "BILLING" | "SHIPPING";
+    addressLine1: string;
+    addressLine2?: string | null;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phone?: string | null;
+    isDefault?: boolean;
+  }
+) {
+  console.log(`[BACKEND] createUserAddress: Initiating address creation for User: ${userId}`);
+  let profile = await prisma.customerProfile.findUnique({
+    where: { userId },
+  });
+  if (!profile) {
+    const userObj = await prisma.user.findUnique({ where: { id: userId } });
+    profile = await prisma.customerProfile.create({
+      data: {
+        userId,
+        firstName: userObj?.email.split("@")[0] || "Customer",
+        lastName: "User",
+      },
+    });
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const existingAddressesCount = await tx.customerAddress.count({
+      where: { profileId: profile!.id },
+    });
+
+    const isDefault = data.isDefault || existingAddressesCount === 0;
+
+    if (isDefault) {
+      await tx.customerAddress.updateMany({
+        where: { profileId: profile!.id },
+        data: { isDefault: false },
+      });
+    }
+
+    const newAddr = await tx.customerAddress.create({
+      data: {
+        profileId: profile!.id,
+        addressType: data.addressType,
+        isDefault,
+        addressLine1: data.addressLine1,
+        addressLine2: data.addressLine2 || null,
+        city: data.city,
+        state: data.state,
+        postalCode: data.postalCode,
+        country: data.country,
+        phone: data.phone || null,
+      },
+    });
+    console.log(`[BACKEND] createUserAddress: Address created successfully in DB (ID: ${newAddr.id}, Type: ${newAddr.addressType})`);
+    return newAddr;
+  });
+}
+
+export async function updateUserAddress(
+  userId: string,
+  addressId: string,
+  data: {
+    addressType?: "HOME" | "WORK" | "BILLING" | "SHIPPING";
+    addressLine1?: string;
+    addressLine2?: string | null;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    phone?: string | null;
+    isDefault?: boolean;
+  }
+) {
+  console.log(`[BACKEND] updateUserAddress: Updating address ID: ${addressId} for User: ${userId}`);
+  const profile = await prisma.customerProfile.findUnique({
+    where: { userId },
+  });
+
+  if (!profile) {
+    throw new Error("Customer profile not found");
+  }
+
+  const address = await prisma.customerAddress.findUnique({
+    where: { id: addressId },
+  });
+
+  if (!address || address.profileId !== profile.id) {
+    throw new Error("Address not found or does not belong to this profile");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    if (data.isDefault) {
+      await tx.customerAddress.updateMany({
+        where: { profileId: profile.id, id: { not: addressId } },
+        data: { isDefault: false },
+      });
+    }
+
+    const updatedAddr = await tx.customerAddress.update({
+      where: { id: addressId },
+      data: {
+        addressType: data.addressType,
+        isDefault: data.isDefault,
+        addressLine1: data.addressLine1,
+        addressLine2: data.addressLine2 !== undefined ? data.addressLine2 : undefined,
+        city: data.city,
+        state: data.state,
+        postalCode: data.postalCode,
+        country: data.country,
+        phone: data.phone !== undefined ? data.phone : undefined,
+      },
+    });
+    console.log(`[BACKEND] updateUserAddress: Address updated successfully in DB (ID: ${updatedAddr.id})`);
+    return updatedAddr;
+  });
+}
+
+export async function deleteUserAddress(userId: string, addressId: string) {
+  console.log(`[BACKEND] deleteUserAddress: Deleting address ID: ${addressId} for User: ${userId}`);
+  const profile = await prisma.customerProfile.findUnique({
+    where: { userId },
+  });
+
+  if (!profile) {
+    throw new Error("Customer profile not found");
+  }
+
+  const address = await prisma.customerAddress.findUnique({
+    where: { id: addressId },
+  });
+
+  if (!address || address.profileId !== profile.id) {
+    throw new Error("Address not found or does not belong to this profile");
+  }
+
+  await prisma.customerAddress.delete({
+    where: { id: addressId },
+  });
+  console.log(`[BACKEND] deleteUserAddress: Address deleted successfully from DB (ID: ${addressId})`);
+
+  return true;
+}

@@ -3,6 +3,21 @@ import { persist } from "zustand/middleware";
 import { useAuthStore } from "./authStore";
 import { fetchApi } from "../lib/api";
 
+let cachedProducts: any[] | null = null;
+
+async function getCachedProducts(): Promise<any[]> {
+  if (cachedProducts) return cachedProducts;
+  try {
+    const productsData = await fetchApi<any>("/api/products?limit=100");
+    cachedProducts = productsData?.items || [];
+    return cachedProducts || [];
+  } catch (e) {
+    console.error("Failed to fetch products for cart caching:", e);
+    return [];
+  }
+}
+
+
 export interface CartItem {
   id: string; // product.id + '-' + weight (guest) OR variantId (authenticated)
   productId: string;
@@ -112,9 +127,9 @@ export const useCartStore = create<CartStore>()(
         if (user) {
           try {
             const data = await fetchApi<any>("/api/cart");
-            const productsData = await fetchApi<any>("/api/products?limit=100");
-            if (data && productsData) {
-              set({ items: mapBackendCartToFrontend(data, productsData.items || []) });
+            const allProducts = await getCachedProducts();
+            if (data && allProducts) {
+              set({ items: mapBackendCartToFrontend(data, allProducts) });
             }
           } catch (e) {
             console.error("Error fetching cart from backend", e);
@@ -206,12 +221,10 @@ export const useCartStore = create<CartStore>()(
                 method: "POST",
                 body: JSON.stringify({ productId: variantId, quantity: quantityToAdd }),
               });
-              console.log("[useCartStore] Backend response for adding item to cart:", res);
-              // Fetch latest mapped cart
-              const data = await fetchApi<any>("/api/cart");
-              console.log("[useCartStore] Fetched raw cart from backend:", data);
-              const productsData = await fetchApi<any>("/api/products?limit=100");
-              const mapped = mapBackendCartToFrontend(data, productsData.items || []);
+              console.log("[useCartStore] Backend response for adding item to cart (returned updated cart):", res);
+              
+              const allProducts = await getCachedProducts();
+              const mapped = mapBackendCartToFrontend(res, allProducts);
               console.log("[useCartStore] Client-side mapped cart items for rendering:", mapped);
               set({ items: mapped });
             } catch (e: any) {
@@ -262,19 +275,19 @@ export const useCartStore = create<CartStore>()(
         if (user) {
           try {
             const state = useCartStore.getState();
-            const productsData = await fetchApi<any>("/api/products?limit=100");
-            const allProducts = productsData?.items || [];
-            
-            const updatedItems = state.items.map((item) =>
-              item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-            );
-            
-            // Sync entire updated cart since backend uses database cartItem.id which is not exposed
-            await syncCartToBackend(updatedItems, allProducts);
-            
-            // Refetch fresh mapped cart
-            const data = await fetchApi<any>("/api/cart");
-            set({ items: mapBackendCartToFrontend(data, allProducts) });
+            const currentItem = state.items.find(item => item.id === id);
+            if (!currentItem) return;
+
+            const newQty = Math.max(1, currentItem.quantity + delta);
+
+            // Fast API call: update quantity of a specific cartItem using PUT route
+            const res = await fetchApi<any>(`/api/cart/items/${id}`, {
+              method: "PUT",
+              body: JSON.stringify({ quantity: newQty }),
+            });
+
+            const allProducts = await getCachedProducts();
+            set({ items: mapBackendCartToFrontend(res, allProducts) });
           } catch (e) {
             console.error("Error updating quantity in backend cart:", e);
           }
@@ -291,16 +304,13 @@ export const useCartStore = create<CartStore>()(
         const user = useAuthStore.getState().user;
         if (user) {
           try {
-            const state = useCartStore.getState();
-            const productsData = await fetchApi<any>("/api/products?limit=100");
-            const allProducts = productsData?.items || [];
-            
-            const updatedItems = state.items.filter((item) => item.id !== id);
-            
-            await syncCartToBackend(updatedItems, allProducts);
-            
-            const data = await fetchApi<any>("/api/cart");
-            set({ items: mapBackendCartToFrontend(data, allProducts) });
+            // Fast API call: delete only this cartItem using DELETE route
+            const res = await fetchApi<any>(`/api/cart/items/${id}`, {
+              method: "DELETE",
+            });
+
+            const allProducts = await getCachedProducts();
+            set({ items: mapBackendCartToFrontend(res, allProducts) });
           } catch (e) {
             console.error("Error removing item from backend cart:", e);
           }

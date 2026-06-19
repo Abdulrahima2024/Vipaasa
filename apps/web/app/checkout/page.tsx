@@ -49,103 +49,109 @@ export default function CheckoutPage() {
     }
   }, [mounted, isAuthenticated, router]);
 
-  // Default Addresses from mockup
-  const DEFAULT_MOCK_ADDRESSES: Address[] = [
-    {
-      id: "addr-1",
-      type: "Home",
-      name: "Ananya Sharma",
-      addressLine1: "42, Lotus Boulevard, Sector 150",
-      city: "Noida",
-      state: "Uttar Pradesh",
-      postalCode: "201310",
-      country: "India",
-      phone: "+91 98765 43210",
-      isDefault: true,
-    },
-    {
-      id: "addr-2",
-      type: "Work",
-      name: "Ananya Sharma",
-      addressLine1: "The Hub, Floor 12, Cyber City, Phase III",
-      city: "Gurugram",
-      state: "Haryana",
-      postalCode: "122002",
-      country: "India",
-      phone: "+91 98765 99887",
-      isDefault: false,
-    },
-  ];
-
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
 
   useEffect(() => {
-    if (mounted) {
-      const stored = localStorage.getItem("vipaasa_addresses");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setAddresses(parsed);
-          const defaultAddr = parsed.find((a: Address) => a.isDefault) || parsed[0];
-          if (defaultAddr) {
-            setSelectedAddressId(defaultAddr.id);
+    if (mounted && isAuthenticated) {
+      fetchApi<{ status: string; data: Address[] }>("/api/users/addresses")
+        .then((res) => {
+          if (res && res.data) {
+            setAddresses(res.data);
+            const defaultAddr = res.data.find((a) => a.isDefault) || res.data[0];
+            if (defaultAddr) {
+              setSelectedAddressId(defaultAddr.id);
+            }
           }
-        } catch (e) {
-          console.error("Failed to parse stored addresses", e);
-          setAddresses(DEFAULT_MOCK_ADDRESSES);
-          setSelectedAddressId(DEFAULT_MOCK_ADDRESSES[0].id);
-        }
-      } else {
-        setAddresses(DEFAULT_MOCK_ADDRESSES);
-        localStorage.setItem("vipaasa_addresses", JSON.stringify(DEFAULT_MOCK_ADDRESSES));
-        setSelectedAddressId(DEFAULT_MOCK_ADDRESSES[0].id);
-      }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch addresses from backend", err);
+        });
     }
-  }, [mounted]);
+  }, [mounted, isAuthenticated]);
 
-  const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || addresses[0] || DEFAULT_MOCK_ADDRESSES[0];
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || addresses[0];
 
   // Total amount details for payment
   const activeItems = mounted ? items.filter(item => !item.saved) : [];
   const subtotal = activeItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const isFreeShipping = subtotal >= 1000;
-  const shippingFee = isFreeShipping ? 0 : 70;
-  const estimatedTax = parseFloat((subtotal * 0.05).toFixed(2)); // 5% GST
+  const shippingFee = isFreeShipping ? 0 : 100;
+  const estimatedTax = parseFloat((subtotal * 0.18).toFixed(2)); // 18% standard tax to match backend
   const finalTotal = parseFloat((subtotal + shippingFee + estimatedTax).toFixed(2));
 
   // Address Handlers
-  const handleAddAddress = (newAddr: Omit<Address, "id">) => {
-    const id = `addr-${Date.now()}`;
-    const added: Address = { ...newAddr, id, isDefault: addresses.length === 0 };
-    
-    let updated: Address[];
-    if (added.isDefault) {
-      updated = [...addresses.map((a) => ({ ...a, isDefault: false })), added];
-    } else {
-      updated = [...addresses, added];
+  const handleAddAddress = async (newAddr: Omit<Address, "id">) => {
+    try {
+      const res = await fetchApi<{ status: string; data: Address }>("/api/users/addresses", {
+        method: "POST",
+        body: JSON.stringify({
+          addressType: newAddr.type === "Home" ? "HOME" : newAddr.type === "Work" ? "WORK" : "SHIPPING",
+          addressLine1: newAddr.addressLine1,
+          addressLine2: newAddr.addressLine2,
+          city: newAddr.city,
+          state: newAddr.state,
+          postalCode: newAddr.postalCode,
+          country: newAddr.country,
+          phone: newAddr.phone,
+        }),
+      });
+
+      if (res && res.data) {
+        setAddresses((prev) => {
+          const added = res.data;
+          let updated: Address[];
+          if (added.isDefault) {
+            updated = [...prev.map((a) => ({ ...a, isDefault: false })), added];
+          } else {
+            updated = [...prev, added];
+          }
+          return updated;
+        });
+        setSelectedAddressId(res.data.id);
+      }
+    } catch (err) {
+      console.error("Failed to add address", err);
+      alert("Failed to add address to backend database.");
     }
-    
-    setAddresses(updated);
-    localStorage.setItem("vipaasa_addresses", JSON.stringify(updated));
-    setSelectedAddressId(id);
   };
 
-  const handleEditAddress = (id: string, updatedAddr: Address) => {
-    let updated = addresses.map((a) => (a.id === id ? updatedAddr : a));
-    
-    if (updatedAddr.isDefault) {
-      updated = updated.map((a) => ({ ...a, isDefault: a.id === id }));
+  const handleEditAddress = async (id: string, updatedAddr: Address) => {
+    try {
+      const res = await fetchApi<{ status: string; data: Address }>(`/api/users/addresses/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          addressType: updatedAddr.type === "Home" ? "HOME" : updatedAddr.type === "Work" ? "WORK" : "SHIPPING",
+          addressLine1: updatedAddr.addressLine1,
+          addressLine2: updatedAddr.addressLine2,
+          city: updatedAddr.city,
+          state: updatedAddr.state,
+          postalCode: updatedAddr.postalCode,
+          country: updatedAddr.country,
+          phone: updatedAddr.phone,
+          isDefault: updatedAddr.isDefault,
+        }),
+      });
+
+      if (res && res.data) {
+        setAddresses((prev) =>
+          prev.map((a) => (a.id === id ? res.data : a))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update address", err);
+      alert("Failed to update address in backend database.");
     }
-    
-    setAddresses(updated);
-    localStorage.setItem("vipaasa_addresses", JSON.stringify(updated));
   };
 
   const handlePaymentComplete = async (method: string) => {
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
+      if (!selectedAddress) {
+        throw new Error("Please select or add a delivery address first.");
+      }
+
       const rawAddress = {
         addressLine1: selectedAddress.addressLine1,
         addressLine2: selectedAddress.addressLine2 || "",
@@ -156,15 +162,21 @@ export default function CheckoutPage() {
         phone: selectedAddress.phone || "",
       };
 
-      const result = await fetchApi<{ status: string; data: any }>("/checkout", {
+      const payload: any = {};
+      if (selectedAddress.id && !selectedAddress.id.startsWith("addr-")) {
+        payload.shippingAddressId = selectedAddress.id;
+        payload.billingAddressId = selectedAddress.id;
+      } else {
+        payload.shippingAddress = rawAddress;
+        payload.billingAddress = rawAddress;
+      }
+
+      const result = await fetchApi<{ status: string; data: any }>("/api/checkout", {
         method: "POST",
-        body: JSON.stringify({
-          shippingAddress: rawAddress,
-          billingAddress: rawAddress,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (result.status === "success" && result.data) {
+      if (result && result.status === "success" && result.data) {
         setPlacedOrder(result.data);
         setStep(4);
       } else {
@@ -173,11 +185,12 @@ export default function CheckoutPage() {
     } catch (err: any) {
       console.error("Checkout error:", err);
       setErrorMessage(err.message || "Something went wrong during checkout.");
-      setStep(2); // Go back to review step to let them see the error banner and try again
+      setStep(2); // Go back to review step
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   // Clear cart upon arriving at success step
   useEffect(() => {
@@ -494,8 +507,8 @@ export default function CheckoutPage() {
               {/* Only show Live Preview on Step 1 or 2 */}
               {step <= 2 && (
                 <ShippingEstimate
-                  addressName={selectedAddress.city}
-                  postalCode={selectedAddress.postalCode}
+                  addressName={selectedAddress?.city || "your city"}
+                  postalCode={selectedAddress?.postalCode || ""}
                 />
               )}
               <GSTBreakdown items={items} />

@@ -25,7 +25,17 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || errorData.error?.message || `HTTP error! status: ${response.status}`);
+    if (response.status === 401) {
+      useAuthStore.getState().logout();
+    }
+    const errorMessage = typeof errorData.error === "string" 
+      ? errorData.error 
+      : errorData.message 
+      ? errorData.message 
+      : (errorData.error && typeof errorData.error.message === "string")
+      ? errorData.error.message
+      : `HTTP error! status: ${response.status}`;
+    throw new Error(errorMessage);
   }
   
   return response.json() as Promise<T>;
