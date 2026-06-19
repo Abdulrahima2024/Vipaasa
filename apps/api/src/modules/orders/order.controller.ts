@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../../shared/middleware/authenticate";
 import * as orderService from "./order.service";
 import { CheckoutRequestSchema, OrderParamSchema } from "./order.schema";
 import { AppError } from "../../shared/middleware/errorHandler";
+import { acquireCheckoutLock, releaseCheckoutLock } from "./checkoutLock.service";
 
 /**
  * Handles order checkout request.
@@ -27,12 +28,21 @@ export async function checkout(req: AuthenticatedRequest, res: Response, next: N
       });
     }
 
-    const order = await orderService.checkout(userId, validation.data);
+    const hasLock = await acquireCheckoutLock(userId, 15);
+    if (!hasLock) {
+      throw new AppError("Another checkout request is currently processing. Please wait.", 409);
+    }
 
-    return res.status(201).json({
-      status: "success",
-      data: order,
-    });
+    try {
+      const order = await orderService.checkout(userId, validation.data);
+
+      return res.status(201).json({
+        status: "success",
+        data: order,
+      });
+    } finally {
+      await releaseCheckoutLock(userId);
+    }
   } catch (error) {
     next(error);
   }

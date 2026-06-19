@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../../shared/middleware/authenticate";
 import * as productService from "./product.service";
+import * as cache from "../../config/cache.service";
 import {
   GetProductsQuerySchema,
   SearchProductsQuerySchema,
@@ -15,7 +16,14 @@ import {
  */
 export async function getCategories(req: AuthenticatedRequest, res: Response) {
   try {
+    const cacheKey = "categories:all";
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+
     const tree = await productService.getCategoriesTree();
+    await cache.set(cacheKey, JSON.stringify(tree), 600); // 10 minutes TTL
     return res.status(200).json(tree);
   } catch (error) {
     console.error("Error fetching categories:", error);
@@ -42,7 +50,14 @@ export async function getProducts(req: AuthenticatedRequest, res: Response) {
       filter.includeInactive = false;
     }
 
+    const cacheKey = `products:list:${JSON.stringify(filter)}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+
     const result = await productService.getProductsList(filter);
+    await cache.set(cacheKey, JSON.stringify(result), 600); // 10 minutes TTL
     return res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -66,12 +81,19 @@ export async function getProductById(req: AuthenticatedRequest, res: Response) {
 
     const { id } = paramValidation.data;
     const isSuperAdmin = req.user?.role === "SUPER_ADMIN";
-    const product = await productService.getProductDetails(id, isSuperAdmin);
 
+    const cacheKey = `products:detail:${id}:${isSuperAdmin ? "admin" : "customer"}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+
+    const product = await productService.getProductDetails(id, isSuperAdmin);
     if (!product) {
       return res.status(404).json({ error: "Product not found or unavailable" });
     }
 
+    await cache.set(cacheKey, JSON.stringify(product), 600); // 10 minutes TTL
     return res.status(200).json(product);
   } catch (error) {
     console.error(`Error fetching product details for ID ${req.params.id}:`, error);
@@ -116,6 +138,11 @@ export async function createProduct(req: AuthenticatedRequest, res: Response) {
     }
 
     const product = await productService.createProduct(validation.data);
+    
+    // Invalidate product & category caches
+    await cache.clearPattern("products:*");
+    await cache.clearPattern("categories:*");
+
     return res.status(201).json({
       message: "Product created successfully",
       product,
@@ -142,6 +169,11 @@ export async function deleteProduct(req: AuthenticatedRequest, res: Response) {
 
     const { id } = paramValidation.data;
     await productService.deleteProduct(id);
+
+    // Invalidate product & category caches
+    await cache.clearPattern("products:*");
+    await cache.clearPattern("categories:*");
+
     return res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error(`Error deleting product ID ${req.params.id}:`, error);
@@ -173,6 +205,11 @@ export async function updateProduct(req: AuthenticatedRequest, res: Response) {
 
     const { id } = paramValidation.data;
     const updated = await productService.updateProduct(id, bodyValidation.data);
+
+    // Invalidate product & category caches
+    await cache.clearPattern("products:*");
+    await cache.clearPattern("categories:*");
+
     return res.status(200).json({
       message: "Product updated successfully",
       product: updated,
