@@ -254,20 +254,20 @@ export const useCartStore = create<CartStore>()(
 
       updateQuantity: async (id, delta) => {
         const user = useAuthStore.getState().user;
+        const state = useCartStore.getState();
+        const previousItems = state.items;
+        const currentItem = previousItems.find(item => item.id === id);
+        if (!currentItem) return;
+
+        const newQty = Math.max(1, currentItem.quantity + delta);
+
         if (user) {
-          const state = useCartStore.getState();
-          const currentItem = state.items.find(item => item.id === id);
-          if (!currentItem) return;
-
-          const oldQty = currentItem.quantity;
-          const newQty = Math.max(1, currentItem.quantity + delta);
-
           // Optimistically update frontend state
-          set((state) => ({
-            items: state.items.map((item) =>
+          set({
+            items: previousItems.map((item) =>
               item.id === id ? { ...item, quantity: newQty } : item
             ),
-          }));
+          });
 
           try {
             const res = await fetchApi<any>(`/api/cart/items/${id}`, {
@@ -277,12 +277,8 @@ export const useCartStore = create<CartStore>()(
             set({ items: mapBackendCartToFrontend(res) });
           } catch (e) {
             console.error("Error updating quantity in backend cart:", e);
-            // Rollback on error
-            set((state) => ({
-              items: state.items.map((item) =>
-                item.id === id ? { ...item, quantity: oldQty } : item
-              ),
-            }));
+            // Rollback to exact previous items state on error
+            set({ items: previousItems });
           }
         } else {
           set((state) => ({
@@ -296,14 +292,15 @@ export const useCartStore = create<CartStore>()(
       removeItem: async (id) => {
         const user = useAuthStore.getState().user;
         const state = useCartStore.getState();
-        const itemToRemove = state.items.find(item => item.id === id);
+        const previousItems = state.items;
+        const itemToRemove = previousItems.find(item => item.id === id);
         if (!itemToRemove) return;
 
         if (user) {
           // Optimistically update frontend state
-          set((state) => ({
-            items: state.items.filter((item) => item.id !== id),
-          }));
+          set({
+            items: previousItems.filter((item) => item.id !== id),
+          });
 
           try {
             const res = await fetchApi<any>(`/api/cart/items/${id}`, {
@@ -312,10 +309,8 @@ export const useCartStore = create<CartStore>()(
             set({ items: mapBackendCartToFrontend(res) });
           } catch (e) {
             console.error("Error removing item from backend cart:", e);
-            // Rollback on error
-            set((state) => ({
-              items: [...state.items, itemToRemove],
-            }));
+            // Rollback to exact previous items state on error
+            set({ items: previousItems });
           }
         } else {
           set((state) => ({
