@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sendEmail, getOtpEmailTemplate } from "../notifications/email.service";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../config/database";
 
 export async function authenticateUser(email: string, password_raw: string) {
   // Find active user by email and fetch profile and role details

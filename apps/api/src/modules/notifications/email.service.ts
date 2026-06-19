@@ -1,6 +1,3 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
 
 /**
  * Sends an email via the Resend HTTP API using native fetch.

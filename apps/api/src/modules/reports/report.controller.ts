@@ -1,8 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../../shared/middleware/authenticate";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../config/database";
 
 export async function getDashboardStats(req: AuthenticatedRequest, res: Response) {
   try {

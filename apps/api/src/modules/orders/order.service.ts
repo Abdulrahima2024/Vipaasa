@@ -1,7 +1,6 @@
-import { PrismaClient, OrderStatus, ReservationStatus, PaymentStatus, DeliveryStatus } from "@prisma/client";
+import { OrderStatus, ReservationStatus, PaymentStatus, DeliveryStatus } from "@prisma/client";
 import { AppError } from "../../shared/middleware/errorHandler";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../config/database";
 
 /**
  * Executes a customer checkout.

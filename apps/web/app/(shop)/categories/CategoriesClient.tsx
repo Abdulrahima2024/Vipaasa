@@ -86,23 +86,48 @@ export default function CategoriesClient() {
       try {
         const data = await fetchApi<{ items: any[] }>("/api/products?limit=100");
         if (data && data.items) {
-          const mapped: CategoryProduct[] = data.items.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            category: item.category?.name || "General",
-            prices: {
-              "250g": item.price,
-              "500g": Math.round(item.price * 1.8),
-              "1kg": Math.round(item.price * 3.2),
-            },
-            weight: "250g",
-            image: (item.images && item.images[0]) || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
-            tag: item.stockStatus === "IN_STOCK" ? "In Stock" : "Out of Stock",
-            description: item.description || `${item.name} — 100% pure organic staple.`,
-            inStock: item.stockStatus === "IN_STOCK",
-            rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
-            createdAt: new Date().toISOString().split("T")[0],
-          }));
+          const mapped: CategoryProduct[] = data.items.map((item: any) => {
+            // Find first available variant weight
+            let defaultWeight: "1kg" | "500g" | "250g" = "250g";
+            if (item.variants && item.variants.length > 0) {
+              const firstGrams = item.variants[0].weightGrams;
+              defaultWeight = firstGrams === 1000 ? "1kg" : firstGrams === 500 ? "500g" : "250g";
+            }
+
+            // Map prices based on actual variants if available, otherwise fallback
+            const prices = {
+              "250g": item.price || 0,
+              "500g": Math.round((item.price || 0) * 1.8),
+              "1kg": Math.round((item.price || 0) * 3.2),
+            };
+
+            if (item.variants && item.variants.length > 0) {
+              item.variants.forEach((v: any) => {
+                const grams = v.weightGrams;
+                const weightKey = grams === 1000 ? "1kg" : grams === 500 ? "500g" : "250g";
+                const basePrice = v.pricing ? Number(v.pricing.basePrice) : 0;
+                if (basePrice > 0) {
+                  prices[weightKey] = basePrice;
+                }
+              });
+            }
+
+            const imageUrl = (item.images && item.images[0]?.url) || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400";
+
+            return {
+              id: item.id,
+              name: item.name,
+              category: item.category?.name || "General",
+              prices,
+              weight: defaultWeight,
+              image: imageUrl,
+              tag: item.stockStatus === "IN_STOCK" ? "In Stock" : "Out of Stock",
+              description: item.description || `${item.name} — 100% pure organic staple.`,
+              inStock: item.stockStatus === "IN_STOCK",
+              rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
+              createdAt: new Date().toISOString().split("T")[0],
+            };
+          });
           setApiProducts(mapped);
         } else {
           setApiProducts([]);

@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { ProductFilter, SearchFilter } from "./product.types";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../config/database";
 
 /**
  * Find all active categories

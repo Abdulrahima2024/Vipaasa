@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../config/database";
 
 export async function getUserProfile(userId: string) {
   const user = await prisma.user.findFirst({

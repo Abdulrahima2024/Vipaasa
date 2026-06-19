@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import * as cartRepository from "./cart.repository";
 import { CartResponse, CartItemResponse } from "./cart.types";
 import { AppError } from "../../shared/middleware/errorHandler";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../config/database";
 
 /**
  * Maps database Cart model and relations to dynamic CartResponse schema
