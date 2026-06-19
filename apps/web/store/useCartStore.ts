@@ -168,13 +168,16 @@ export const useCartStore = create<CartStore>()(
       addToCart: async (product, weight, quantityToAdd = 1) => {
         const user = useAuthStore.getState().user;
         console.log("[useCartStore] addToCart action invoked. User authenticated:", !!user, "Product:", product.name, "Weight:", weight, "Quantity:", quantityToAdd);
-        const grams = weight === "1kg" ? 1000 : weight === "500g" ? 500 : 250;
+        let grams = weight === "1kg" ? 1000 : weight === "500g" ? 500 : 250;
         let variantId: string | null = null;
 
         // Try to find variant ID from product object
-        if (product.variants && Array.isArray(product.variants)) {
-          const variant = product.variants.find((v: any) => v.weightGrams === grams);
+        if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+          const variant = product.variants.find((v: any) => v.weightGrams === grams) || product.variants[0];
           variantId = variant?.id || null;
+          const resolvedGrams = variant?.weightGrams || 250;
+          weight = resolvedGrams === 1000 ? "1kg" : resolvedGrams === 500 ? "500g" : "250g";
+          grams = resolvedGrams;
         }
 
         if (user) {
@@ -182,9 +185,12 @@ export const useCartStore = create<CartStore>()(
           if (!variantId && product.id && !product.id.startsWith("bundle-") && !product.id.startsWith("mock-")) {
             try {
               const raw = await fetchApi<any>(`/api/products/${product.id}`);
-              if (raw && raw.variants) {
-                const variant = raw.variants.find((v: any) => v.weightGrams === grams);
+              if (raw && raw.variants && raw.variants.length > 0) {
+                const variant = raw.variants.find((v: any) => v.weightGrams === grams) || raw.variants[0];
                 variantId = variant?.id || null;
+                const resolvedGrams = variant?.weightGrams || 250;
+                weight = resolvedGrams === 1000 ? "1kg" : resolvedGrams === 500 ? "500g" : "250g";
+                grams = resolvedGrams;
               }
             } catch (e) {
               console.error("Failed to fetch product details to retrieve variant ID:", e);
@@ -208,11 +214,13 @@ export const useCartStore = create<CartStore>()(
               const mapped = mapBackendCartToFrontend(data, productsData.items || []);
               console.log("[useCartStore] Client-side mapped cart items for rendering:", mapped);
               set({ items: mapped });
-            } catch (e) {
+            } catch (e: any) {
               console.error("Error adding item to backend cart:", e);
+              alert(e.message || "Failed to add item to cart. It might be out of stock.");
             }
           } else {
             console.warn("[useCartStore] Failed to add to cart: Could not resolve a product variant ID in the database for weight:", weight, "on product:", product);
+            alert("Could not resolve a product variant ID for this product weight.");
           }
         } else {
           // Guest mode: local state update
