@@ -172,6 +172,16 @@ export async function getDashboardStats(req: AuthenticatedRequest, res: Response
             profile: true,
           },
         },
+        items: {
+          include: {
+            variant: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+        payments: true,
       },
     });
 
@@ -183,6 +193,17 @@ export async function getDashboardStats(req: AuthenticatedRequest, res: Response
       const initials = order.user?.profile
         ? ((order.user.profile.firstName?.[0] || "") + (order.user.profile.lastName?.[0] || "")).toUpperCase()
         : "GC";
+
+      const formattedItems = (order.items || []).map((item) => {
+        const weightSpec = item.variant?.weightGrams ? ` (${item.variant.weightGrams}g)` : "";
+        return {
+          name: `${item.variant?.product?.name || "Product"}${weightSpec}`,
+          quantity: item.quantity,
+          price: `₹${Number(item.unitPrice).toLocaleString("en-IN")}`,
+        };
+      });
+
+      const addr = `${order.shippingAddressLine1}${order.shippingAddressLine2 ? ", " + order.shippingAddressLine2 : ""}, ${order.shippingCity}, ${order.shippingState}, ${order.shippingPostalCode}`;
 
       return {
         id: order.orderNumber || `#${order.id.slice(0, 8)}`,
@@ -200,6 +221,11 @@ export async function getDashboardStats(req: AuthenticatedRequest, res: Response
               : order.status === "RETURNED"
                 ? "bg-purple-100 text-purple-700"
                 : "bg-gray-100 text-gray-700",
+        paymentMethod: order.payments?.[0]?.paymentMethod || "COD",
+        email: order.user?.email || "",
+        phone: order.user?.phoneNumber || "",
+        shippingAddress: addr,
+        items: formattedItems,
       };
     });
 

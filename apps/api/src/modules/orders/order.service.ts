@@ -338,7 +338,11 @@ export async function getOrders(userId: string) {
         include: {
           variant: {
             include: {
-              product: true,
+              product: {
+                include: {
+                  images: true,
+                },
+              },
             },
           },
         },
@@ -359,7 +363,11 @@ export async function getOrderById(userId: string, orderId: string) {
         include: {
           variant: {
             include: {
-              product: true,
+              product: {
+                include: {
+                  images: true,
+                },
+              },
             },
           },
         },

@@ -60,13 +60,15 @@ const MOCK_ORDERS: OrderItem[] = [
     id: "ord-4",
     orderId: "#VO-87221",
     placedOn: "Sep 15, 2023",
-    total: 45.00,
-    status: "Cancelled",
-    images: [
-      "https://images.unsplash.com/photo-1581600140682-d4e68c8cde32?auto=format&fit=crop&q=80&w=150"
-    ]
-  }
-];
+  shippingAddress?: string;
+  paymentStatus?: string;
+  deliveryStatus?: string;
+  paymentMethod?: string;
+  itemsList?: any[];
+  subtotal?: number;
+  shippingFee?: number;
+  taxAmount?: number;
+}
 
 type StatusFilter = "All Orders" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
@@ -78,21 +80,59 @@ export default function MyOrdersPage() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<StatusFilter>("All Orders");
   const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<OrderItem | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    // Map cart items to order-like objects for display
-    const cartOrders = items.map((item, idx) => ({
-      id: `order-${idx}`,
-      orderId: `#VO-${Date.now() + idx}`,
-      placedOn: new Date().toLocaleDateString(),
-      total: item.price * item.quantity,
-      status: "Processing" as const,
-      images: item.image ? [item.image] : [],
-      extraItemsCount: 0,
-    } as any));
-    setOrders(cartOrders);
-  }, [items]);
+    if (isAuthenticated) {
+      fetchApi<{ status: string; data: any[] }>("/api/orders")
+        .then((res) => {
+          if (res && res.data) {
+            const mapped = res.data.map((order: any) => {
+              const formattedImages = (order.items || []).map((item: any) => {
+                const img = item.variant?.product?.images?.[0]?.url || item.variant?.product?.image || "🟢";
+                return img;
+              });
+
+              let status: OrderItem["status"] = "Processing";
+              if (order.status === "SHIPPED") status = "Shipped";
+              else if (order.status === "DELIVERED") status = "Delivered";
+              else if (order.status === "CANCELLED") status = "Cancelled";
+
+              const addr = `${order.shippingAddressLine1}${order.shippingAddressLine2 ? ", " + order.shippingAddressLine2 : ""}, ${order.shippingCity}, ${order.shippingState}, ${order.shippingPostalCode}`;
+
+              return {
+                id: order.id,
+                orderId: order.orderNumber || `#${order.id.slice(0, 8)}`,
+                placedOn: new Date(order.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+                total: Number(order.totalPayable),
+                status,
+                images: formattedImages.slice(0, 3),
+                extraItemsCount: Math.max(0, formattedImages.length - 3),
+                shippingAddress: addr,
+                paymentStatus: order.paymentStatus,
+                deliveryStatus: order.deliveryStatus,
+                paymentMethod: order.payments?.[0]?.paymentMethod || "COD",
+                itemsList: (order.items || []).map((item: any) => ({
+                  name: item.variant?.product?.name || "Product",
+                  spec: item.variant?.name || "",
+                  quantity: item.quantity,
+                  price: Number(item.unitPrice),
+                  image: item.variant?.product?.images?.[0]?.url || item.variant?.product?.image || "🟢",
+                })),
+                subtotal: Number(order.totalItemsPrice),
+                shippingFee: Number(order.shippingFee),
+                taxAmount: Number(order.taxAmount),
+              };
+            });
+            setOrders(mapped);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load customer orders:", err);
+        });
+    }
+  }, [isAuthenticated, items]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -151,14 +191,12 @@ export default function MyOrdersPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">
-      {/* Google Fonts */}
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
         .font-sans { font-family: 'Outfit', sans-serif; }
         .font-serif { font-family: 'Playfair Display', serif; }
       `}} />
 
-      {/* Header */}
       <Header
         showSearch={false}
         cartCount={activeCartCount}
@@ -167,7 +205,6 @@ export default function MyOrdersPage() {
       />
 
       <main className="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Title Block */}
         <div className="mb-8">
           <h1 className="font-serif text-3xl sm:text-4xl font-extrabold text-[#113C27] tracking-tight">
             My Orders
@@ -177,7 +214,6 @@ export default function MyOrdersPage() {
           </p>
         </div>
 
-        {/* Tab Filters */}
         <div className="border-b border-[#EAE6DB] mb-8 flex overflow-x-auto whitespace-nowrap no-scrollbar gap-6">
           {(["All Orders", "Processing", "Shipped", "Delivered", "Cancelled"] as const).map((tab) => {
             const isActive = activeTab === tab;
@@ -200,14 +236,12 @@ export default function MyOrdersPage() {
           })}
         </div>
 
-        {/* Orders List */}
         <div className="space-y-6 mb-12">
           {filteredOrders.map((order) => (
             <div
               key={order.id}
               className="bg-white rounded-2xl border border-[#EAE6DB]/60 overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.02)]"
             >
-              {/* Order Info Row */}
               <div className="px-6 py-4 bg-[#FAF9F5]/40 border-b border-[#EAE6DB]/40 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-8 text-xs font-bold uppercase tracking-wider text-[#738276]">
                   <div>
@@ -226,9 +260,7 @@ export default function MyOrdersPage() {
                 <div>{getStatusBadge(order.status)}</div>
               </div>
 
-              {/* Order Body: Thumbnails & Action */}
               <div className="px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-6">
-                {/* Product Images */}
                 <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto">
                   {order.images.map((img, idx) => (
                     <div
@@ -261,7 +293,6 @@ export default function MyOrdersPage() {
                   )}
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                   {order.status === "Shipped" && (
                     <button
@@ -279,6 +310,7 @@ export default function MyOrdersPage() {
                   )}
                   
                   <button
+                    onClick={() => setSelectedOrderDetail(order)}
                     className={`py-2.5 px-5 rounded-xl font-bold transition-all text-xs active:scale-95 ${
                       order.status === "Cancelled"
                         ? "bg-[#EAE6DB]/60 hover:bg-[#EAE6DB]/90 text-[#1F3E2F]"
@@ -353,6 +385,159 @@ export default function MyOrdersPage() {
 
       {/* Footer */}
       <Footer />
+
+      {/* DETAILED MODAL DIALOG */}
+      {selectedOrderDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-[#EAE6DB]/60 p-6 sm:p-8 space-y-6 relative text-left">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedOrderDetail(null)}
+              className="absolute top-6 right-6 p-2 bg-[#FAF9F5] hover:bg-[#EAE6DB]/40 rounded-full text-[#738276] hover:text-[#1F3E2F] transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Modal Title */}
+            <div>
+              <span className="text-[10px] font-bold text-[#A39E93] uppercase tracking-widest block mb-1">Order Details</span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#113C27] tracking-tight">
+                {selectedOrderDetail.orderId}
+              </h2>
+              <p className="text-xs font-semibold text-[#738276] mt-1">Placed on {selectedOrderDetail.placedOn}</p>
+            </div>
+
+            {/* How Ordered & Which User Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 pb-6 border-b border-[#EAE6DB]/45">
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-[#1F3E2F] uppercase tracking-wider flex items-center gap-1.5">
+                  <UserIcon className="w-4 h-4 text-[#738276]" />
+                  Customer Details
+                </h3>
+                <div className="text-xs space-y-1 font-semibold text-[#5C6E61]">
+                  <p className="text-[#1F3E2F] font-bold text-sm">
+                    {user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ""}` : user?.email.split("@")[0]}
+                  </p>
+                  <p>Email: {user?.email}</p>
+                  <p>Phone: {user?.phoneNumber || "N/A"}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-[#1F3E2F] uppercase tracking-wider flex items-center gap-1.5">
+                  <Truck className="w-4 h-4 text-[#738276]" />
+                  Shipping Address
+                </h3>
+                <p className="text-xs font-semibold text-[#5C6E61] leading-relaxed">
+                  {selectedOrderDetail.shippingAddress || "No shipping address provided."}
+                </p>
+              </div>
+            </div>
+
+            {/* Payment status & Fulfillment status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-[#EAE6DB]/45">
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-[#1F3E2F] uppercase tracking-wider flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-[#738276]" />
+                  Payment Details
+                </h3>
+                <div className="text-xs space-y-1 font-semibold text-[#5C6E61]">
+                  <p className="text-[#1F3E2F] font-bold text-sm">
+                    Paid via {selectedOrderDetail.paymentMethod || "COD"}
+                  </p>
+                  <p>Status: <span className="font-bold text-[#0F5132]">{selectedOrderDetail.paymentStatus || "UNPAID"}</span></p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-[#1F3E2F] uppercase tracking-wider flex items-center gap-1.5">
+                  <ShoppingBag className="w-4 h-4 text-[#738276]" />
+                  Fulfillment Status
+                </h3>
+                <div>
+                  <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-[#EAF5EC] text-[#0F5132]">
+                    {selectedOrderDetail.status}
+                  </span>
+                  <span className="block text-[10px] font-bold text-[#738276] mt-1.5">
+                    Delivery: {selectedOrderDetail.deliveryStatus || "PENDING"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* What Products */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-[#1F3E2F] uppercase tracking-wider flex items-center gap-1.5">
+                <ShoppingBag className="w-4 h-4 text-[#738276]" />
+                Products Placed ({selectedOrderDetail.itemsList?.length || 0})
+              </h3>
+              <div className="border border-[#EAE6DB]/60 rounded-2xl overflow-hidden divide-y divide-[#EAE6DB]/40">
+                {selectedOrderDetail.itemsList && selectedOrderDetail.itemsList.length > 0 ? (
+                  selectedOrderDetail.itemsList.map((item: any, idx: number) => (
+                    <div key={idx} className="flex gap-4 p-4 first:pt-4 last:pb-4 items-center bg-[#FAF9F5]/20">
+                      <div className="w-12 h-12 rounded-lg border border-[#EAE6DB]/60 overflow-hidden bg-[#F9F7F2] flex-shrink-0 flex items-center justify-center">
+                        {(() => {
+                          const emojiInfo = parseEmojiImage(item.image);
+                          return emojiInfo.isEmoji ? (
+                            <span className="text-2xl select-none" style={{ backgroundColor: emojiInfo.bgColor }}>
+                              {emojiInfo.emoji}
+                            </span>
+                          ) : (
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          );
+                        })()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-[#1F3E2F] text-xs sm:text-sm truncate">{item.name}</h4>
+                        <p className="text-[10px] text-[#738276] font-semibold mt-0.5">
+                          {item.spec} • Qty: {item.quantity}
+                        </p>
+                      </div>
+                      <span className="font-bold text-[#113C27] text-xs sm:text-sm whitespace-nowrap">
+                        ₹{(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-xs text-[#738276] font-semibold">
+                    No items in this order.
+                  </div>
+                )}
+
+                {/* Total breakdown */}
+                <div className="p-4 bg-[#FAF9F5]/45 border-t border-[#EAE6DB]/60 text-xs font-bold text-[#5C6E61] space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span>Items Subtotal</span>
+                    <span className="text-[#1F3E2F]">₹{(selectedOrderDetail.subtotal || selectedOrderDetail.total).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Shipping Fee</span>
+                    <span className="text-[#1F3E2F]">₹{(selectedOrderDetail.shippingFee || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Estimated GST (18%)</span>
+                    <span className="text-[#1F3E2F]">₹{(selectedOrderDetail.taxAmount || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-[#EAE6DB]/40 text-sm font-extrabold text-[#113C27]">
+                    <span>Total Amount Paid</span>
+                    <span>₹{selectedOrderDetail.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setSelectedOrderDetail(null)}
+                className="bg-[#0F5132] hover:bg-[#113C27] text-white py-3 px-8 rounded-xl font-bold transition-all text-xs active:scale-95 shadow-sm shadow-green-950/10"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
