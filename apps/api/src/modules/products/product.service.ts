@@ -236,3 +236,10 @@ export async function deleteProduct(id: string) {
 export async function updateProduct(id: string, input: UpdateProductInput) {
   return productRepository.updateProduct(id, input);
 }
+
+/**
+ * Gets product inventory catalogue overview stats
+ */
+export async function getProductStats() {
+  return productRepository.getProductStats();
+}

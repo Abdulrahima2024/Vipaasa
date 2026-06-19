@@ -17,50 +17,12 @@ export default function ProductsPage() {
   async function loadStats() {
     try {
       setLoading(true);
-      // Fetch up to 1000 products to compute dashboard statistics
-      const data = await fetchAPI("/api/products", {
-        params: { limit: 1000, includeInactive: true },
-      });
-      const items = data.items || [];
-      const total = items.length;
-      
-      let activeCount = 0;
-      let lowStockCount = 0;
-      let totalValuation = 0;
-
-      items.forEach((product: any) => {
-        if (product.isActive) {
-          activeCount++;
-        }
-        
-        let productStock = 0;
-        (product.variants || []).forEach((v: any) => {
-          let variantStock = 0;
-          if (v.inventories) {
-            v.inventories.forEach((inv: any) => {
-              variantStock += (inv.quantityOnHand - inv.quantityReserved);
-            });
-          }
-          productStock += variantStock;
-          
-          if (v.pricing) {
-            const price = parseFloat(v.pricing.basePrice);
-            totalValuation += price * variantStock;
-          }
-        });
-        
-        if (productStock <= 15) {
-          lowStockCount++;
-        }
-      });
-
-      const activePercent = total > 0 ? `${((activeCount / total) * 100).toFixed(1)}%` : "0%";
-
+      const data = await fetchAPI("/api/products/stats");
       setStats({
-        total,
-        activePercent,
-        lowStock: lowStockCount,
-        valuation: `₹${totalValuation.toLocaleString("en-IN")}`,
+        total: data.totalProducts,
+        activePercent: `${data.activePercentage.toFixed(1)}%`,
+        lowStock: data.lowStockCount,
+        valuation: `₹${data.totalValuation.toLocaleString("en-IN")}`,
       });
     } catch (err) {
       console.error("Failed to load dashboard stats:", err);

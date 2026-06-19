@@ -183,3 +183,17 @@ export async function updateProduct(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+/**
+ * GET /products/stats
+ * Retrieves overview metrics of the products catalogue (Admin only)
+ */
+export async function getProductStats(req: AuthenticatedRequest, res: Response) {
+  try {
+    const stats = await productService.getProductStats();
+    return res.status(200).json(stats);
+  } catch (error) {
+    console.error("Error fetching product stats:", error);
+    return res.status(500).json({ error: "Failed to fetch product stats" });
+  }
+}
+

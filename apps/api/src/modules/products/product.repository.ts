@@ -657,3 +657,62 @@ export async function deleteProduct(id: string) {
     },
   });
 }
+
+export async function getProductStats() {
+  const totalProducts = await prisma.product.count({
+    where: { isDeleted: false },
+  });
+
+  const activeProducts = await prisma.product.count({
+    where: { isDeleted: false, isActive: true },
+  });
+
+  const activePercentage = totalProducts > 0 ? (activeProducts / totalProducts) * 100 : 0;
+
+  const lowStockCount = await prisma.productVariant.count({
+    where: {
+      product: { isDeleted: false },
+      skuStatus: { not: "DISCONTINUED" },
+      inventories: {
+        some: {
+          quantityOnHand: { lte: 24 },
+        },
+      },
+    },
+  });
+
+  const pricingAndInventories = await prisma.productVariant.findMany({
+    where: {
+      product: { isDeleted: false },
+    },
+    select: {
+      pricing: {
+        select: {
+          basePrice: true,
+        },
+      },
+      inventories: {
+        select: {
+          quantityOnHand: true,
+          quantityReserved: true,
+        },
+      },
+    },
+  });
+
+  let totalValuation = 0;
+  pricingAndInventories.forEach((pv) => {
+    if (pv.pricing && pv.inventories) {
+      const price = parseFloat(pv.pricing.basePrice.toString());
+      const stock = pv.inventories.reduce((sum, inv) => sum + (inv.quantityOnHand - inv.quantityReserved), 0);
+      totalValuation += price * Math.max(0, stock);
+    }
+  });
+
+  return {
+    totalProducts,
+    activePercentage,
+    lowStockCount,
+    totalValuation,
+  };
+}
