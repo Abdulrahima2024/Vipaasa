@@ -9,8 +9,28 @@ const prisma = new PrismaClient();
  */
 export async function checkout(
   userId: string,
-  shippingAddressId: string,
-  billingAddressId?: string
+  payload: {
+    shippingAddressId?: string;
+    shippingAddress?: {
+      addressLine1: string;
+      addressLine2?: string | null;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+      phone?: string | null;
+    };
+    billingAddressId?: string;
+    billingAddress?: {
+      addressLine1: string;
+      addressLine2?: string | null;
+      city: string;
+      state: string;
+      postalCode: string;
+      country: string;
+      phone?: string | null;
+    };
+  }
 ) {
   return prisma.$transaction(async (tx) => {
     // 1. Prevent duplicate checkout by row-locking the user's cart
@@ -61,26 +81,74 @@ export async function checkout(
       }
     }
 
-    // 3. Validate Addresses
-    const shippingAddress = await tx.customerAddress.findUnique({
-      where: { id: shippingAddressId },
-      include: { profile: true },
+    // 3. Resolve / Create Addresses
+    let profile = await tx.customerProfile.findUnique({
+      where: { userId },
     });
+    if (!profile) {
+      const userObj = await tx.user.findUnique({ where: { id: userId } });
+      profile = await tx.customerProfile.create({
+        data: {
+          userId,
+          firstName: userObj?.email.split("@")[0] || "Customer",
+          lastName: "User",
+        },
+      });
+    }
 
-    if (!shippingAddress || shippingAddress.profile.userId !== userId) {
-      throw new AppError("Invalid shipping address selected.", 400);
+    let shippingAddress: any;
+    if (payload.shippingAddressId) {
+      shippingAddress = await tx.customerAddress.findUnique({
+        where: { id: payload.shippingAddressId },
+        include: { profile: true },
+      });
+      if (!shippingAddress || shippingAddress.profile.userId !== userId) {
+        throw new AppError("Invalid shipping address selected.", 400);
+      }
+    } else if (payload.shippingAddress) {
+      shippingAddress = await tx.customerAddress.create({
+        data: {
+          profileId: profile.id,
+          addressType: "SHIPPING",
+          addressLine1: payload.shippingAddress.addressLine1,
+          addressLine2: payload.shippingAddress.addressLine2 || null,
+          city: payload.shippingAddress.city,
+          state: payload.shippingAddress.state,
+          postalCode: payload.shippingAddress.postalCode,
+          country: payload.shippingAddress.country,
+          phone: payload.shippingAddress.phone || null,
+        },
+      });
+    } else {
+      throw new AppError("Shipping address is required.", 400);
     }
 
     let billingAddress = shippingAddress;
-    if (billingAddressId && billingAddressId !== shippingAddressId) {
-      const dbBillingAddress = await tx.customerAddress.findUnique({
-        where: { id: billingAddressId },
-        include: { profile: true },
-      });
-      if (!dbBillingAddress || dbBillingAddress.profile.userId !== userId) {
-        throw new AppError("Invalid billing address selected.", 400);
+    if (payload.billingAddressId) {
+      if (payload.billingAddressId !== payload.shippingAddressId) {
+        const dbBillingAddress = await tx.customerAddress.findUnique({
+          where: { id: payload.billingAddressId },
+          include: { profile: true },
+        });
+        if (!dbBillingAddress || dbBillingAddress.profile.userId !== userId) {
+          throw new AppError("Invalid billing address selected.", 400);
+        }
+        billingAddress = dbBillingAddress;
       }
-      billingAddress = dbBillingAddress;
+    } else if (payload.billingAddress) {
+      billingAddress = await tx.customerAddress.create({
+        data: {
+          profileId: profile.id,
+          addressType: "BILLING",
+          addressLine1: payload.billingAddress.addressLine1,
+          addressLine2: payload.billingAddress.addressLine2 || null,
+          city: payload.billingAddress.city,
+          state: payload.billingAddress.state,
+          postalCode: payload.billingAddress.postalCode,
+          country: payload.billingAddress.country,
+          phone: payload.billingAddress.phone || null,
+        },
+      });
     }
 
     // 4. Validate Inventory availability

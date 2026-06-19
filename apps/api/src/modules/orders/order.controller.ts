@@ -27,8 +27,7 @@ export async function checkout(req: AuthenticatedRequest, res: Response, next: N
       });
     }
 
-    const { shippingAddressId, billingAddressId } = validation.data;
-    const order = await orderService.checkout(userId, shippingAddressId, billingAddressId);
+    const order = await orderService.checkout(userId, validation.data);
 
     return res.status(201).json({
       status: "success",

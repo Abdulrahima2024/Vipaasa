@@ -13,6 +13,7 @@ import PaymentSection from "../../components/checkout/PaymentSection";
 import { useAuthStore } from "../../store/authStore";
 import { useRouter } from "next/navigation";
 import { Sprout } from "lucide-react";
+import { fetchApi } from "../../lib/api";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -21,6 +22,9 @@ export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 1: Address, 2: Summary, 3: Payment, 4: Success
   const [confetti, setConfetti] = useState<{ id: number; left: number; size: number; delay: number; duration: number; color: string; rotation: number; shape: "square" | "circle" }[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -138,9 +142,41 @@ export default function CheckoutPage() {
     localStorage.setItem("vipaasa_addresses", JSON.stringify(updated));
   };
 
-  const handlePaymentComplete = (method: string) => {
-    setStep(4);
-    // Note: We clear the cart in Step 4's mount/render so the total amount is still visible on completion screen
+  const handlePaymentComplete = async (method: string) => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const rawAddress = {
+        addressLine1: selectedAddress.addressLine1,
+        addressLine2: selectedAddress.addressLine2 || "",
+        city: selectedAddress.city,
+        state: selectedAddress.state,
+        postalCode: selectedAddress.postalCode,
+        country: selectedAddress.country,
+        phone: selectedAddress.phone || "",
+      };
+
+      const result = await fetchApi<{ status: string; data: any }>("/checkout", {
+        method: "POST",
+        body: JSON.stringify({
+          shippingAddress: rawAddress,
+          billingAddress: rawAddress,
+        }),
+      });
+
+      if (result.status === "success" && result.data) {
+        setPlacedOrder(result.data);
+        setStep(4);
+      } else {
+        throw new Error("Failed to place order.");
+      }
+    } catch (err: any) {
+      console.error("Checkout error:", err);
+      setErrorMessage(err.message || "Something went wrong during checkout.");
+      setStep(2); // Go back to review step to let them see the error banner and try again
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Clear cart upon arriving at success step
@@ -150,7 +186,7 @@ export default function CheckoutPage() {
     }
   }, [step, clearCart]);
 
-  if (!mounted) {
+  if (!mounted || isSubmitting) {
     return (
       <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">
         <style dangerouslySetInnerHTML={{ __html: `
@@ -159,9 +195,10 @@ export default function CheckoutPage() {
           .font-serif { font-family: 'Playfair Display', serif; }
         `}} />
         <Header showSearch={true} cartCount={0} favoritesCount={0} />
-        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-16 py-8 flex items-center justify-center">
-          <div className="text-center py-20 text-[#738276] font-semibold text-lg animate-pulse">
-            Loading checkout...
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-16 py-8 flex flex-col items-center justify-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#1B4332]" />
+          <div className="text-center text-[#738276] font-semibold text-lg animate-pulse">
+            {isSubmitting ? "Placing your organic order..." : "Loading checkout..."}
           </div>
         </main>
       </div>
@@ -351,7 +388,7 @@ export default function CheckoutPage() {
                   Order Number
                 </span>
                 <span className="text-base sm:text-xl font-bold text-[#1F3E2F]">
-                  #VO-8829-2024
+                  {placedOrder?.orderNumber || "#VO-8829-2024"}
                 </span>
               </div>
               
@@ -361,7 +398,9 @@ export default function CheckoutPage() {
                   Expected Delivery
                 </span>
                 <span className="text-base sm:text-xl font-bold text-[#1F3E2F]">
-                  Oct 24, 2024
+                  {placedOrder?.createdAt 
+                    ? new Date(new Date(placedOrder.createdAt).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : "Oct 24, 2024"}
                 </span>
               </div>
             </div>
@@ -414,6 +453,14 @@ export default function CheckoutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* LEFT COLUMN: ACTIVE STEP DETAILS */}
             <div className="lg:col-span-2 space-y-6">
+              {errorMessage && (
+                <div className="bg-red-50 border border-red-200 text-red-800 px-5 py-4 rounded-2xl text-sm font-semibold mb-4 flex items-center gap-3">
+                  <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>{errorMessage}</span>
+                </div>
+              )}
               {step === 1 && (
                 <AddressSelector
                   addresses={addresses}
