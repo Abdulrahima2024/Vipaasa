@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Menu, X, Flame } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import { useCartStore } from "../../store/useCartStore";
 
 interface HeaderProps {
   showSearch?: boolean;
@@ -31,6 +32,22 @@ export default function Header({
   const { isAuthenticated, user, logout, _hasHydrated } = useAuthStore();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const storeItems = useCartStore((state) => state.items);
+  const storeFavorites = useCartStore((state) => state.favorites);
+
+  const displayCartCount = mounted
+    ? storeItems.reduce((acc, item) => acc + item.quantity, 0)
+    : 0;
+
+  const displayFavoritesCount = mounted
+    ? storeFavorites.length
+    : 0;
 
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -281,9 +298,9 @@ export default function Header({
             <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
             </svg>
-            {favoritesCount > 0 && (
+            {displayFavoritesCount > 0 && (
               <span className="absolute -top-1 -right-1.5 bg-[#A84444] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-all scale-100">
-                {favoritesCount}
+                {displayFavoritesCount}
               </span>
             )}
           </button>
@@ -403,9 +420,9 @@ export default function Header({
             <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
             </svg>
-            {cartCount > 0 && (
+            {displayCartCount > 0 && (
               <span className="absolute -top-1 -right-1.5 bg-[#A84444] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center transition-all scale-100">
-                {cartCount}
+                {displayCartCount}
               </span>
             )}
           </a>
