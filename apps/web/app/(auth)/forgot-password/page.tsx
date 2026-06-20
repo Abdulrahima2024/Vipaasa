@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Header from "../../../components/layout/Header";
 import { useCartStore } from "../../../store/useCartStore";
 import { Mail } from "lucide-react";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Cart store for Header notifications/counts
   const { items, favorites } = useCartStore();
@@ -47,6 +49,12 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    if (process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && !captchaToken) {
+      setValidationError("Please complete the hCaptcha challenge.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
       const response = await fetch(`${apiBaseUrl}/api/auth/forgot-password`, {
@@ -54,7 +62,7 @@ export default function ForgotPasswordPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: target }),
+        body: JSON.stringify({ email: target, captchaToken: captchaToken || undefined }),
       });
 
       const data = await response.json();
@@ -174,6 +182,17 @@ export default function ForgotPasswordPage() {
                   />
                 </div>
               </div>
+
+              {/* hCaptcha Widget */}
+              {process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && (
+                <div className="flex justify-center py-2">
+                  <HCaptcha
+                    sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY}
+                    onVerify={(token) => setCaptchaToken(token)}
+                    onExpire={() => setCaptchaToken(null)}
+                  />
+                </div>
+              )}
 
               {/* Submit Button */}
               <div>

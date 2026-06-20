@@ -9,6 +9,7 @@ import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 import { Lock, Mail, Phone, User, Check } from "lucide-react";
 import AnimatedEye from "../../../components/ui/AnimatedEye";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [loginMethod, setLoginMethod] = useState<"email" | "mobile">("email");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Form states
   const [email, setEmail] = useState("");
@@ -73,8 +75,13 @@ export default function LoginPage() {
       return;
     }
 
+    if (process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && !captchaToken) {
+      setValidationError("Please complete the hCaptcha challenge.");
+      return;
+    }
+
     if (authMode === "login") {
-      const success = await login(email, password);
+      const success = await login(email, password, captchaToken || undefined);
       if (success) {
         const redirectTo = searchParams.get("redirect") || "/";
         router.push(redirectTo);
@@ -86,7 +93,7 @@ export default function LoginPage() {
       }
       // For every new account creation, clear the cart and favorites first
       useCartStore.setState({ items: [], savedItems: [], favorites: [] });
-      const success = await register(email, password, fullName, mobileNumber || undefined);
+      const success = await register(email, password, fullName, mobileNumber || undefined, captchaToken || undefined);
       if (success) {
         const redirectTo = searchParams.get("redirect") || "/";
         router.push(redirectTo);
@@ -338,6 +345,17 @@ export default function LoginPage() {
                   <span className="ml-2.5 text-xs text-[#5C6E61] font-semibold leading-normal select-none cursor-pointer" onClick={() => setTermsAccepted(!termsAccepted)}>
                     I accept the terms and conditions and privacy policies.
                   </span>
+                </div>
+              )}
+
+              {/* hCaptcha Widget */}
+              {process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && (
+                <div className="flex justify-center py-2">
+                  <HCaptcha
+                    sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY}
+                    onVerify={(token) => setCaptchaToken(token)}
+                    onExpire={() => setCaptchaToken(null)}
+                  />
                 </div>
               )}
 

@@ -22,12 +22,13 @@ interface AuthState {
   isAuthenticated: boolean;
   error: string | null;
   isLoading: boolean;
-  login: (email: string, password_raw: string) => Promise<boolean>;
+  login: (email: string, password_raw: string, captchaToken?: string) => Promise<boolean>;
   register: (
     email: string,
     password_raw: string,
     fullName: string,
-    phoneNumber?: string
+    phoneNumber?: string,
+    captchaToken?: string
   ) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
@@ -47,7 +48,7 @@ export const useAuthStore = create<AuthState>()(
       _hasHydrated: false,
       setHasHydrated: (val) => set({ _hasHydrated: val }),
 
-      login: async (email, password) => {
+      login: async (email, password, captchaToken) => {
         set({ isLoading: true, error: null });
         try {
           const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -56,7 +57,7 @@ export const useAuthStore = create<AuthState>()(
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ email, password, captchaToken }),
           });
 
           const data = await response.json();
@@ -88,7 +89,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (email, password, fullName, phoneNumber) => {
+      register: async (email, password, fullName, phoneNumber, captchaToken) => {
         set({ isLoading: true, error: null });
         try {
           const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -97,7 +98,7 @@ export const useAuthStore = create<AuthState>()(
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ email, password, fullName, phoneNumber }),
+            body: JSON.stringify({ email, password, fullName, phoneNumber, captchaToken }),
           });
 
           const data = await response.json();
