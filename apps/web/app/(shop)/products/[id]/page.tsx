@@ -35,6 +35,7 @@ interface Product {
   image: string;
   isNew?: boolean;
   rating?: number;
+  variants?: any[];
 }
 
 // Unsplash images helper to populate alternative gallery pictures dynamically
@@ -200,6 +201,7 @@ export default function ProductDetailPage() {
           image: imageUrl,
           isNew: raw.stockStatus === "IN_STOCK",
           rating: 4.5 + (parseInt((raw.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
+          variants: raw.variants,
         };
         setProduct(mapped);
       } catch (err: any) {

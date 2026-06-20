@@ -27,6 +27,7 @@ interface CategoryProduct {
   inStock: boolean;
   rating: number;
   createdAt: string;
+  variants?: any[];
 }
 
 
@@ -126,6 +127,7 @@ export default function CategoriesClient() {
               inStock: item.stockStatus === "IN_STOCK",
               rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
               createdAt: new Date().toISOString().split("T")[0],
+              variants: item.variants,
             };
           });
           setApiProducts(mapped);

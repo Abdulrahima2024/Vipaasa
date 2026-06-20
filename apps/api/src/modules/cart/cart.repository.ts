@@ -16,6 +16,7 @@ function getDb(tx?: Tx) {
 export async function findCartByUserId(userId: string, tx?: Tx) {
   return getDb(tx).cart.findUnique({
     where: { userId },
+    relationLoadStrategy: "join",
     include: {
       items: {
         include: {
@@ -45,6 +46,7 @@ export async function createCart(userId: string, tx?: Tx) {
     data: {
       userId,
     },
+    relationLoadStrategy: "join",
     include: {
       items: {
         include: {
@@ -139,6 +141,7 @@ export async function findCartItemById(itemId: string, tx?: Tx) {
 export async function getVariantWithDetails(variantId: string, tx?: Tx) {
   return getDb(tx).productVariant.findUnique({
     where: { id: variantId },
+    relationLoadStrategy: "join",
     include: {
       product: true,
       pricing: true,

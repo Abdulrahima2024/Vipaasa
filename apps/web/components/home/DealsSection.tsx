@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Flame, Clock, Sparkles, ShoppingCart, Award } from "lucide-react";
 import { useCartStore } from "../../store/useCartStore";
+import { fetchApi } from "../../lib/api";
+import { useAuthStore } from "../../store/authStore";
 
 interface DealItem {
   id: string;
@@ -18,55 +20,146 @@ interface DealItem {
   claimedPercentage: number;
   stars: number;
   reviewsCount: number;
+  variants?: any[];
 }
 
 export default function DealsSection() {
   const { addToCart } = useCartStore();
   const [mounted, setMounted] = useState(false);
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 12, seconds: 48 });
+  const [apiProducts, setApiProducts] = useState<any[]>([]);
+  const { token } = useAuthStore();
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const data = await fetchApi<{ items: any[] }>("/api/products?limit=100");
+        if (data && Array.isArray(data.items) && data.items.length > 0) {
+          setApiProducts(data.items);
+        }
+      } catch (err) {
+        console.warn("DealsSection: Failed to fetch API products, falling back to local data.", err);
+      }
+    }
+    loadProducts();
+  }, [token]);
 
   // Mock deals matching real products in database
-  const deals: DealItem[] = [
-    {
-      id: "40", // Desi Cow Ghee
-      name: "Desi Cow Ghee (A2 Vedic Churned)",
-      category: "Honey & Ghee",
-      image: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=400",
-      originalPrice: 4200,
-      dealPrice: 3499,
-      weight: "1kg",
-      badge: "Best Seller • Save 17%",
-      claimedPercentage: 82,
-      stars: 4.9,
-      reviewsCount: 1842,
-    },
-    {
-      id: "37", // Wild Forest Honey
-      name: "Raw Wild Forest Honey",
-      category: "Honey & Ghee",
-      image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
-      originalPrice: 420,
-      dealPrice: 299,
-      weight: "1kg",
-      badge: "Deal of the Day • Save 29%",
-      claimedPercentage: 64,
-      stars: 4.8,
-      reviewsCount: 894,
-    },
-    {
-      id: "1", // Kandipappu
-      name: "Premium Kandipappu (Toor Dal)",
-      category: "Dals & Pulses",
-      image: "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
-      originalPrice: 240,
-      dealPrice: 169,
-      weight: "1kg",
-      badge: "Lightning Deal • Save 30%",
-      claimedPercentage: 47,
-      stars: 4.7,
-      reviewsCount: 1230,
-    },
-  ];
+  const deals = useMemo<DealItem[]>(() => {
+    const defaultDeals: DealItem[] = [
+      {
+        id: "40", // Desi Cow Ghee
+        name: "Desi Cow Ghee (A2 Vedic Churned)",
+        category: "Honey & Ghee",
+        image: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=400",
+        originalPrice: 4200,
+        dealPrice: 3499,
+        weight: "1kg",
+        badge: "Best Seller • Save 17%",
+        claimedPercentage: 82,
+        stars: 4.9,
+        reviewsCount: 1842,
+      },
+      {
+        id: "37", // Wild Forest Honey
+        name: "Raw Wild Forest Honey",
+        category: "Honey & Ghee",
+        image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
+        originalPrice: 420,
+        dealPrice: 299,
+        weight: "1kg",
+        badge: "Deal of the Day • Save 29%",
+        claimedPercentage: 64,
+        stars: 4.8,
+        reviewsCount: 894,
+      },
+      {
+        id: "1", // Kandipappu
+        name: "Premium Kandipappu (Toor Dal)",
+        category: "Dals & Pulses",
+        image: "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
+        originalPrice: 240,
+        dealPrice: 169,
+        weight: "1kg",
+        badge: "Lightning Deal • Save 30%",
+        claimedPercentage: 47,
+        stars: 4.7,
+        reviewsCount: 1230,
+      },
+    ];
+
+    if (apiProducts.length === 0) return defaultDeals;
+
+    const findProductByName = (name: string) => {
+      return apiProducts.find(p => p.name?.toLowerCase() === name.toLowerCase()) || 
+             apiProducts.find(p => p.name?.toLowerCase().includes(name.toLowerCase())) || 
+             apiProducts[0];
+    };
+
+    const dealsList: DealItem[] = [];
+
+    // 1. Ghee
+    const gheeProduct = findProductByName("Desi Cow Ghee");
+    if (gheeProduct) {
+      const basePrice250g = gheeProduct.price || 0;
+      dealsList.push({
+        id: gheeProduct.id,
+        name: gheeProduct.name || "Desi Cow Ghee (A2 Vedic Churned)",
+        category: gheeProduct.category?.name || "Honey & Ghee",
+        image: (gheeProduct.images && gheeProduct.images[0]) || gheeProduct.image || "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=400",
+        originalPrice: Math.round(basePrice250g * 3.2),
+        dealPrice: Math.round(basePrice250g * 3.2 * 0.83), // ~17% off
+        weight: "1kg",
+        badge: "Best Seller • Save 17%",
+        claimedPercentage: 82,
+        stars: 4.9,
+        reviewsCount: 1842,
+        variants: gheeProduct.variants,
+      });
+    }
+
+    // 2. Honey
+    const honeyProduct = findProductByName("Wild Forest Honey");
+    if (honeyProduct) {
+      const basePrice250g = honeyProduct.price || 0;
+      dealsList.push({
+        id: honeyProduct.id,
+        name: honeyProduct.name || "Raw Wild Forest Honey",
+        category: honeyProduct.category?.name || "Honey & Ghee",
+        image: (honeyProduct.images && honeyProduct.images[0]) || honeyProduct.image || "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
+        originalPrice: Math.round(basePrice250g * 3.2),
+        dealPrice: Math.round(basePrice250g * 3.2 * 0.71), // ~29% off
+        weight: "1kg",
+        badge: "Deal of the Day • Save 29%",
+        claimedPercentage: 64,
+        stars: 4.8,
+        reviewsCount: 894,
+        variants: honeyProduct.variants,
+      });
+    }
+
+    // 3. Kandipappu
+    const dalProduct = findProductByName("Kandipappu");
+    if (dalProduct) {
+      const basePrice250g = dalProduct.price || 0;
+      dealsList.push({
+        id: dalProduct.id,
+        name: dalProduct.name || "Premium Kandipappu (Toor Dal)",
+        category: dalProduct.category?.name || "Dals & Pulses",
+        image: (dalProduct.images && dalProduct.images[0]) || dalProduct.image || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
+        originalPrice: Math.round(basePrice250g * 3.2),
+        dealPrice: Math.round(basePrice250g * 3.2 * 0.70), // ~30% off
+        weight: "1kg",
+        badge: "Lightning Deal • Save 30%",
+        claimedPercentage: 47,
+        stars: 4.7,
+        reviewsCount: 1230,
+        variants: dalProduct.variants,
+      });
+    }
+
+    return dealsList.length === 3 ? dealsList : defaultDeals;
+  }, [apiProducts]);
 
   useEffect(() => {
     setMounted(true);
@@ -104,6 +197,7 @@ export default function DealsSection() {
       prices: {
         [deal.weight]: deal.dealPrice,
       },
+      variants: deal.variants,
     };
     addToCart(formattedProduct, deal.weight);
   };

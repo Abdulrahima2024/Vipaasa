@@ -7,7 +7,7 @@ import Footer from "../../components/layout/Footer";
 import { ProductCard, Product } from "../../components/home/ProductListing";
 import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/authStore";
-import productsData from "../../data/products.json";
+import { fetchApi } from "../../lib/api";
 
 export default function FavoritesPage() {
   const {
@@ -18,7 +18,9 @@ export default function FavoritesPage() {
     toggleFavorite,
   } = useCartStore();
 
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, token } = useAuthStore();
+  const [apiProducts, setApiProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   const handleBuyNow = (product: Product, weight: "1kg" | "500g" | "250g") => {
     addToCart(product, weight);
@@ -34,7 +36,55 @@ export default function FavoritesPage() {
     setMounted(true);
   }, []);
 
-  const favoriteProducts = (productsData as Product[]).filter((p) => favorites.includes(p.id));
+  useEffect(() => {
+    async function loadProducts() {
+      setLoadingProducts(true);
+      try {
+        const data = await fetchApi<{ items: any[] }>("/api/products?limit=100");
+        if (data && Array.isArray(data.items)) {
+          const mapped: Product[] = data.items.map((item: any) => {
+            const prices = {
+              "250g": item.price || 0,
+              "500g": Math.round((item.price || 0) * 1.8),
+              "1kg": Math.round((item.price || 0) * 3.2),
+            };
+
+            if (item.variants && item.variants.length > 0) {
+              item.variants.forEach((v: any) => {
+                const grams = v.weightGrams;
+                const weightKey = grams === 1000 ? "1kg" : grams === 500 ? "500g" : "250g";
+                const basePrice = v.pricing ? Number(v.pricing.basePrice) : 0;
+                if (basePrice > 0) {
+                  prices[weightKey] = basePrice;
+                }
+              });
+            }
+
+            return {
+              id: item.id,
+              name: item.name,
+              category: item.category?.name || "General",
+              prices,
+              image: (item.images && item.images[0]?.url) || item.image || "/placeholder.jpg",
+              isNew: item.stockStatus === "IN_STOCK",
+              rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
+              variants: item.variants,
+            };
+          });
+          setApiProducts(mapped);
+        }
+      } catch (err) {
+        console.error("FavoritesPage: Failed to load products:", err);
+      } finally {
+        setLoadingProducts(false);
+      }
+    }
+    if (mounted) {
+      loadProducts();
+    }
+  }, [mounted, token]);
+
+  const favoriteProducts = apiProducts.filter((p) => favorites.includes(p.id));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">
@@ -83,7 +133,7 @@ export default function FavoritesPage() {
         </div>
 
         {/* FAVORITES GRID OR EMPTY STATE */}
-        {!mounted ? (
+        {!mounted || loadingProducts ? (
           <div className="text-center py-20 text-[#738276] font-semibold text-lg animate-pulse">
             Loading your favorites...
           </div>

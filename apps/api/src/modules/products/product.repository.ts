@@ -88,6 +88,7 @@ export async function findProducts(filter: ProductFilter) {
       skip,
       take: limit,
       orderBy,
+      relationLoadStrategy: "join",
       select: {
         id: true,
         name: true,
@@ -165,6 +166,7 @@ export async function findProductById(id: string, includeInactive: boolean = fal
 
   return prisma.product.findFirst({
     where,
+    relationLoadStrategy: "join",
     select: {
       id: true,
       name: true,
@@ -265,6 +267,7 @@ export async function searchProducts(filter: SearchFilter) {
       where,
       skip,
       take: limit,
+      relationLoadStrategy: "join",
       select: {
         id: true,
         name: true,

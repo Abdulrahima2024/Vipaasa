@@ -29,6 +29,7 @@ interface DealProduct {
   };
   description: string;
   rating: number;
+  variants?: any[];
 }
 
 export default function DealsClient() {
@@ -157,7 +158,8 @@ export default function DealsClient() {
           "1kg": isApiShape ? Math.round(basePrice250g * 3.2 * 0.8) : Math.round(gheeProduct.prices["1kg"] * 0.8)
         },
         description: gheeProduct.description || "100% pure A2 Desi Cow Ghee prepared traditional bilona method.",
-        rating: 4.8
+        rating: 4.8,
+        variants: gheeProduct.variants
       });
     }
 
@@ -182,7 +184,8 @@ export default function DealsClient() {
           "1kg": isApiShape ? Math.round(basePrice250g * 3.2) : honeyProduct.prices["1kg"]
         },
         description: honeyProduct.description || "Pure raw wild forest honey harvested sustainably from local tribes.",
-        rating: 4.7
+        rating: 4.7,
+        variants: honeyProduct.variants
       });
     }
 
@@ -207,7 +210,8 @@ export default function DealsClient() {
           "1kg": isApiShape ? Math.round(basePrice250g * 3.2) : munagaKaram.prices["1kg"]
         },
         description: munagaKaram.description || "Nutritious moringa leaf spice powder, perfect for daily immune support.",
-        rating: 4.6
+        rating: 4.6,
+        variants: munagaKaram.variants
       });
     }
 
@@ -274,7 +278,8 @@ export default function DealsClient() {
           "1kg": isApiShape ? Math.round(basePrice250g * 3.2 * 0.85) : Math.round(dalProduct.prices["1kg"] * 0.85)
         },
         description: dalProduct.description || "Unpolished, stone-ground toor dal packed with raw proteins and fiber.",
-        rating: 4.7
+        rating: 4.7,
+        variants: dalProduct.variants
       });
     }
 
@@ -299,7 +304,8 @@ export default function DealsClient() {
           "1kg": isApiShape ? Math.round(basePrice250g * 3.2 * 0.85) : Math.round(ragiProduct.prices["1kg"] * 0.85)
         },
         description: ragiProduct.description || "Finely stone-ground nutritious finger millet flour, rich in bone calcium.",
-        rating: 4.5
+        rating: 4.5,
+        variants: ragiProduct.variants
       });
     }
 
@@ -391,7 +397,8 @@ export default function DealsClient() {
       category: product.category,
       prices: product.prices,
       image: product.image,
-      description: product.description
+      description: product.description,
+      variants: product.variants
     };
     addToCart(cartPayload, product.weight);
     
@@ -407,7 +414,8 @@ export default function DealsClient() {
       category: product.category,
       prices: product.prices,
       image: product.image,
-      description: product.description
+      description: product.description,
+      variants: product.variants
     };
     addToCart(cartPayload, product.weight);
     
