@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { sendEmail, getOtpEmailTemplate } from "../notifications/email.service";
 import { prisma } from "../../config/database";
 import * as otpService from "./otp.service";
+import { generateAccessToken, generateRefreshToken, storeRefreshToken } from "./token.service";
 
 export async function authenticateUser(email: string, password_raw: string) {
   // Find active user by email and fetch profile and role details
@@ -27,19 +28,21 @@ export async function authenticateUser(email: string, password_raw: string) {
     return null;
   }
 
-  // Generate JWT token
-  const secret = process.env.JWT_ACCESS_SECRET || "vipaasa_default_jwt_access_secret_key_1234567890";
-  const token = jwt.sign(
-    {
-      userId: user.id,
-      email: user.email,
-      role: user.role.name
-    },
-    secret,
-    { expiresIn: "1d" } // 1 day token
-  );
+  // Generate Access and Refresh tokens
+  const payload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role.name,
+  };
+  const accessToken = generateAccessToken(payload);
+  const refreshToken = generateRefreshToken(payload);
 
-  return { token, user };
+  // Store refresh token
+  const decoded = jwt.decode(refreshToken) as { exp: number };
+  const expiresAt = decoded ? new Date(decoded.exp * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  await storeRefreshToken(user.id, refreshToken, expiresAt);
+
+  return { accessToken, refreshToken, user };
 }
 
 export async function generatePasswordResetOtp(email: string) {
@@ -210,19 +213,21 @@ export async function registerUser(
     console.error("Failed to generate/send registration verification OTP:", error);
   }
 
-  // Generate JWT token
-  const secret = process.env.JWT_ACCESS_SECRET || "vipaasa_default_jwt_access_secret_key_1234567890";
-  const token = jwt.sign(
-    {
-      userId: user.id,
-      email: user.email,
-      role: user.role.name
-    },
-    secret,
-    { expiresIn: "1d" }
-  );
+  // Generate Access and Refresh tokens
+  const payload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role.name,
+  };
+  const accessToken = generateAccessToken(payload);
+  const refreshToken = generateRefreshToken(payload);
 
-  return { token, user };
+  // Store refresh token
+  const decoded = jwt.decode(refreshToken) as { exp: number };
+  const expiresAt = decoded ? new Date(decoded.exp * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  await storeRefreshToken(user.id, refreshToken, expiresAt);
+
+  return { accessToken, refreshToken, user };
 }
 
 

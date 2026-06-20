@@ -74,29 +74,7 @@ const mapBackendCartToFrontend = (backendCart: any): CartItem[] => {
   });
 };
 
-const syncCartToBackend = async (items: CartItem[], allProducts: any[]) => {
-  // 1. Clear cart
-  await fetchApi("/api/cart", { method: "DELETE" });
-  // 2. Re-add items sequentially
-  for (const item of items) {
-    let variantId = item.variantId;
-    if (!variantId && item.productId) {
-      const parentProduct = allProducts.find((p: any) => p.id === item.productId);
-      if (parentProduct && parentProduct.variants) {
-        const grams = item.weight === "1kg" ? 1000 : item.weight === "500g" ? 500 : 250;
-        const variant = parentProduct.variants.find((v: any) => v.weightGrams === grams);
-        variantId = variant?.id;
-      }
-    }
-
-    if (variantId) {
-      await fetchApi("/api/cart/items", {
-        method: "POST",
-        body: JSON.stringify({ productId: variantId, quantity: item.quantity }),
-      });
-    }
-  }
-};
+// syncCartToBackend removed (optimized out to avoid full cart clear/re-add and heavy product list queries)
 
 export const useCartStore = create<CartStore>()(
   persist(
@@ -123,13 +101,7 @@ export const useCartStore = create<CartStore>()(
       mergeGuestCart: async (guestItems) => {
         if (guestItems.length === 0) return;
         try {
-          const productsData = await fetchApi<any>("/api/products?limit=100");
-          const allProducts = productsData?.items || [];
-          const userCart = await fetchApi<any>("/api/cart");
-          const userItemsMapped = mapBackendCartToFrontend(userCart);
-
-          // Merge guest items into user items
-          const mergedItems = [...userItemsMapped];
+          const allProducts = await getCachedProducts();
           for (const gItem of guestItems) {
             let variantId = gItem.variantId;
             const grams = gItem.weight === "1kg" ? 1000 : gItem.weight === "500g" ? 500 : 250;
@@ -143,21 +115,12 @@ export const useCartStore = create<CartStore>()(
             }
 
             if (variantId) {
-              const existing = mergedItems.find((uItem) => uItem.variantId === variantId);
-              if (existing) {
-                existing.quantity += gItem.quantity;
-              } else {
-                mergedItems.push({
-                  ...gItem,
-                  id: variantId,
-                  variantId,
-                });
-              }
+              await fetchApi("/api/cart/items", {
+                method: "POST",
+                body: JSON.stringify({ productId: variantId, quantity: gItem.quantity }),
+              });
             }
           }
-
-          // Sync merged cart to backend
-          await syncCartToBackend(mergedItems, allProducts);
         } catch (e) {
           console.error("Error merging guest cart", e);
         }
@@ -326,14 +289,10 @@ export const useCartStore = create<CartStore>()(
 
           const user = useAuthStore.getState().user;
           if (user) {
-            // Remove item from backend cart
-            const productsData = fetchApi<any>("/api/products?limit=100");
-            const updatedItems = state.items.filter((item) => item.id !== id);
-            productsData.then((pData) => {
-              syncCartToBackend(updatedItems, pData?.items || []).catch((e) =>
-                console.error("Error syncing cart for saveForLater:", e)
-              );
-            });
+            // Remove item from backend cart directly
+            fetchApi<any>(`/api/cart/items/${id}`, { method: "DELETE" }).catch((e) =>
+              console.error("Error deleting cart item for saveForLater:", e)
+            );
           }
 
           return {
@@ -349,15 +308,15 @@ export const useCartStore = create<CartStore>()(
 
           const user = useAuthStore.getState().user;
           if (user) {
-            const productsData = fetchApi<any>("/api/products?limit=100");
-            const updatedItems = [...state.items, { ...itemToMove, saved: false }];
-            productsData.then((pData) => {
-              syncCartToBackend(updatedItems, pData?.items || [])
-                .then(() => {
-                  useCartStore.getState().fetchCart();
-                })
-                .catch((e) => console.error("Error syncing cart for moveToCart:", e));
-            });
+            const variantId = itemToMove.variantId || itemToMove.productId;
+            fetchApi<any>("/api/cart/items", {
+              method: "POST",
+              body: JSON.stringify({ productId: variantId, quantity: itemToMove.quantity }),
+            })
+              .then((res) => {
+                set({ items: mapBackendCartToFrontend(res) });
+              })
+              .catch((e) => console.error("Error moving item to cart:", e));
           }
 
           return {
@@ -409,6 +368,20 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "vipaasa-cart-storage",
+      partialize: (state) => {
+        const user = useAuthStore.getState().user;
+        if (user) {
+          return {
+            savedItems: state.savedItems,
+            favorites: state.favorites,
+          };
+        }
+        return {
+          items: state.items,
+          savedItems: state.savedItems,
+          favorites: state.favorites,
+        };
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           const user = useAuthStore.getState().user;

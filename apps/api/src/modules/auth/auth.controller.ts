@@ -7,6 +7,7 @@ import {
   confirmOtp, 
   updatePasswordWithOtp 
 } from "./auth.service";
+import { rotateRefreshToken, revokeRefreshToken, verifyRefreshToken } from "./token.service";
 
 export async function login(req: Request, res: Response) {
   try {
@@ -24,8 +25,8 @@ export async function login(req: Request, res: Response) {
 
     return res.status(200).json({
       message: "Login successful",
-      token: authResult.token,
-      accessToken: authResult.token,
+      accessToken: authResult.accessToken,
+      refreshToken: authResult.refreshToken,
       user: {
         id: authResult.user.id,
         email: authResult.user.email,
@@ -55,7 +56,8 @@ export async function register(req: Request, res: Response) {
 
     return res.status(201).json({
       message: "Registration successful. Verification email sent.",
-      token: registrationResult.token,
+      accessToken: registrationResult.accessToken,
+      refreshToken: registrationResult.refreshToken,
       user: {
         id: registrationResult.user.id,
         email: registrationResult.user.email,
@@ -132,6 +134,51 @@ export async function resetPassword(req: Request, res: Response) {
   } catch (error: any) {
     console.error("ResetPassword controller error:", error);
     return res.status(500).json({ error: error.message || "Internal server error" });
+  }
+}
+
+export async function refresh(req: Request, res: Response) {
+  try {
+    const refreshToken = req.body.refreshToken || req.headers["x-refresh-token"];
+
+    if (!refreshToken || typeof refreshToken !== "string") {
+      return res.status(400).json({ error: "Refresh token is required" });
+    }
+
+    const rotationResult = await rotateRefreshToken(refreshToken);
+
+    if (!rotationResult) {
+      return res.status(401).json({ error: "Invalid, expired or reused refresh token" });
+    }
+
+    return res.status(200).json({
+      message: "Token refreshed successfully",
+      accessToken: rotationResult.accessToken,
+      refreshToken: rotationResult.refreshToken,
+    });
+  } catch (error) {
+    console.error("Refresh token controller error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function logout(req: Request, res: Response) {
+  try {
+    const refreshToken = req.body.refreshToken || req.headers["x-refresh-token"];
+
+    if (!refreshToken || typeof refreshToken !== "string") {
+      return res.status(400).json({ error: "Refresh token is required to logout" });
+    }
+
+    const payload = verifyRefreshToken(refreshToken);
+    if (payload) {
+      await revokeRefreshToken(payload.userId, refreshToken);
+    }
+
+    return res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout controller error:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
