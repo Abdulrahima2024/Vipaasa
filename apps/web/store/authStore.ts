@@ -72,7 +72,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({
             user: data.user,
-            token: data.token,
+            token: data.accessToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -113,7 +113,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({
             user: data.user,
-            token: data.token,
+            token: data.accessToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,

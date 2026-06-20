@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../../../components/layout/Header";
 import { useCartStore } from "../../../store/useCartStore";
 import { Mail } from "lucide-react";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
+import CaptchaWrapper from "../../../components/auth/CaptchaWrapper";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function ForgotPasswordPage() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
 
   // Cart store for Header notifications/counts
   const { items, favorites } = useCartStore();
@@ -49,7 +51,8 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    if (process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && !captchaToken) {
+    const siteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "10000000-ffff-ffff-ffff-000000000001";
+    if (siteKey && !captchaToken) {
       setValidationError("Please complete the hCaptcha challenge.");
       setIsLoading(false);
       return;
@@ -70,6 +73,8 @@ export default function ForgotPasswordPage() {
       if (!response.ok) {
         setApiError(data.error || "No account found with this email address.");
         setIsLoading(false);
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
         return;
       }
 
@@ -78,6 +83,8 @@ export default function ForgotPasswordPage() {
       console.error("Forgot password API error:", err);
       setApiError("Cannot connect to the authentication server.");
       setIsLoading(false);
+      setCaptchaToken(null);
+      captchaRef.current?.resetCaptcha();
     }
   };
 
@@ -184,15 +191,11 @@ export default function ForgotPasswordPage() {
               </div>
 
               {/* hCaptcha Widget */}
-              {process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && (
-                <div className="flex justify-center py-2">
-                  <HCaptcha
-                    sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY}
-                    onVerify={(token) => setCaptchaToken(token)}
-                    onExpire={() => setCaptchaToken(null)}
-                  />
-                </div>
-              )}
+              <CaptchaWrapper
+                ref={captchaRef}
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+              />
 
               {/* Submit Button */}
               <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -9,12 +9,16 @@ import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 import { Lock, Mail, Phone, User, Check } from "lucide-react";
 import AnimatedEye from "../../../components/ui/AnimatedEye";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
+import CaptchaWrapper from "../../../components/auth/CaptchaWrapper";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("register");
   const [loginMethod, setLoginMethod] = useState<"email" | "mobile">("email");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
 
   // Form states
   const [email, setEmail] = useState("");
@@ -65,10 +69,19 @@ export default function RegisterPage() {
       return;
     }
 
+    const siteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "10000000-ffff-ffff-ffff-000000000001";
+    if (siteKey && !captchaToken) {
+      setValidationError("Please complete the hCaptcha challenge.");
+      return;
+    }
+
     if (authMode === "login") {
-      const success = await login(email, password);
+      const success = await login(email, password, captchaToken || undefined);
       if (success) {
         router.push("/");
+      } else {
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
       }
     } else {
       if (!termsAccepted) {
@@ -77,9 +90,12 @@ export default function RegisterPage() {
       }
       // For every new account creation, clear the cart and favorites first
       useCartStore.setState({ items: [], savedItems: [], favorites: [] });
-      const success = await register(email, password, fullName, mobileNumber || undefined);
+      const success = await register(email, password, fullName, mobileNumber || undefined, captchaToken || undefined);
       if (success) {
         router.push("/");
+      } else {
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
       }
     }
   };
@@ -331,16 +347,33 @@ export default function RegisterPage() {
                 </div>
               )}
 
+              {/* hCaptcha Widget */}
+              <CaptchaWrapper
+                ref={captchaRef}
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+              />
+
               {/* Login/Sign Up Submit Button */}
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={authMode === "register" && !termsAccepted}
+                  disabled={isLoading || (authMode === "register" && !termsAccepted)}
                   className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-[#113C27] hover:bg-[#2D6A4F] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#113C27] active:scale-[0.98] transform transition-all duration-200 ${
-                    authMode === "register" && !termsAccepted ? "opacity-60 cursor-not-allowed" : ""
+                    (isLoading || (authMode === "register" && !termsAccepted)) ? "opacity-60 cursor-not-allowed" : ""
                   }`}
                 >
-                  {authMode === "login" ? "Login" : "Create Account"}
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {authMode === "login" ? "Logging in..." : "Creating Account..."}
+                    </span>
+                  ) : (
+                    authMode === "login" ? "Login" : "Create Account"
+                  )}
                 </button>
               </div>
             </form>

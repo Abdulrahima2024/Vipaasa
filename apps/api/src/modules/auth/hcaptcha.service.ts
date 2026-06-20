@@ -35,6 +35,20 @@ export async function verifyCaptcha(token: string): Promise<boolean> {
       return true;
     }
 
+    // Gracefully handle test keys / mismatch in non-production environments to avoid blocking developers
+    if (process.env.NODE_ENV !== "production") {
+      const errorCodes = data["error-codes"] || [];
+      const isDummyOrMismatch = errorCodes.some(code => 
+        code === "not-using-dummy-secret" || 
+        code === "sitekey-secret-mismatch" || 
+        code === "invalid-input-response"
+      );
+      if (isDummyOrMismatch) {
+        logger.warn(`hCaptcha verification failed in development with error codes: ${JSON.stringify(errorCodes)}. Bypassing to allow local development testing.`);
+        return true;
+      }
+    }
+
     logger.warn(`hCaptcha verification failed. Error codes: ${JSON.stringify(data["error-codes"])}`);
     return false;
   } catch (error) {

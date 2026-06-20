@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -10,6 +10,7 @@ import { useAuthStore } from "../../../store/authStore";
 import { Lock, Mail, Phone, User, Check } from "lucide-react";
 import AnimatedEye from "../../../components/ui/AnimatedEye";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
+import CaptchaWrapper from "../../../components/auth/CaptchaWrapper";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [loginMethod, setLoginMethod] = useState<"email" | "mobile">("email");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<HCaptcha>(null);
 
   // Form states
   const [email, setEmail] = useState("");
@@ -75,7 +77,8 @@ export default function LoginPage() {
       return;
     }
 
-    if (process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && !captchaToken) {
+    const siteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "10000000-ffff-ffff-ffff-000000000001";
+    if (siteKey && !captchaToken) {
       setValidationError("Please complete the hCaptcha challenge.");
       return;
     }
@@ -85,6 +88,9 @@ export default function LoginPage() {
       if (success) {
         const redirectTo = searchParams.get("redirect") || "/";
         router.push(redirectTo);
+      } else {
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
       }
     } else {
       if (!termsAccepted) {
@@ -97,6 +103,9 @@ export default function LoginPage() {
       if (success) {
         const redirectTo = searchParams.get("redirect") || "/";
         router.push(redirectTo);
+      } else {
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
       }
     }
   };
@@ -349,15 +358,11 @@ export default function LoginPage() {
               )}
 
               {/* hCaptcha Widget */}
-              {process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY && (
-                <div className="flex justify-center py-2">
-                  <HCaptcha
-                    sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY}
-                    onVerify={(token) => setCaptchaToken(token)}
-                    onExpire={() => setCaptchaToken(null)}
-                  />
-                </div>
-              )}
+              <CaptchaWrapper
+                ref={captchaRef}
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+              />
 
               {/* Login/Sign Up Submit Button */}
               <div className="pt-2">
