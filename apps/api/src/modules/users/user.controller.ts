@@ -289,34 +289,7 @@ export async function deleteAddress(req: AuthenticatedRequest, res: Response) {
 
 export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
   try {
-    const users = await userService.getAllUsers();
-    
-    // Map database users to SystemUser format for the frontend
-    const mappedUsers = users.map(u => {
-      let roleName: "Admin" | "Store Executive" | "Super Admin" = "Store Executive";
-      if (u.role.name === "SUPER_ADMIN") roleName = "Super Admin";
-      else if (u.role.name === "ADMIN") roleName = "Admin";
-      else roleName = "Store Executive";
-
-      const permissions = {
-        manageProducts: roleName === "Super Admin" || roleName === "Admin",
-        manageOrders: true,
-        manageInventory: true,
-        viewReports: roleName === "Super Admin" || roleName === "Admin"
-      };
-
-      const fullName = u.profile ? `${u.profile.firstName} ${u.profile.lastName}`.trim() : "System User";
-
-      return {
-        id: u.id,
-        name: fullName,
-        email: u.email,
-        role: roleName,
-        status: u.status === "ACTIVE" ? "Active" : "Inactive",
-        permissions
-      };
-    });
-
+    const mappedUsers = await userService.getAllUsers();
     return res.status(200).json(mappedUsers);
   } catch (error) {
     console.error("GetAllUsers controller error:", error);
@@ -326,12 +299,12 @@ export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
 
 export async function createSystemUser(req: AuthenticatedRequest, res: Response) {
   try {
-    const { email, name, role, status } = req.body;
-    if (!email || !name || !role || !status) {
-      return res.status(400).json({ error: "email, name, role, and status are required" });
+    const { email, name, status, permissions } = req.body;
+    if (!email || !name || !status) {
+      return res.status(400).json({ error: "email, name, and status are required" });
     }
 
-    const newUser = await userService.createSystemUser({ email, name, role, status });
+    const newUser = await userService.createSystemUser({ email, name, status, permissions });
     return res.status(201).json({
       status: "success",
       message: "System user created successfully",
@@ -346,12 +319,12 @@ export async function createSystemUser(req: AuthenticatedRequest, res: Response)
 export async function updateSystemUser(req: AuthenticatedRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { email, name, role, status } = req.body;
-    if (!email || !name || !role || !status) {
-      return res.status(400).json({ error: "email, name, role, and status are required" });
+    const { email, name, status, permissions } = req.body;
+    if (!email || !name || !status) {
+      return res.status(400).json({ error: "email, name, and status are required" });
     }
 
-    const updatedUser = await userService.updateSystemUser(id, { email, name, role, status });
+    const updatedUser = await userService.updateSystemUser(id, { email, name, status, permissions });
     return res.status(200).json({
       status: "success",
       message: "System user updated successfully",

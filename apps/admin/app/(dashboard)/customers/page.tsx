@@ -1,22 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ChevronRight, 
   Search, 
   ChevronDown, 
   RefreshCw, 
-  ChevronLeft, 
-  ChevronRight as ChevronRightIcon,
   X,
   User,
-  ShoppingBag,
-  CircleCheck,
   Ban,
   Mail,
-  MapPin,
-  Calendar
+  MapPin
 } from "lucide-react";
+import { fetchAPI } from "../../../lib/api";
 
 interface CustomerOrder {
   id: string;
@@ -35,87 +31,16 @@ interface Customer {
   totalSpent: number;
   ordersCount: number;
   shippingAddress: string;
-  orderHistory: CustomerOrder[];
+  orderHistory?: CustomerOrder[];
 }
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([
-    {
-      id: "CUST-001",
-      name: "Tejesh Kumar",
-      email: "tejesh@vipaasa.com",
-      phone: "+91 98765 43210",
-      status: "Active",
-      joinedDate: "2026-01-15",
-      totalSpent: 12450,
-      ordersCount: 8,
-      shippingAddress: "Flat 402, Green Meadows, Hyderabad, TS, 500081",
-      orderHistory: [
-        { id: "VIP-9481", date: "2026-06-16", total: 4680, status: "Pending" },
-        { id: "VIP-9310", date: "2026-05-12", total: 3200, status: "Delivered" },
-        { id: "VIP-9152", date: "2026-04-02", total: 4570, status: "Delivered" }
-      ]
-    },
-    {
-      id: "CUST-002",
-      name: "Sai Kiran",
-      email: "sai.kiran@gmail.com",
-      phone: "+91 99887 76655",
-      status: "Active",
-      joinedDate: "2026-02-18",
-      totalSpent: 4890,
-      ordersCount: 4,
-      shippingAddress: "Plot 12, Sector 4, Madhapur, Hyderabad, TS, 500081",
-      orderHistory: [
-        { id: "VIP-9475", date: "2026-06-15", total: 490, status: "Delivered" },
-        { id: "VIP-9220", date: "2026-04-20", total: 2400, status: "Delivered" }
-      ]
-    },
-    {
-      id: "CUST-003",
-      name: "Ananya Rao",
-      email: "ananya.rao@yahoo.com",
-      phone: "+91 88776 65544",
-      status: "Active",
-      joinedDate: "2026-03-22",
-      totalSpent: 6200,
-      ordersCount: 5,
-      shippingAddress: "Villas 9, Whispering Palms, Gachibowli, Hyderabad, TS, 500032",
-      orderHistory: [
-        { id: "VIP-9470", date: "2026-06-14", total: 468, status: "Shipped" },
-        { id: "VIP-9280", date: "2026-05-01", total: 3100, status: "Delivered" }
-      ]
-    },
-    {
-      id: "CUST-004",
-      name: "Mohan Lal",
-      email: "mohan.lal@outlook.com",
-      phone: "+91 77665 54433",
-      status: "Inactive",
-      joinedDate: "2026-04-05",
-      totalSpent: 860,
-      ordersCount: 1,
-      shippingAddress: "Apartment 1A, Sunrise Towers, Jubilee Hills, Hyderabad, 500033",
-      orderHistory: [
-        { id: "VIP-9462", date: "2026-06-13", total: 860, status: "Cancelled" }
-      ]
-    },
-    {
-      id: "CUST-005",
-      name: "Kavitha Reddy",
-      email: "kavitha.reddy@gmail.com",
-      phone: "+91 90001 20002",
-      status: "Active",
-      joinedDate: "2026-04-29",
-      totalSpent: 3500,
-      ordersCount: 3,
-      shippingAddress: "House 4-82, NTR Colony, Vijayawada, AP, 520008",
-      orderHistory: [
-        { id: "VIP-9455", date: "2026-06-12", total: 1060, status: "Returned" },
-        { id: "VIP-9304", date: "2026-05-18", total: 2440, status: "Delivered" }
-      ]
-    }
-  ]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Search & Status filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -123,8 +48,43 @@ export default function CustomersPage() {
 
   // Selected customer modal details
   const [selectedCust, setSelectedCust] = useState<Customer | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
 
-  // Toggle active/inactive status
+  const loadCustomers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await fetchAPI(`/api/admin/customers?page=${page}&limit=50`);
+      setCustomers(res.data);
+      if (res.meta?.totalPages) {
+        setTotalPages(res.meta.totalPages);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to load customers.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomers();
+  }, [page]);
+
+  const handleViewProfile = async (customer: Customer) => {
+    setSelectedCust(customer); // Show basic info immediately
+    try {
+      setIsDetailLoading(true);
+      const res = await fetchAPI(`/api/admin/customers/${customer.id}`);
+      setSelectedCust(res.data); // Update with full details + orderHistory
+    } catch (err: any) {
+      console.error("Failed to load customer details:", err);
+    } finally {
+      setIsDetailLoading(false);
+    }
+  };
+
+  // Toggle active/inactive status (optimistic local state)
   const toggleCustStatus = (id: string) => {
     setCustomers(customers.map(c => c.id === id ? { ...c, status: c.status === "Active" ? "Inactive" : "Active" } : c));
     if (selectedCust && selectedCust.id === id) {
@@ -133,8 +93,9 @@ export default function CustomersPage() {
   };
 
   const filteredCustomers = customers.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          c.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const nameMatch = c.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const emailMatch = c.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = nameMatch || emailMatch;
     const matchesStatus = statusFilter === "All" || c.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -192,9 +153,9 @@ export default function CustomersPage() {
             </div>
 
             <button 
-              onClick={() => { setSearchQuery(""); setStatusFilter("All"); }}
+              onClick={() => { setSearchQuery(""); setStatusFilter("All"); loadCustomers(); }}
               className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
-              title="Reset Filters"
+              title="Reset Filters & Refresh"
             >
               <RefreshCw className="h-4 w-4" />
             </button>
@@ -216,51 +177,105 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium">
-              {filteredCustomers.map((cust) => {
-                const isActive = cust.status === "Active";
-                return (
-                  <tr key={cust.id} className="hover:bg-gray-50/30 transition-colors">
-                    <td className="px-6 py-4 font-mono font-bold text-gray-900 text-xs">{cust.id}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[var(--primary-green)]/10 text-[var(--primary-green)] flex items-center justify-center font-bold">
-                          {cust.name[0]}
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw className="h-5 w-5 animate-spin text-gray-400" />
+                      <span>Loading customers...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-red-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Ban className="h-6 w-6 text-red-400" />
+                      <span>{error}</span>
+                      <button onClick={loadCustomers} className="mt-2 text-[var(--primary-green)] underline text-xs font-bold">Try Again</button>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    No customers found.
+                  </td>
+                </tr>
+              ) : (
+                filteredCustomers.map((cust) => {
+                  const isActive = cust.status === "Active";
+                  return (
+                    <tr key={cust.id} className="hover:bg-gray-50/30 transition-colors">
+                      <td className="px-6 py-4 font-mono font-bold text-gray-900 text-xs" title={cust.id}>
+                        {cust.id.substring(0, 8)}...
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-[var(--primary-green)]/10 text-[var(--primary-green)] flex items-center justify-center font-bold uppercase">
+                            {cust.name ? cust.name[0] : "C"}
+                          </div>
+                          <div>
+                            <div className="text-gray-900 font-bold">{cust.name}</div>
+                            <div className="text-xs text-gray-400 font-semibold">{cust.email}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-gray-900 font-bold">{cust.name}</div>
-                          <div className="text-xs text-gray-400 font-semibold">{cust.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-semibold text-gray-500">{cust.joinedDate}</td>
-                    <td className="px-6 py-4 text-center font-bold text-gray-900">{cust.ordersCount} orders</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">₹{cust.totalSpent}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => toggleCustStatus(cust.id)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                          isActive 
-                            ? "bg-green-50 text-green-700 border-green-100" 
-                            : "bg-red-50 text-red-700 border-red-100"
-                        }`}
-                      >
-                        {cust.status}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => setSelectedCust(cust)}
-                        className="px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 text-xs font-bold border border-gray-200 rounded-lg text-gray-700"
-                      >
-                        View Profile
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-semibold text-gray-500">{cust.joinedDate}</td>
+                      <td className="px-6 py-4 text-center font-bold text-gray-900">{cust.ordersCount} orders</td>
+                      <td className="px-6 py-4 font-bold text-gray-900">₹{cust.totalSpent}</td>
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => toggleCustStatus(cust.id)}
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                            isActive 
+                              ? "bg-green-50 text-green-700 border-green-100" 
+                              : "bg-red-50 text-red-700 border-red-100"
+                          }`}
+                        >
+                          {cust.status}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleViewProfile(cust)}
+                          className="px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 text-xs font-bold border border-gray-200 rounded-lg text-gray-700"
+                        >
+                          View Profile
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination controls */}
+        {!isLoading && !error && totalPages > 1 && (
+          <div className="p-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+            <div>
+              Showing page <span className="font-bold text-gray-900">{page}</span> of <span className="font-bold text-gray-900">{totalPages}</span>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button 
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* CUSTOMER DETAILS MODAL (WITH ORDER HISTORY) */}
@@ -271,12 +286,14 @@ export default function CustomersPage() {
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[var(--primary-green)]/15 text-[var(--primary-green)] flex items-center justify-center text-lg font-bold">
-                  {selectedCust.name[0]}
+                <div className="w-12 h-12 rounded-full bg-[var(--primary-green)]/15 text-[var(--primary-green)] flex items-center justify-center text-lg font-bold uppercase">
+                  {selectedCust.name ? selectedCust.name[0] : "C"}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">{selectedCust.name}</h3>
-                  <p className="text-xs text-gray-400 font-semibold">{selectedCust.id} • Joined {selectedCust.joinedDate}</p>
+                  <p className="text-xs text-gray-400 font-semibold" title={selectedCust.id}>
+                    {selectedCust.id.substring(0, 8)}... • Joined {selectedCust.joinedDate}
+                  </p>
                 </div>
               </div>
               <button onClick={() => setSelectedCust(null)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400">
@@ -296,11 +313,11 @@ export default function CustomersPage() {
                   </div>
                   <div className="flex items-center gap-2 text-gray-600">
                     <User className="w-4 h-4 text-gray-400" />
-                    <span>{selectedCust.phone}</span>
+                    <span>{selectedCust.phone || "N/A"}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <MapPin className="w-4 h-4 text-gray-400" />
-                    <span className="line-clamp-1">{selectedCust.shippingAddress}</span>
+                  <div className="flex items-start gap-2 text-gray-600">
+                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                    <span className="line-clamp-2">{selectedCust.shippingAddress || "N/A"}</span>
                   </div>
                 </div>
 
@@ -333,27 +350,41 @@ export default function CustomersPage() {
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Purchase History Log</h4>
                 
-                <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100">
-                  {selectedCust.orderHistory.map((order) => (
-                    <div key={order.id} className="p-3.5 flex items-center justify-between hover:bg-gray-50/50 transition-colors text-xs font-semibold">
-                      <div className="flex items-center gap-4">
-                        <span className="font-mono font-bold text-gray-900">{order.id}</span>
-                        <span className="text-gray-400 font-medium">{order.date}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="font-bold text-gray-950">₹{order.total}</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          order.status === "Delivered" 
-                            ? "bg-green-50 text-green-700" 
-                            : order.status === "Pending" || order.status === "Shipped"
-                            ? "bg-amber-50 text-amber-700"
-                            : "bg-red-50 text-red-700"
-                        }`}>
-                          {order.status}
-                        </span>
+                <div className="border border-gray-100 rounded-xl overflow-hidden divide-y divide-gray-100 min-h-[100px] relative">
+                  {isDetailLoading && !selectedCust.orderHistory && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[1px] z-10">
+                      <div className="flex items-center gap-2 text-gray-500 font-medium text-xs">
+                        <RefreshCw className="h-4 w-4 animate-spin" /> Fetching latest details...
                       </div>
                     </div>
-                  ))}
+                  )}
+                  
+                  {selectedCust.orderHistory && selectedCust.orderHistory.length > 0 ? (
+                    selectedCust.orderHistory.map((order) => (
+                      <div key={order.id} className="p-3.5 flex items-center justify-between hover:bg-gray-50/50 transition-colors text-xs font-semibold">
+                        <div className="flex items-center gap-4">
+                          <span className="font-mono font-bold text-gray-900" title={order.id}>
+                            {order.id.substring(0, 10)}...
+                          </span>
+                          <span className="text-gray-400 font-medium">{order.date}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold text-gray-950">₹{order.total}</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            order.status === "Delivered" 
+                              ? "bg-green-50 text-green-700" 
+                              : order.status === "Pending" || order.status === "Shipped"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-red-50 text-red-700"
+                          }`}>
+                            {order.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : isDetailLoading ? null : (
+                    <div className="p-6 text-center text-gray-400 text-xs">No orders found for this customer.</div>
+                  )}
                 </div>
               </div>
 

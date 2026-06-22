@@ -4,18 +4,12 @@ import { useState, useEffect } from "react";
 import { 
   ChevronRight, 
   Search, 
-  ChevronDown, 
-  RefreshCw, 
-  ChevronLeft, 
-  ChevronRight as ChevronRightIcon,
   X,
   Plus,
   Shield,
-  UserCheck,
   Edit2,
   Trash2,
-  Lock,
-  Eye
+  Lock
 } from "lucide-react";
 import { fetchAPI } from "../../../lib/api";
 
@@ -30,7 +24,7 @@ interface SystemUser {
   id: string;
   name: string;
   email: string;
-  role: "Admin" | "Store Executive" | "Super Admin";
+  role: "Admin" | "Super Admin" | string;
   status: "Active" | "Inactive";
   permissions: PermissionSet;
 }
@@ -50,11 +44,10 @@ export default function UsersPage() {
   // Form inputs
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
-  const [formRole, setFormRole] = useState<SystemUser["role"]>("Store Executive");
   const [formStatus, setFormStatus] = useState(true);
   const [formPermProducts, setFormPermProducts] = useState(false);
   const [formPermOrders, setFormPermOrders] = useState(false);
-  const [formPermInventory, setFormPermInventory] = useState(true);
+  const [formPermInventory, setFormPermInventory] = useState(false);
   const [formPermReports, setFormPermReports] = useState(false);
 
   const loadUsers = async () => {
@@ -75,16 +68,16 @@ export default function UsersPage() {
     loadUsers();
   }, []);
 
-  const handleOpenAddModal = (roleType: SystemUser["role"]) => {
+  const handleOpenAddModal = () => {
     setEditingUser(null);
     setFormName("");
     setFormEmail("");
-    setFormRole(roleType);
     setFormStatus(true);
-    setFormPermProducts(roleType === "Admin");
+    // Default to all permissions for a new Admin
+    setFormPermProducts(true);
     setFormPermOrders(true);
     setFormPermInventory(true);
-    setFormPermReports(roleType === "Admin");
+    setFormPermReports(true);
     setIsModalOpen(true);
   };
 
@@ -92,7 +85,6 @@ export default function UsersPage() {
     setEditingUser(user);
     setFormName(user.name);
     setFormEmail(user.email);
-    setFormRole(user.role);
     setFormStatus(user.status === "Active");
     setFormPermProducts(user.permissions.manageProducts);
     setFormPermOrders(user.permissions.manageOrders);
@@ -112,13 +104,40 @@ export default function UsersPage() {
     }
   };
 
+  const handleToggleStatus = async (user: SystemUser) => {
+    if (user.role === "Super Admin") {
+      alert("Cannot toggle status for Super Admin");
+      return;
+    }
+    try {
+      const newStatus = user.status === "Active" ? "Inactive" : "Active";
+      await fetchAPI(`/api/users/${user.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: user.name,
+          email: user.email,
+          status: newStatus,
+          permissions: user.permissions
+        })
+      });
+      setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
+    } catch (err: any) {
+      alert("Failed to update user status.");
+    }
+  };
+
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
       name: formName,
       email: formEmail,
-      role: formRole,
-      status: formStatus ? "Active" : "Inactive"
+      status: formStatus ? "Active" : "Inactive",
+      permissions: {
+        manageProducts: formPermProducts,
+        manageOrders: formPermOrders,
+        manageInventory: formPermInventory,
+        viewReports: formPermReports
+      }
     };
 
     try {
@@ -143,12 +162,14 @@ export default function UsersPage() {
   };
 
   // Filter list
-  const filteredUsers = users.filter((u) => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.role.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
+  // Specifically filter out the legacy "Store Executive" roles from the UI display entirely.
+  const filteredUsers = users.filter((u) => {
+    if (u.role === "Store Executive") return false;
+    
+    return u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           u.role.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -168,27 +189,15 @@ export default function UsersPage() {
       </div>
 
       {/* Info grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
           <div className="p-3 bg-gray-50 rounded-lg text-[var(--primary-green)] bg-emerald-50">
             <Shield className="w-6 h-6" />
           </div>
           <div>
-            <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Active Admins</span>
+            <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Total Users</span>
             <span className="block text-2xl font-bold text-gray-900 mt-0.5">
-              {users.filter(u => u.role === "Admin" || u.role === "Super Admin").length} Users
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="p-3 bg-gray-50 rounded-lg text-teal-600 bg-teal-50">
-            <UserCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Store Executives</span>
-            <span className="block text-2xl font-bold text-gray-900 mt-0.5">
-              {users.filter(u => u.role === "Store Executive").length} Users
+              {filteredUsers.length}
             </span>
           </div>
         </div>
@@ -225,14 +234,7 @@ export default function UsersPage() {
           {/* Quick Create Buttons */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => handleOpenAddModal("Store Executive")}
-              className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all bg-gray-50/50"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Create Executive
-            </button>
-            <button
-              onClick={() => handleOpenAddModal("Admin")}
+              onClick={handleOpenAddModal}
               className="flex items-center gap-2 bg-[var(--primary-green)] text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-[var(--primary-hover)] transition-all shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -248,7 +250,6 @@ export default function UsersPage() {
               <tr>
                 <th className="px-6 py-4 font-bold">User Name</th>
                 <th className="px-6 py-4 font-bold">Role</th>
-                <th className="px-6 py-4 font-bold">Active Permission Flags</th>
                 <th className="px-6 py-4 font-bold text-center">Status</th>
                 <th className="px-6 py-4 font-bold text-right">Actions</th>
               </tr>
@@ -258,13 +259,11 @@ export default function UsersPage() {
                 const isSuper = user.role === "Super Admin";
                 
                 // Role tag styling
-                let roleStyle = "bg-gray-50 border-gray-100 text-gray-600";
-                if (user.role === "Super Admin") {
+                let roleStyle = "bg-emerald-50 border-emerald-100 text-emerald-700";
+                if (isSuper) {
                   roleStyle = "bg-purple-50 border-purple-100 text-purple-700";
-                } else if (user.role === "Admin") {
-                  roleStyle = "bg-emerald-50 border-emerald-100 text-emerald-700";
-                } else {
-                  roleStyle = "bg-teal-50 border-teal-100 text-teal-700";
+                } else if (user.role === "Customer") {
+                  roleStyle = "bg-blue-50 border-blue-100 text-blue-700";
                 }
 
                 return (
@@ -280,42 +279,26 @@ export default function UsersPage() {
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1.5 max-w-sm">
-                        {user.permissions.manageProducts && (
-                          <span className="text-[10px] bg-gray-50 text-gray-600 border border-gray-200 px-1.5 py-0.5 rounded font-bold">Products</span>
-                        )}
-                        {user.permissions.manageOrders && (
-                          <span className="text-[10px] bg-gray-50 text-gray-600 border border-gray-200 px-1.5 py-0.5 rounded font-bold">Orders</span>
-                        )}
-                        {user.permissions.manageInventory && (
-                          <span className="text-[10px] bg-gray-50 text-gray-600 border border-gray-200 px-1.5 py-0.5 rounded font-bold">Inventory</span>
-                        )}
-                        {user.permissions.viewReports && (
-                          <span className="text-[10px] bg-gray-50 text-gray-600 border border-gray-200 px-1.5 py-0.5 rounded font-bold">Reports</span>
-                        )}
-                        {!user.permissions.manageProducts && 
-                         !user.permissions.manageOrders && 
-                         !user.permissions.manageInventory && 
-                         !user.permissions.viewReports && (
-                          <span className="text-[10px] text-gray-400 italic font-semibold">No active permissions</span>
-                        )}
-                      </div>
-                    </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                        user.status === "Active"
-                          ? "bg-green-50 text-green-700 border-green-100"
-                          : "bg-red-50 text-red-700 border-red-100"
-                      }`}>
+                      <button
+                        onClick={() => handleToggleStatus(user)}
+                        disabled={isSuper}
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors hover:opacity-80 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+                          user.status === "Active"
+                            ? "bg-green-50 text-green-700 border-green-100"
+                            : "bg-red-50 text-red-700 border-red-100"
+                        }`}
+                        title="Click to toggle status"
+                      >
                         {user.status}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenEditModal(user)}
-                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all active:scale-95"
+                          disabled={isSuper}
+                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Edit User"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -344,7 +327,7 @@ export default function UsersPage() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl border border-gray-100 animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">
-                {editingUser ? "Edit User Account" : "Create System Account"}
+                {editingUser ? "Edit Admin Account" : "Create Admin Account"}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400">
                 <X className="w-5 h-5" />
@@ -380,31 +363,17 @@ export default function UsersPage() {
                 </div>
               </div>
 
-              {/* Role & Status Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Role Definition</label>
-                  <select
-                    value={formRole}
-                    onChange={(e) => setFormRole(e.target.value as any)}
-                    className="block w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary-green)] bg-white cursor-pointer"
-                  >
-                    <option value="Store Executive">Store Executive</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col justify-end pb-3">
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={formStatus}
-                      onChange={(e) => setFormStatus(e.target.checked)}
-                      className="rounded border-gray-300 text-[var(--primary-green)] focus:ring-[var(--primary-green)] w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">User Active</span>
-                  </label>
-                </div>
+              {/* Status Row */}
+              <div className="flex flex-col justify-end">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formStatus}
+                    onChange={(e) => setFormStatus(e.target.checked)}
+                    className="rounded border-gray-300 text-[var(--primary-green)] focus:ring-[var(--primary-green)] w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">User Active</span>
+                </label>
               </div>
 
               {/* RBAC Custom Permissions Assignment */}
@@ -469,7 +438,7 @@ export default function UsersPage() {
                   type="submit"
                   className="px-5 py-2.5 bg-[var(--primary-green)] text-white hover:bg-[var(--primary-hover)] rounded-xl text-xs font-bold transition-all shadow-sm"
                 >
-                  {editingUser ? "Save User" : "Create Account"}
+                  {editingUser ? "Save Admin" : "Create Account"}
                 </button>
               </div>
 

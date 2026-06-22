@@ -12,6 +12,7 @@ import organicRoutes from "./modules/organics/organic.routes";
 import inventoryRoutes from "./modules/inventory/inventory.routes";
 import paymentRoutes from "./modules/payments/payment.routes";
 import settingsRoutes from "./modules/settings/settings.routes";
+import customerRoutes from "./modules/customers/customer.routes";
 import { requestLogger } from "./shared/middleware/requestLogger";
 import { rateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
@@ -44,6 +45,7 @@ app.use("/api", organicRoutes);
 app.use("/api", inventoryRoutes);
 app.use("/api", paymentRoutes);
 app.use("/api", settingsRoutes);
+app.use("/api", customerRoutes);
 
 
 

@@ -371,7 +371,7 @@ export async function deleteUserAddress(userId: string, addressId: string) {
 }
 
 export async function getAllUsers() {
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: {
       isDeleted: false
     },
@@ -383,35 +383,60 @@ export async function getAllUsers() {
       createdAt: "desc"
     }
   });
+
+  return users.map(u => {
+    let roleName = "Customer";
+    let permissions = { manageProducts: false, manageOrders: false, manageInventory: false, viewReports: false };
+
+    if (u.role.name === "SUPER_ADMIN") {
+      roleName = "Super Admin";
+      permissions = { manageProducts: true, manageOrders: true, manageInventory: true, viewReports: true };
+    } else if (u.role.name.startsWith("CUSTOM_")) {
+      roleName = "Admin";
+      try {
+        permissions = JSON.parse(u.role.description || "{}");
+      } catch (e) {}
+    } else if (u.role.name === "STORE_EXECUTIVE") {
+      roleName = "Store Executive";
+      permissions = { manageProducts: false, manageOrders: true, manageInventory: true, viewReports: false };
+    } else if (u.role.name === "ADMIN") {
+      roleName = "Admin";
+      permissions = { manageProducts: true, manageOrders: true, manageInventory: true, viewReports: true };
+    }
+
+    return {
+      id: u.id,
+      name: u.profile ? `${u.profile.firstName} ${u.profile.lastName}`.trim() : "System User",
+      email: u.email,
+      role: roleName,
+      status: u.status === "ACTIVE" ? "Active" : "Inactive",
+      permissions
+    };
+  });
 }
 
 export async function createSystemUser(data: {
   email: string;
   name: string;
-  role: string;
+  role?: string;
   status: string;
+  permissions?: {
+    manageProducts: boolean;
+    manageOrders: boolean;
+    manageInventory: boolean;
+    viewReports: boolean;
+  };
 }) {
   const parts = data.name.split(" ");
   const firstName = parts[0] || "System";
   const lastName = parts.slice(1).join(" ") || "User";
 
-  let roleName = "STORE_EXECUTIVE";
-  if (data.role === "Super Admin") roleName = "SUPER_ADMIN";
-  else if (data.role === "Admin") {
-    const existing = await prisma.role.findFirst({ where: { name: "ADMIN" } });
-    if (existing) roleName = "ADMIN";
-    else {
-      const created = await prisma.role.create({ data: { name: "ADMIN", description: "Admin privileges" } });
-      roleName = "ADMIN";
-    }
-  }
+  const p = data.permissions || { manageProducts: true, manageOrders: true, manageInventory: true, viewReports: true };
+  const roleName = `CUSTOM_${p.manageProducts ? "P" : "0"}${p.manageOrders ? "O" : "0"}${p.manageInventory ? "I" : "0"}${p.viewReports ? "R" : "0"}`;
 
-  const role = await prisma.role.findFirst({
-    where: { name: roleName }
-  });
-
+  let role = await prisma.role.findFirst({ where: { name: roleName } });
   if (!role) {
-    throw new Error(`Role ${roleName} not found`);
+    role = await prisma.role.create({ data: { name: roleName, description: JSON.stringify(p) } });
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -458,30 +483,25 @@ export async function createSystemUser(data: {
 export async function updateSystemUser(id: string, data: {
   email: string;
   name: string;
-  role: string;
+  role?: string;
   status: string;
+  permissions?: {
+    manageProducts: boolean;
+    manageOrders: boolean;
+    manageInventory: boolean;
+    viewReports: boolean;
+  };
 }) {
   const parts = data.name.split(" ");
   const firstName = parts[0] || "System";
   const lastName = parts.slice(1).join(" ") || "User";
 
-  let roleName = "STORE_EXECUTIVE";
-  if (data.role === "Super Admin") roleName = "SUPER_ADMIN";
-  else if (data.role === "Admin") {
-    const existing = await prisma.role.findFirst({ where: { name: "ADMIN" } });
-    if (existing) roleName = "ADMIN";
-    else {
-      await prisma.role.create({ data: { name: "ADMIN", description: "Admin privileges" } });
-      roleName = "ADMIN";
-    }
-  }
+  const p = data.permissions || { manageProducts: true, manageOrders: true, manageInventory: true, viewReports: true };
+  const roleName = `CUSTOM_${p.manageProducts ? "P" : "0"}${p.manageOrders ? "O" : "0"}${p.manageInventory ? "I" : "0"}${p.viewReports ? "R" : "0"}`;
 
-  const role = await prisma.role.findFirst({
-    where: { name: roleName }
-  });
-
+  let role = await prisma.role.findFirst({ where: { name: roleName } });
   if (!role) {
-    throw new Error(`Role ${roleName} not found`);
+    role = await prisma.role.create({ data: { name: roleName, description: JSON.stringify(p) } });
   }
 
   return prisma.$transaction(async (tx) => {
