@@ -174,7 +174,7 @@ export default function CartPage() {
                           </div>
                         ) : (
                           <img
-                            src={item.image}
+                            src={emojiInfo.imageUrl}
                             alt={item.name}
                             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                             loading="lazy"
@@ -383,7 +383,7 @@ export default function CartPage() {
                       </div>
                     ) : (
                       <img
-                        src={item.image}
+                        src={emojiInfo.imageUrl}
                         alt={item.name}
                         className="w-20 h-20 object-cover rounded-lg bg-[#FAF8F5] flex-shrink-0"
                       />

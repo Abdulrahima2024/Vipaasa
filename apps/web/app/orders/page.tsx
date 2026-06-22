@@ -339,7 +339,7 @@ export default function MyOrdersPage() {
                           </div>
                         ) : (
                           <img
-                            src={img}
+                            src={emojiInfo.imageUrl}
                             alt="Product thumbnail"
                             className="w-full h-full object-cover"
                           />
@@ -556,7 +556,7 @@ export default function MyOrdersPage() {
                               {emojiInfo.emoji}
                             </span>
                           ) : (
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                            <img src={emojiInfo.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                           );
                         })()}
                       </div>

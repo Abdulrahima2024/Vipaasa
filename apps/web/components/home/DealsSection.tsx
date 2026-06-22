@@ -271,14 +271,14 @@ export default function DealsSection() {
                 <Link href={`/products/${deal.id}`} className="block w-full h-full relative">
                   {emojiInfo.isEmoji ? (
                     <div
-                      className="w-full h-full flex items-center justify-center text-4xl select-none"
+                      className="w-full h-full flex items-center justify-center text-4xl transition-transform duration-500 group-hover:scale-105 select-none"
                       style={{ backgroundColor: emojiInfo.bgColor }}
                     >
                       {emojiInfo.emoji}
                     </div>
                   ) : (
                     <Image
-                      src={deal.image}
+                      src={emojiInfo.imageUrl}
                       alt={deal.name}
                       fill
                       sizes="(max-width: 768px) 100vw, 30vw"
