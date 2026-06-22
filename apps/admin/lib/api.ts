@@ -36,6 +36,10 @@ export async function fetchAPI<T = any>(endpoint: string, options: RequestOption
   });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("vipaasa_admin_token");
+      window.location.href = "/login";
+    }
     const errorData = await response.json().catch(() => ({}));
     const errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
     throw new Error(typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : errorMessage);
