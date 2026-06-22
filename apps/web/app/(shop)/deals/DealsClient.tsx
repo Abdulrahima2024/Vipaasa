@@ -8,7 +8,6 @@ import Footer from "../../../components/layout/Footer";
 import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 import { fetchApi } from "../../../lib/api";
-import productsData from "../../../data/products.json";
 import { parseEmojiImage } from "../../../lib/image";
 
 interface DealProduct {
@@ -112,11 +111,11 @@ export default function DealsClient() {
         if (data && Array.isArray(data.items) && data.items.length > 0) {
           setApiProducts(data.items);
         } else {
-          setApiProducts(productsData);
+          setApiProducts([]);
         }
       } catch (err) {
-        console.warn("DealsClient: Failed to fetch API products, falling back to local data.", err);
-        setApiProducts(productsData);
+        console.warn("DealsClient: Failed to fetch API products.", err);
+        setApiProducts([]);
       } finally {
         setLoading(false);
       }
@@ -148,7 +147,7 @@ export default function DealsClient() {
         originalPrice: isApiShape ? Math.round(basePrice250g * 3.2) : gheeProduct.prices["1kg"],
         dealPrice: isApiShape ? Math.round(basePrice250g * 3.2 * 0.8) : Math.round(gheeProduct.prices["1kg"] * 0.8),
         discountPercentage: 20,
-        image: gheeProduct.images?.[0] || gheeProduct.image || "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=400",
+        image: gheeProduct.images?.[0]?.url || gheeProduct.images?.[0] || gheeProduct.image || "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=400",
         dealType: "Flash Sales",
         inStock: gheeProduct.stockStatus === "IN_STOCK" || gheeProduct.inStock || true,
         weight: "1kg",
@@ -174,7 +173,7 @@ export default function DealsClient() {
         originalPrice: isApiShape ? Math.round(basePrice250g * 1.8) : honeyProduct.prices["500g"],
         dealPrice: isApiShape ? Math.round(basePrice250g * 1.8 * 0.75) : Math.round(honeyProduct.prices["500g"] * 0.75),
         discountPercentage: 25,
-        image: honeyProduct.images?.[0] || honeyProduct.image || "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
+        image: honeyProduct.images?.[0]?.url || honeyProduct.images?.[0] || honeyProduct.image || "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
         dealType: "Flash Sales",
         inStock: honeyProduct.stockStatus === "IN_STOCK" || honeyProduct.inStock || true,
         weight: "500g",
@@ -200,7 +199,7 @@ export default function DealsClient() {
         originalPrice: basePrice250g,
         dealPrice: Math.round(basePrice250g * 0.8),
         discountPercentage: 20,
-        image: munagaKaram.images?.[0] || munagaKaram.image || "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=400",
+        image: munagaKaram.images?.[0]?.url || munagaKaram.images?.[0] || munagaKaram.image || "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=400",
         dealType: "Flash Sales",
         inStock: munagaKaram.stockStatus === "IN_STOCK" || munagaKaram.inStock || true,
         weight: "250g",
@@ -268,7 +267,7 @@ export default function DealsClient() {
         originalPrice: isApiShape ? Math.round(basePrice250g * 3.2) : dalProduct.prices["1kg"],
         dealPrice: isApiShape ? Math.round(basePrice250g * 3.2 * 0.85) : Math.round(dalProduct.prices["1kg"] * 0.85),
         discountPercentage: 15,
-        image: dalProduct.images?.[0] || dalProduct.image || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
+        image: dalProduct.images?.[0]?.url || dalProduct.images?.[0] || dalProduct.image || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
         dealType: "Bulk Savings",
         inStock: dalProduct.stockStatus === "IN_STOCK" || dalProduct.inStock || true,
         weight: "1kg",
@@ -294,7 +293,7 @@ export default function DealsClient() {
         originalPrice: isApiShape ? Math.round(basePrice250g * 3.2) : ragiProduct.prices["1kg"],
         dealPrice: isApiShape ? Math.round(basePrice250g * 3.2 * 0.85) : Math.round(ragiProduct.prices["1kg"] * 0.85),
         discountPercentage: 15,
-        image: ragiProduct.images?.[0] || ragiProduct.image || "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400",
+        image: ragiProduct.images?.[0]?.url || ragiProduct.images?.[0] || ragiProduct.image || "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400",
         dealType: "Bulk Savings",
         inStock: ragiProduct.stockStatus === "IN_STOCK" || ragiProduct.inStock || true,
         weight: "1kg",

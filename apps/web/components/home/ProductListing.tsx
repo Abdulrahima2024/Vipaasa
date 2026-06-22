@@ -255,7 +255,7 @@ const mapOrganicToProduct = (item: any): Product => {
       "500g": Math.round(price * 1.8),
       "1kg": Math.round(price * 3.2),
     },
-    image: (item.images && item.images[0]?.url) || "/placeholder.jpg",
+    image: (item.images && (item.images[0]?.url || item.images[0])) || "/placeholder.jpg",
     isNew: true,
     rating: 4.8,
   };
@@ -351,7 +351,7 @@ export default function ProductListing({
               name: item.name,
               category: item.category?.name || "General",
               prices,
-              image: (item.images && item.images[0]) || "/placeholder.jpg",
+              image: (item.images && (item.images[0]?.url || item.images[0])) || "/placeholder.jpg",
               isNew: item.stockStatus === "IN_STOCK",
               rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
               variants: item.variants,

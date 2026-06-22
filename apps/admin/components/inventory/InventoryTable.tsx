@@ -756,18 +756,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
               {/* Image Input Configuration */}
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Product Image URL</label>
-                  <input
-                    type="text"
-                    value={formImageUrl}
-                    onChange={(e) => setFormImageUrl(e.target.value)}
-                    placeholder="e.g. https://images.unsplash.com/photo-..."
-                    className="block w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary-green)]"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Or Upload Image File</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Upload Image File</label>
                   <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold text-gray-600 bg-white">
                       <Upload className="w-4 h-4 text-gray-500" />

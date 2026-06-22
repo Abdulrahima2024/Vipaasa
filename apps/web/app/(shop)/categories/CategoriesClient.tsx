@@ -113,7 +113,7 @@ export default function CategoriesClient() {
               });
             }
 
-            const imageUrl = (item.images && item.images[0]?.url) || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400";
+            const imageUrl = (item.images && (item.images[0]?.url || item.images[0])) || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400";
 
             return {
               id: item.id,
