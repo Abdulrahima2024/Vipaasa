@@ -8,6 +8,7 @@ import { useAuthStore } from "../../store/authStore";
 import { fetchApi } from "../../lib/api";
 import { LayoutGrid, Leaf, Wheat, Sparkles, Sprout, Layers, Droplet } from "lucide-react";
 import { parseEmojiImage } from "../../lib/image";
+import { useOrganicSocket } from "../../hooks/useOrganicSocket";
 
 export interface Product {
   id: string;
@@ -243,6 +244,23 @@ interface ProductListingProps {
   setShowFavoritesOnly: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+const mapOrganicToProduct = (item: any): Product => {
+  const price = Number(item.price) || 0;
+  return {
+    id: item.id,
+    name: item.name,
+    category: "Organics",
+    prices: {
+      "250g": price,
+      "500g": Math.round(price * 1.8),
+      "1kg": Math.round(price * 3.2),
+    },
+    image: (item.images && item.images[0]?.url) || "/placeholder.jpg",
+    isNew: true,
+    rating: 4.8,
+  };
+};
+
 export default function ProductListing({
   searchQuery,
   selectedCategory,
@@ -253,9 +271,22 @@ export default function ProductListing({
 
   // API state
   const [products, setProducts] = useState<Product[]>([]);
+  const [organics, setOrganics] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
+
+  useOrganicSocket(
+    (created: any) => {
+      setOrganics(prev => [mapOrganicToProduct(created), ...prev]);
+    },
+    (updated: any) => {
+      setOrganics(prev => prev.map(o => o.id === updated.id ? mapOrganicToProduct(updated) : o));
+    },
+    (deletedId: string) => {
+      setOrganics(prev => prev.filter(o => o.id !== deletedId));
+    }
+  );
 
   // Zustand Cart Store connection
   const {
@@ -291,9 +322,13 @@ export default function ProductListing({
       setLoading(true);
       setApiError(null);
       try {
-        const data = await fetchApi<{ items: any[]; total: number }>("/api/products?limit=8");
-        if (data && Array.isArray(data.items)) {
-          const mapped: Product[] = data.items.map((item: any) => {
+        const [prodRes, orgRes] = await Promise.all([
+          fetchApi<{ items: any[]; total: number }>("/api/products?limit=8").catch(() => null),
+          fetchApi<{ success: boolean; data: any[] }>("/api/organics").catch(() => null)
+        ]);
+
+        if (prodRes && Array.isArray(prodRes.items)) {
+          const mapped: Product[] = prodRes.items.map((item: any) => {
             const prices = {
               "250g": item.price || 0,
               "500g": Math.round((item.price || 0) * 1.8),
@@ -326,6 +361,13 @@ export default function ProductListing({
         } else {
           setProducts([]);
         }
+
+        if (orgRes && orgRes.success && Array.isArray(orgRes.data)) {
+          setOrganics(orgRes.data.map(mapOrganicToProduct));
+        } else {
+          setOrganics([]);
+        }
+
       } catch (err: any) {
         console.error("ProductListing: failed to fetch products", err);
         setApiError(err?.message || "Failed to load products");
@@ -349,7 +391,8 @@ export default function ProductListing({
   ];
 
   // Filter products based on search input, active category pill, and favorites filter
-  const filteredProducts = products.filter((product) => {
+  const allProducts = [...products, ...organics];
+  const filteredProducts = allProducts.filter((product) => {
     const matchesFavorites = !showFavoritesOnly || favorites.includes(product.id);
 
     const matchesCategory =

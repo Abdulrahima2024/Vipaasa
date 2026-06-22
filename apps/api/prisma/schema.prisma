@@ -989,3 +989,31 @@ model ActivityLog {
   @@index([userId])
   @@map("activity_logs")
 }
+
+model Organic {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
+  price       Decimal        @db.Decimal(10, 2)
+  isActive    Boolean        @default(true) @map("is_active")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  images      OrganicImage[]
+
+  @@map("organics")
+}
+
+model OrganicImage {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organicId String   @map("organic_id") @db.Uuid
+  url       String
+  publicId  String   @map("public_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organic   Organic  @relation(fields: [organicId], references: [id], onDelete: Cascade)
+
+  @@index([organicId])
+  @@map("organic_images")
+}
