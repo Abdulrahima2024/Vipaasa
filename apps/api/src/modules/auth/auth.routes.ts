@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { login, register, forgotPassword, sendVerificationOtp, verifyOtp, resetPassword, refresh, logout } from "./auth.controller";
+import { login, register, forgotPassword, sendVerificationOtp, verifyOtp, resetPassword, refresh, logout, googleLogin } from "./auth.controller";
 import { createRedisRateLimiter } from "../../shared/middleware/rateLimit.middleware";
 import { validateCaptcha } from "../../shared/middleware/captcha.middleware";
 
@@ -25,6 +25,7 @@ const forgotPasswordLimiter = createRedisRateLimiter({
 
 router.post("/login", validateCaptcha, loginLimiter, login);
 router.post("/register", validateCaptcha, registerLimiter, register);
+router.post("/google", loginLimiter, googleLogin);
 router.post("/forgot-password", validateCaptcha, forgotPasswordLimiter, forgotPassword);
 router.post("/send-verification-otp", sendVerificationOtp);
 router.post("/verify-otp", verifyOtp);

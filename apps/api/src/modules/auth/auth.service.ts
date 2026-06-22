@@ -230,6 +230,81 @@ export async function registerUser(
   return { accessToken, refreshToken, user };
 }
 
+export async function authenticateGoogleUser(googleAccessToken: string, sessionMeta?: any) {
+  // 1. Fetch user info from Google using the access token
+  const googleResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: { Authorization: `Bearer ${googleAccessToken}` }
+  });
 
+  if (!googleResponse.ok) {
+    throw new Error("Failed to authenticate with Google");
+  }
 
+  const googleUser = await googleResponse.json();
+  const { email, given_name, family_name, picture } = googleUser;
 
+  if (!email) {
+    throw new Error("Google account must have an email address");
+  }
+
+  // 2. Check if user exists
+  let user = await prisma.user.findUnique({
+    where: { email },
+    include: { role: true, profile: true }
+  });
+
+  // 3. If user doesn't exist, create them
+  if (!user) {
+    const customerRole = await prisma.role.findUnique({ where: { name: "CUSTOMER" } });
+    if (!customerRole) throw new Error("Customer role not found in system");
+
+    // Generate a random password hash since they use Google
+    const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
+    const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+    user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        roleId: customerRole.id,
+        profile: {
+          create: {
+            firstName: given_name || "Google",
+            lastName: family_name || "User",
+            avatarUrl: picture
+          }
+        }
+      },
+      include: { role: true, profile: true }
+    });
+  }
+
+  // 4. Record session if meta provided
+  if (sessionMeta) {
+    await prisma.userSession.create({
+      data: {
+        userId: user.id,
+        ipAddress: sessionMeta.ipAddress || null,
+        userAgent: sessionMeta.userAgent || null,
+        deviceType: sessionMeta.deviceType || "WEB",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      }
+    });
+  }
+
+  // 5. Generate Tokens
+  const payload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role.name,
+  };
+  
+  const accessToken = generateAccessToken(payload);
+  const refreshToken = generateRefreshToken(payload);
+
+  const decoded = jwt.decode(refreshToken) as { exp: number };
+  const expiresAt = decoded ? new Date(decoded.exp * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  await storeRefreshToken(user.id, refreshToken, expiresAt);
+
+  return { user, accessToken, refreshToken };
+}

@@ -11,6 +11,7 @@ import { Lock, Mail, Phone, User, Check } from "lucide-react";
 import AnimatedEye from "../../../components/ui/AnimatedEye";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import CaptchaWrapper from "../../../components/auth/CaptchaWrapper";
+import { signInWithGoogle } from "../../../lib/googleOAuth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Zustand Auth Store
-  const { login, register, isLoading, error: authError, isAuthenticated } = useAuthStore();
+  const { login, register, loginWithGoogle, isLoading, error: authError, isAuthenticated } = useAuthStore();
 
   // Cart store for Header notifications/counts
   const { items, favorites } = useCartStore();
@@ -45,7 +46,23 @@ export default function LoginPage() {
     } else {
       setAuthMode("login");
     }
-  }, [searchParams]);
+
+    // Google OAuth Hash handling
+    if (typeof window !== "undefined") {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get("access_token");
+      if (accessToken) {
+        loginWithGoogle(accessToken)
+          .then((success) => {
+            if (success) {
+              const redirect = searchParams.get("redirect") || "/";
+              router.push(redirect);
+            }
+          })
+          .catch((err) => console.error(err));
+      }
+    }
+  }, [searchParams, loginWithGoogle, router]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -401,6 +418,7 @@ export default function LoginPage() {
             <div className="flex justify-center gap-4">
               <button
                 type="button"
+                onClick={signInWithGoogle}
                 className="flex items-center justify-center gap-2 py-2.5 px-4 border border-[#EAE6DB] rounded-xl shadow-sm bg-white hover:bg-[#F9F7F2] text-xs font-bold text-[#4B594F] transition-all active:scale-95"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
