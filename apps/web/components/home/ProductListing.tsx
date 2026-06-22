@@ -60,7 +60,7 @@ export function ProductCard({
             </div>
           ) : (
             <Image
-              src={product.image}
+              src={emojiInfo.imageUrl}
               alt={product.name}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"

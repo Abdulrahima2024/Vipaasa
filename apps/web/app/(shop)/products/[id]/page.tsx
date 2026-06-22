@@ -365,7 +365,7 @@ export default function ProductDetailPage() {
                       </div>
                     ) : (
                       <img
-                        src={imgUrl}
+                        src={emojiInfo.imageUrl}
                         alt={`${product.name} view ${index + 1}`}
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -389,7 +389,7 @@ export default function ProductDetailPage() {
                   </div>
                 ) : (
                   <img
-                    src={activeImage}
+                    src={emojiInfo.imageUrl}
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   />

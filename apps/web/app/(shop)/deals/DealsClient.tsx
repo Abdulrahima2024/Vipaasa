@@ -714,7 +714,7 @@ export default function DealsClient() {
                               </div>
                             ) : (
                               <img
-                                src={deal.image}
+                                src={emojiInfo.imageUrl}
                                 alt={deal.name}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 loading="lazy"

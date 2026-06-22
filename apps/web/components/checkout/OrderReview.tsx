@@ -98,7 +98,7 @@ export default function OrderReview({ address, items, onProceed, onBack }: Order
                   </div>
                 ) : (
                   <img
-                    src={item.image}
+                    src={emojiInfo.imageUrl}
                     alt={item.name}
                     className="w-16 h-16 object-cover rounded-lg border border-[#EAE6DB]/40 bg-[#FAF8F5]"
                   />
