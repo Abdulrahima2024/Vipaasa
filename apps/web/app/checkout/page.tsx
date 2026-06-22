@@ -421,7 +421,7 @@ export default function CheckoutPage() {
             {/* Action Buttons */}
             <div className="flex justify-center items-center gap-4 pt-4 relative z-10">
               <button
-                onClick={() => window.location.href = "/"}
+                onClick={() => window.location.href = `/orders/${placedOrder?.id}`}
                 className="bg-[#1B4332] hover:bg-[#113C27] text-white py-3.5 px-8 rounded-xl font-bold transition-all shadow-md shadow-green-950/10 active:scale-[0.98] text-sm font-semibold"
               >
                 Track Order

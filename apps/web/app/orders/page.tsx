@@ -355,12 +355,13 @@ export default function MyOrdersPage() {
                 </div>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                  {order.status === "Shipped" && (
-                    <button
+                  {order.status !== "Cancelled" && (
+                    <Link
+                      href={`/orders/${order.id}`}
                       className="bg-[#EAE6DB]/60 hover:bg-[#EAE6DB]/90 text-[#1F3E2F] py-2.5 px-5 rounded-xl font-bold transition-all text-xs active:scale-95 flex items-center gap-1.5"
                     >
                       <Truck className="w-3.5 h-3.5" /> Track Order
-                    </button>
+                    </Link>
                   )}
                   {order.status === "Cancelled" && (
                     <button
