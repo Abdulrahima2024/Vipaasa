@@ -9,10 +9,19 @@ import {
   getAddresses,
   createAddress,
   updateAddress,
-  deleteAddress
+  deleteAddress,
+  getAllUsers,
+  createSystemUser,
+  updateSystemUser,
+  deleteSystemUser
 } from "./user.controller";
 
 const router = Router();
+
+router.get("/", authenticate, getAllUsers);
+router.post("/", authenticate, createSystemUser);
+router.put("/:id", authenticate, updateSystemUser);
+router.delete("/:id", authenticate, deleteSystemUser);
 
 router.get("/profile", authenticate, getProfile);
 router.put("/profile", authenticate, updateProfile);
@@ -27,3 +36,5 @@ router.put("/addresses/:id", authenticate, updateAddress);
 router.delete("/addresses/:id", authenticate, deleteAddress);
 
 export default router;
+
+

@@ -9,6 +9,9 @@ import reportRoutes from "./modules/reports/report.routes";
 import cartRoutes from "./modules/cart/cart.routes";
 import orderRoutes from "./modules/orders/order.routes";
 import organicRoutes from "./modules/organics/organic.routes";
+import inventoryRoutes from "./modules/inventory/inventory.routes";
+import paymentRoutes from "./modules/payments/payment.routes";
+import settingsRoutes from "./modules/settings/settings.routes";
 import { requestLogger } from "./shared/middleware/requestLogger";
 import { rateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
@@ -38,6 +41,12 @@ app.use("/api", reportRoutes);
 app.use("/api", cartRoutes);
 app.use("/api", orderRoutes);
 app.use("/api", organicRoutes);
+app.use("/api", inventoryRoutes);
+app.use("/api", paymentRoutes);
+app.use("/api", settingsRoutes);
+
+
+
 
 // Health Check
 app.get("/health", (req, res) => {

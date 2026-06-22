@@ -369,3 +369,168 @@ export async function deleteUserAddress(userId: string, addressId: string) {
 
   return true;
 }
+
+export async function getAllUsers() {
+  return prisma.user.findMany({
+    where: {
+      isDeleted: false
+    },
+    include: {
+      role: true,
+      profile: true
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
+}
+
+export async function createSystemUser(data: {
+  email: string;
+  name: string;
+  role: string;
+  status: string;
+}) {
+  const parts = data.name.split(" ");
+  const firstName = parts[0] || "System";
+  const lastName = parts.slice(1).join(" ") || "User";
+
+  let roleName = "STORE_EXECUTIVE";
+  if (data.role === "Super Admin") roleName = "SUPER_ADMIN";
+  else if (data.role === "Admin") {
+    const existing = await prisma.role.findFirst({ where: { name: "ADMIN" } });
+    if (existing) roleName = "ADMIN";
+    else {
+      const created = await prisma.role.create({ data: { name: "ADMIN", description: "Admin privileges" } });
+      roleName = "ADMIN";
+    }
+  }
+
+  const role = await prisma.role.findFirst({
+    where: { name: roleName }
+  });
+
+  if (!role) {
+    throw new Error(`Role ${roleName} not found`);
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email }
+  });
+
+  if (existingUser) {
+    if (existingUser.isDeleted) {
+      return prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          isDeleted: false,
+          status: data.status === "Active" ? "ACTIVE" : "INACTIVE",
+          roleId: role.id
+        },
+        include: { role: true, profile: true }
+      });
+    }
+    throw new Error("User with this email already exists");
+  }
+
+  const passwordHash = "$2a$10$ka/DoBLmP82dZRR.ItmY6.fbdftjHo.kcwBcV8ZpV2rIs2Af.NfGm";
+
+  return prisma.user.create({
+    data: {
+      email: data.email,
+      passwordHash,
+      status: data.status === "Active" ? "ACTIVE" : "INACTIVE",
+      roleId: role.id,
+      profile: {
+        create: {
+          firstName,
+          lastName
+        }
+      }
+    },
+    include: {
+      role: true,
+      profile: true
+    }
+  });
+}
+
+export async function updateSystemUser(id: string, data: {
+  email: string;
+  name: string;
+  role: string;
+  status: string;
+}) {
+  const parts = data.name.split(" ");
+  const firstName = parts[0] || "System";
+  const lastName = parts.slice(1).join(" ") || "User";
+
+  let roleName = "STORE_EXECUTIVE";
+  if (data.role === "Super Admin") roleName = "SUPER_ADMIN";
+  else if (data.role === "Admin") {
+    const existing = await prisma.role.findFirst({ where: { name: "ADMIN" } });
+    if (existing) roleName = "ADMIN";
+    else {
+      await prisma.role.create({ data: { name: "ADMIN", description: "Admin privileges" } });
+      roleName = "ADMIN";
+    }
+  }
+
+  const role = await prisma.role.findFirst({
+    where: { name: roleName }
+  });
+
+  if (!role) {
+    throw new Error(`Role ${roleName} not found`);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id },
+      data: {
+        email: data.email,
+        status: data.status === "Active" ? "ACTIVE" : "INACTIVE",
+        roleId: role.id
+      }
+    });
+
+    const profile = await tx.customerProfile.findUnique({
+      where: { userId: id }
+    });
+
+    if (profile) {
+      await tx.customerProfile.update({
+        where: { userId: id },
+        data: {
+          firstName,
+          lastName
+        }
+      });
+    } else {
+      await tx.customerProfile.create({
+        data: {
+          userId: id,
+          firstName,
+          lastName
+        }
+      });
+    }
+
+    return tx.user.findUnique({
+      where: { id },
+      include: { role: true, profile: true }
+    });
+  });
+}
+
+export async function deleteSystemUser(id: string) {
+  return prisma.user.update({
+    where: { id },
+    data: {
+      isDeleted: true,
+      deletedAt: new Date()
+    }
+  });
+}
+
+
