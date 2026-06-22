@@ -213,7 +213,7 @@ export default function Header({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-10">
+        <nav className="hidden md:flex items-center space-x-8">
           {["Shop", "Categories", "Deals"].map((navItem) => {
             if (navItem === "Categories" || navItem === "Deals" || navItem === "Shop") {
               const href = navItem === "Shop" ? "/" : navItem === "Categories" ? "/categories" : "/deals";
@@ -253,6 +253,18 @@ export default function Header({
               </button>
             );
           })}
+          {/* My Orders link — only shown when authenticated */}
+          {mounted && _hasHydrated && isAuthenticated && (
+            <Link
+              href="/orders"
+              className="text-sm font-medium text-[#4B594F] hover:text-[#113C27] transition-colors relative py-1 flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
+              </svg>
+              My Orders
+            </Link>
+          )}
         </nav>
 
         {/* Header Right Interactions */}
@@ -270,7 +282,7 @@ export default function Header({
                 placeholder={currentPlaceholder}
                 value={localSearchQuery}
                 onChange={handleInputChange}
-                className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-8 py-2 w-64 md:w-80 lg:w-[380px] xl:w-[460px] focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
+                className="bg-[#ECE9E0] text-sm text-[#113C27] font-semibold placeholder-[#738276] rounded-full pl-9 pr-8 py-2 w-48 md:w-56 lg:w-64 xl:w-72 focus:outline-none focus:ring-1 focus:ring-[#113C27] transition-all"
               />
               {localSearchQuery && (
                 <button
