@@ -7,6 +7,7 @@ import { Flame, Clock, Sparkles, ShoppingCart, Award } from "lucide-react";
 import { useCartStore } from "../../store/useCartStore";
 import { fetchApi } from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
+import { parseEmojiImage } from "../../lib/image";
 
 interface DealItem {
   id: string;
@@ -28,9 +29,11 @@ export default function DealsSection() {
   const [mounted, setMounted] = useState(false);
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 12, seconds: 48 });
   const [apiProducts, setApiProducts] = useState<any[]>([]);
-  const { token } = useAuthStore();
+  const token = useAuthStore((state) => state.token);
+  const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   useEffect(() => {
+    if (!_hasHydrated) return;
     async function loadProducts() {
       try {
         const data = await fetchApi<{ items: any[] }>("/api/products?limit=100");
@@ -42,7 +45,7 @@ export default function DealsSection() {
       }
     }
     loadProducts();
-  }, [token]);
+  }, [token, _hasHydrated]);
 
   // Mock deals matching real products in database
   const deals = useMemo<DealItem[]>(() => {
@@ -250,6 +253,7 @@ export default function DealsSection() {
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mt-5">
         {deals.map((deal) => {
           const discount = Math.round(((deal.originalPrice - deal.dealPrice) / deal.originalPrice) * 100);
+          const emojiInfo = parseEmojiImage(deal.image);
           return (
             <div
               key={deal.id}
@@ -265,14 +269,23 @@ export default function DealsSection() {
               {/* Product Image Wrapper */}
               <div className="relative w-full aspect-[1.4] bg-[#FAF9F5] rounded-xl overflow-hidden mb-3 border border-gray-100">
                 <Link href={`/products/${deal.id}`} className="block w-full h-full relative">
-                  <Image
-                    src={deal.image}
-                    alt={deal.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 30vw"
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    priority
-                  />
+                  {emojiInfo.isEmoji ? (
+                    <div
+                      className="w-full h-full flex items-center justify-center text-4xl select-none"
+                      style={{ backgroundColor: emojiInfo.bgColor }}
+                    >
+                      {emojiInfo.emoji}
+                    </div>
+                  ) : (
+                    <Image
+                      src={deal.image}
+                      alt={deal.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 30vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      priority
+                    />
+                  )}
                   {/* Hover overlay shine */}
                   <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out pointer-events-none" />
                 </Link>

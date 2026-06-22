@@ -18,7 +18,9 @@ export default function FavoritesPage() {
     toggleFavorite,
   } = useCartStore();
 
-  const { isAuthenticated, token } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const token = useAuthStore((state) => state.token);
+  const _hasHydrated = useAuthStore((state) => state._hasHydrated);
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
@@ -37,6 +39,7 @@ export default function FavoritesPage() {
   }, []);
 
   useEffect(() => {
+    if (!mounted || !_hasHydrated) return;
     async function loadProducts() {
       setLoadingProducts(true);
       try {
@@ -79,10 +82,8 @@ export default function FavoritesPage() {
         setLoadingProducts(false);
       }
     }
-    if (mounted) {
-      loadProducts();
-    }
-  }, [mounted, token]);
+    loadProducts();
+  }, [mounted, token, _hasHydrated]);
 
   const favoriteProducts = apiProducts.filter((p) => favorites.includes(p.id));
 

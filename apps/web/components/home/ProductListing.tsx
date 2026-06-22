@@ -265,7 +265,9 @@ export default function ProductListing({
     toggleFavorite,
   } = useCartStore();
 
-  const { isAuthenticated, token } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const token = useAuthStore((state) => state.token);
+  const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   const handleBuyNow = (product: Product, weight: "1kg" | "500g" | "250g") => {
     addToCart(product, weight);
@@ -284,6 +286,7 @@ export default function ProductListing({
 
   // Fetch products from real API
   useEffect(() => {
+    if (!_hasHydrated) return;
     async function loadProducts() {
       setLoading(true);
       setApiError(null);
@@ -332,7 +335,7 @@ export default function ProductListing({
       }
     }
     loadProducts();
-  }, [token]);
+  }, [token, _hasHydrated]);
 
   // List of aggregated category values
   const categories = [

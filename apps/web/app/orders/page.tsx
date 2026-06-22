@@ -17,6 +17,7 @@ interface OrderItem {
   placedOn: string;
   total: number;
   status: "Processing" | "Shipped" | "Delivered" | "Cancelled";
+  rawStatus: string;
   images: string[];
   extraItemsCount?: number;
   shippingAddress?: string;
@@ -36,6 +37,7 @@ const MOCK_ORDERS: OrderItem[] = [
     placedOn: "Oct 24, 2023",
     total: 142.50,
     status: "Delivered",
+    rawStatus: "DELIVERED",
     images: [
       "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&q=80&w=150",
       "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=150"
@@ -48,6 +50,7 @@ const MOCK_ORDERS: OrderItem[] = [
     placedOn: "Nov 02, 2023",
     total: 88.00,
     status: "Shipped",
+    rawStatus: "SHIPPED",
     images: [
       "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=150",
       "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&q=80&w=150"
@@ -59,6 +62,7 @@ const MOCK_ORDERS: OrderItem[] = [
     placedOn: "Today, 09:12 AM",
     total: 210.30,
     status: "Processing",
+    rawStatus: "PENDING",
     images: [
       "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=150",
       "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=150"
@@ -71,6 +75,7 @@ const MOCK_ORDERS: OrderItem[] = [
     placedOn: "Sep 15, 2023",
     total: 0,
     status: "Cancelled",
+    rawStatus: "CANCELLED",
     images: [],
     shippingAddress: "",
     paymentStatus: "",
@@ -93,6 +98,49 @@ export default function MyOrdersPage() {
   const [activeTab, setActiveTab] = useState<StatusFilter>("All Orders");
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [selectedOrderDetail, setSelectedOrderDetail] = useState<OrderItem | null>(null);
+
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const handleCancelOrder = async () => {
+    if (!cancellingOrderId) return;
+    setIsCancelling(true);
+    setCancelError(null);
+    try {
+      const response = await fetchApi<{ status: string; message?: string; data?: any }>(
+        `/api/orders/${cancellingOrderId}/cancel`,
+        {
+          method: "PATCH",
+        }
+      );
+
+      if (response && (response.status === "success" || response.data)) {
+        setOrders((prevOrders) =>
+          prevOrders.map((o) =>
+            o.id === cancellingOrderId
+              ? { ...o, status: "Cancelled" as const, rawStatus: "CANCELLED" }
+              : o
+          )
+        );
+        if (selectedOrderDetail && selectedOrderDetail.id === cancellingOrderId) {
+          setSelectedOrderDetail((prev) =>
+            prev ? { ...prev, status: "Cancelled" as const, rawStatus: "CANCELLED" } : null
+          );
+        }
+        setIsCancelConfirmOpen(false);
+        setCancellingOrderId(null);
+      } else {
+        setCancelError(response?.message || "Failed to cancel order.");
+      }
+    } catch (err: any) {
+      console.error("Error cancelling order:", err);
+      setCancelError(err?.message || "An error occurred while cancelling your order.");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -119,6 +167,7 @@ export default function MyOrdersPage() {
                 placedOn: new Date(order.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
                 total: Number(order.totalPayable),
                 status,
+                rawStatus: order.status,
                 images: formattedImages.slice(0, 3),
                 extraItemsCount: Math.max(0, formattedImages.length - 3),
                 shippingAddress: addr,
@@ -321,6 +370,18 @@ export default function MyOrdersPage() {
                     </button>
                   )}
                   
+                  {order.rawStatus === "PENDING" && (
+                    <button
+                      onClick={() => {
+                        setCancellingOrderId(order.id);
+                        setIsCancelConfirmOpen(true);
+                      }}
+                      className="bg-[#FAF9F5] hover:bg-[#FDE4E4] text-[#A84444] border border-[#EAE6DB] hover:border-[#FDE4E4] py-2.5 px-5 rounded-xl font-bold transition-all text-xs active:scale-95 flex items-center gap-1.5"
+                    >
+                      <X className="w-3.5 h-3.5" /> Cancel Order
+                    </button>
+                  )}
+
                   <button
                     onClick={() => setSelectedOrderDetail(order)}
                     className={`py-2.5 px-5 rounded-xl font-bold transition-all text-xs active:scale-95 ${
@@ -539,12 +600,72 @@ export default function MyOrdersPage() {
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-between items-center pt-2">
+              {selectedOrderDetail.rawStatus === "PENDING" ? (
+                <button
+                  onClick={() => {
+                    setCancellingOrderId(selectedOrderDetail.id);
+                    setIsCancelConfirmOpen(true);
+                  }}
+                  className="bg-[#FAF9F5] hover:bg-[#FDE4E4] text-[#A84444] border border-[#EAE6DB] hover:border-[#FDE4E4] py-3 px-6 rounded-xl font-bold transition-all text-xs active:scale-95 flex items-center gap-1.5 animate-fade-in"
+                >
+                  <X className="w-4 h-4" /> Cancel Order
+                </button>
+              ) : (
+                <div />
+              )}
               <button
                 onClick={() => setSelectedOrderDetail(null)}
                 className="bg-[#0F5132] hover:bg-[#113C27] text-white py-3 px-8 rounded-xl font-bold transition-all text-xs active:scale-95 shadow-sm shadow-green-950/10"
               >
                 Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CANCELLATION CONFIRMATION DIALOG */}
+      {isCancelConfirmOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-[#EAE6DB] p-6 space-y-6 relative text-left">
+            <div>
+              <h3 className="font-serif text-xl font-bold text-[#113C27]">Cancel Order?</h3>
+              <p className="text-xs text-[#5C6E61] mt-2 leading-relaxed">
+                Are you sure you want to cancel this order? This action will release all reserved inventory items and cannot be undone.
+              </p>
+            </div>
+
+            {cancelError && (
+              <div className="p-3 bg-[#FDE4E4] border border-[#FAF9F5] text-xs text-[#A84444] rounded-xl font-semibold">
+                {cancelError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                disabled={isCancelling}
+                onClick={() => {
+                  setIsCancelConfirmOpen(false);
+                  setCancellingOrderId(null);
+                  setCancelError(null);
+                }}
+                className="bg-[#EAE6DB]/60 hover:bg-[#EAE6DB]/90 text-[#1F3E2F] py-2.5 px-5 rounded-xl font-bold transition-all text-xs active:scale-95 disabled:opacity-50"
+              >
+                No, Keep Order
+              </button>
+              <button
+                disabled={isCancelling}
+                onClick={handleCancelOrder}
+                className="bg-[#A84444] hover:bg-[#8b3535] text-white py-2.5 px-5 rounded-xl font-bold transition-all text-xs active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isCancelling ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cancelling...
+                  </>
+                ) : (
+                  "Yes, Cancel Order"
+                )}
               </button>
             </div>
           </div>
