@@ -93,6 +93,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
   const [formStatus, setFormStatus] = useState(true);
   const [formImageUrl, setFormImageUrl] = useState("");
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,6 +102,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
         alert("File size exceeds 5MB limit.");
         return;
       }
+      setUploadedFiles(prev => [...prev, file]);
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
@@ -213,6 +215,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
     setFormStatus(true);
     setFormImageUrl("");
     setUploadedImages([]);
+    setUploadedFiles([]);
     setIsProductModalOpen(true);
   };
 
@@ -266,32 +269,35 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
       return;
     }
 
-    const allImages = [...uploadedImages];
+    const formData = new FormData();
+    formData.append("name", formName);
+    formData.append("description", formDescription);
+    formData.append("categoryId", formCategoryId);
+    formData.append("isActive", String(formStatus));
+    formData.append("variants", JSON.stringify(variants));
+
+    // Append existing Image URLs
     if (formImageUrl.trim() !== "") {
-      allImages.unshift(formImageUrl.trim());
+      formData.append("images", formImageUrl.trim());
     }
 
-    const payload = {
-      name: formName,
-      description: formDescription,
-      categoryId: formCategoryId,
-      isActive: formStatus,
-      images: allImages,
-      variants,
-    };
+    // Append raw files instead of base64
+    uploadedFiles.forEach((file) => {
+      formData.append("images", file);
+    });
 
     try {
       if (editingProduct) {
         // Edit mode — send PATCH to update existing product
         await fetchAPI(`/api/products/${editingProduct.id}`, {
           method: "PATCH",
-          body: JSON.stringify(payload)
+          body: formData
         });
       } else {
         // Add mode
         await fetchAPI("/api/products", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: formData,
         });
       }
       setIsProductModalOpen(false);
@@ -789,7 +795,10 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
                         <img src={img} className="w-full h-full object-cover" />
                         <button
                           type="button"
-                          onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))}
+                          onClick={() => {
+                            setUploadedImages(prev => prev.filter((_, i) => i !== idx));
+                            setUploadedFiles(prev => prev.filter((_, i) => i !== idx));
+                          }}
                           className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black"
                         >
                           <X className="w-3 h-3" />

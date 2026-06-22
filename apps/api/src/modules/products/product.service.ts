@@ -208,17 +208,30 @@ export async function searchProductsList(
   };
 }
 
+import { uploadImageToCloudinary } from "../../shared/utils/cloudinary";
+
 /**
  * Creates a new product with variants, pricing and inventory
  */
-export async function createProduct(input: CreateProductInput) {
+export async function createProduct(input: CreateProductInput, files?: Express.Multer.File[]) {
   // Generate product slug
   const baseSlug = slugify(input.name);
   const slugSuffix = Math.floor(1000 + Math.random() * 9000);
   const slug = `${baseSlug}-${slugSuffix}`;
 
+  const uploadedUrls: string[] = [];
+  if (files && files.length > 0) {
+    for (const file of files) {
+      const result = await uploadImageToCloudinary(file.buffer, "products");
+      uploadedUrls.push(result.url);
+    }
+  }
+
+  const finalImages = [...(input.images || []), ...uploadedUrls];
+
   return productRepository.createProduct({
     ...input,
+    images: finalImages,
     slug,
   });
 }
@@ -233,8 +246,23 @@ export async function deleteProduct(id: string) {
 /**
  * Updates a product by ID
  */
-export async function updateProduct(id: string, input: UpdateProductInput) {
-  return productRepository.updateProduct(id, input);
+export async function updateProduct(id: string, input: UpdateProductInput, files?: Express.Multer.File[]) {
+  const uploadedUrls: string[] = [];
+  if (files && files.length > 0) {
+    for (const file of files) {
+      const result = await uploadImageToCloudinary(file.buffer, "products");
+      uploadedUrls.push(result.url);
+    }
+  }
+
+  const finalImages = input.images && input.images.length > 0 || uploadedUrls.length > 0 
+    ? [...(input.images || []), ...uploadedUrls] 
+    : undefined;
+
+  return productRepository.updateProduct(id, {
+    ...input,
+    images: finalImages,
+  });
 }
 
 /**

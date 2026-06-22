@@ -129,7 +129,26 @@ export async function searchProducts(req: AuthenticatedRequest, res: Response) {
  */
 export async function createProduct(req: AuthenticatedRequest, res: Response) {
   try {
-    const validation = CreateProductSchema.safeParse(req.body);
+    const rawBody = { ...req.body };
+    
+    // Parse JSON strings from FormData
+    if (typeof rawBody.variants === "string") {
+      try {
+        rawBody.variants = JSON.parse(rawBody.variants);
+      } catch (e) {}
+    }
+    if (typeof rawBody.images === "string") {
+      try {
+        rawBody.images = JSON.parse(rawBody.images);
+      } catch (e) {
+        rawBody.images = [rawBody.images];
+      }
+    }
+    if (typeof rawBody.isActive === "string") {
+      rawBody.isActive = rawBody.isActive === "true";
+    }
+
+    const validation = CreateProductSchema.safeParse(rawBody);
     if (!validation.success) {
       return res.status(400).json({
         error: "Validation failed",
@@ -137,7 +156,8 @@ export async function createProduct(req: AuthenticatedRequest, res: Response) {
       });
     }
 
-    const product = await productService.createProduct(validation.data);
+    const files = req.files as Express.Multer.File[];
+    const product = await productService.createProduct(validation.data, files);
     
     // Invalidate product & category caches
     await cache.clearPattern("products:*");
@@ -195,7 +215,26 @@ export async function updateProduct(req: AuthenticatedRequest, res: Response) {
       });
     }
 
-    const bodyValidation = UpdateProductSchema.safeParse(req.body);
+    const rawBody = { ...req.body };
+    
+    // Parse JSON strings from FormData
+    if (typeof rawBody.variants === "string") {
+      try {
+        rawBody.variants = JSON.parse(rawBody.variants);
+      } catch (e) {}
+    }
+    if (typeof rawBody.images === "string") {
+      try {
+        rawBody.images = JSON.parse(rawBody.images);
+      } catch (e) {
+        rawBody.images = [rawBody.images];
+      }
+    }
+    if (typeof rawBody.isActive === "string") {
+      rawBody.isActive = rawBody.isActive === "true";
+    }
+
+    const bodyValidation = UpdateProductSchema.safeParse(rawBody);
     if (!bodyValidation.success) {
       return res.status(400).json({
         error: "Validation failed",
@@ -204,7 +243,8 @@ export async function updateProduct(req: AuthenticatedRequest, res: Response) {
     }
 
     const { id } = paramValidation.data;
-    const updated = await productService.updateProduct(id, bodyValidation.data);
+    const files = req.files as Express.Multer.File[];
+    const updated = await productService.updateProduct(id, bodyValidation.data, files);
 
     // Invalidate product & category caches
     await cache.clearPattern("products:*");
