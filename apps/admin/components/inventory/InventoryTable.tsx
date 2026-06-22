@@ -266,17 +266,12 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
       return;
     }
 
-    const allImages = [...uploadedImages];
-    if (formImageUrl.trim() !== "") {
-      allImages.unshift(formImageUrl.trim());
-    }
-
     const payload = {
       name: formName,
       description: formDescription,
       categoryId: formCategoryId,
       isActive: formStatus,
-      images: allImages,
+      images: [], // Removed image logic
       variants,
     };
 
@@ -745,59 +740,6 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
                   />
                   <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Product Activated</span>
                 </label>
-              </div>
-
-              {/* Image Input Configuration */}
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Product Image URL</label>
-                  <input
-                    type="text"
-                    value={formImageUrl}
-                    onChange={(e) => setFormImageUrl(e.target.value)}
-                    placeholder="e.g. https://images.unsplash.com/photo-..."
-                    className="block w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--primary-green)]"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Or Upload Image File</label>
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold text-gray-600 bg-white">
-                      <Upload className="w-4 h-4 text-gray-500" />
-                      Choose File
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
-                    {uploadedImages.length > 0 && (
-                      <span className="text-xs text-gray-500 font-semibold">
-                        {uploadedImages.length} image(s) selected
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Image Previews */}
-                {uploadedImages.length > 0 && (
-                  <div className="flex gap-2 flex-wrap pt-2">
-                    {uploadedImages.map((img, idx) => (
-                      <div key={idx} className="relative w-16 h-16 border border-gray-100 rounded-lg overflow-hidden bg-gray-50">
-                        <img src={img} className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))}
-                          className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white hover:bg-black"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Action Buttons */}
