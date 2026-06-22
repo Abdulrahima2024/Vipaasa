@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ChevronRight, 
   Settings2, 
@@ -14,6 +14,7 @@ import {
   ArrowUpDown,
   AlertTriangle
 } from "lucide-react";
+import { fetchAPI } from "../../../lib/api";
 
 interface InventoryItem {
   id: string;
@@ -32,78 +33,9 @@ interface InventoryItem {
 
 export default function InventoryPage() {
   // Inventory database state
-  const [inventory, setInventory] = useState<InventoryItem[]>([
-    {
-      id: "1",
-      name: "Kandipappu",
-      sku: "VPA-DAL-001",
-      category: "Dals & Pulses",
-      unitType: "kg",
-      purchaseCost: 160,
-      sellingPrice: 240,
-      openingStock: 150,
-      warehouseStock: 80,
-      storeStock: 20,
-      reservedStock: 5,
-      lowStockAlert: 25,
-    },
-    {
-      id: "2",
-      name: "Pottu Minapappu",
-      sku: "VPA-DAL-002",
-      category: "Dals & Pulses",
-      unitType: "kg",
-      purchaseCost: 130,
-      sellingPrice: 196,
-      openingStock: 120,
-      warehouseStock: 65,
-      storeStock: 15,
-      reservedStock: 2,
-      lowStockAlert: 20,
-    },
-    {
-      id: "3",
-      name: "Wild Forest Honey",
-      sku: "VPA-HNY-037",
-      category: "Honey & Ghee",
-      unitType: "liters",
-      purchaseCost: 280,
-      sellingPrice: 420,
-      openingStock: 80,
-      warehouseStock: 30,
-      storeStock: 12,
-      reservedStock: 4,
-      lowStockAlert: 15,
-    },
-    {
-      id: "4",
-      name: "Desi Cow Ghee",
-      sku: "VPA-GHE-040",
-      category: "Honey & Ghee",
-      unitType: "liters",
-      purchaseCost: 2900,
-      sellingPrice: 4200,
-      openingStock: 40,
-      warehouseStock: 8,
-      storeStock: 4,
-      reservedStock: 3,
-      lowStockAlert: 10,
-    },
-    {
-      id: "5",
-      name: "Korralu",
-      sku: "VPA-MIL-013",
-      category: "Millets & Grains",
-      unitType: "kg",
-      purchaseCost: 70,
-      sellingPrice: 108,
-      openingStock: 200,
-      warehouseStock: 120,
-      storeStock: 40,
-      reservedStock: 8,
-      lowStockAlert: 30,
-    }
-  ]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Auto Inventory Rules states
   const [ruleOnlineOrder, setRuleOnlineOrder] = useState(true);
@@ -118,6 +50,24 @@ export default function InventoryPage() {
   const [adjustLocation, setAdjustLocation] = useState<"warehouse" | "store">("warehouse");
   const [adjustQty, setAdjustQty] = useState(1);
   const [adjustReason, setAdjustReason] = useState("Restock audit intake");
+
+  const loadInventory = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchAPI("/api/inventory");
+      setInventory(data);
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to load inventory stock levels.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInventory();
+  }, []);
 
   // Summary Metrics calculations
   const totalWarehouseStock = inventory.reduce((acc, item) => acc + item.warehouseStock, 0);
@@ -137,38 +87,29 @@ export default function InventoryPage() {
   };
 
   // Adjust stock handler
-  const handleSaveAdjustment = (e: React.FormEvent) => {
+  const handleSaveAdjustment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedItem) return;
 
-    setInventory((prev) =>
-      prev.map((item) => {
-        if (item.id !== selectedItem.id) return item;
+    let delta = adjustQty;
+    if (adjustType === "subtract" || adjustType === "damaged") {
+      delta = -adjustQty;
+    }
 
-        let delta = adjustQty;
-        if (adjustType === "subtract" || adjustType === "damaged") {
-          delta = -adjustQty;
-        }
-
-        const isWarehouse = adjustLocation === "warehouse";
-        let newWarehouse = item.warehouseStock;
-        let newStore = item.storeStock;
-
-        if (isWarehouse) {
-          newWarehouse = Math.max(0, item.warehouseStock + delta);
-        } else {
-          newStore = Math.max(0, item.storeStock + delta);
-        }
-
-        return {
-          ...item,
-          warehouseStock: newWarehouse,
-          storeStock: newStore,
-        };
-      })
-    );
-
-    setIsAdjustOpen(false);
+    try {
+      await fetchAPI("/api/inventory/adjust", {
+        method: "POST",
+        body: JSON.stringify({
+          variantId: selectedItem.id,
+          quantityChange: delta,
+          reason: adjustReason || adjustType,
+        }),
+      });
+      setIsAdjustOpen(false);
+      loadInventory();
+    } catch (err: any) {
+      alert(err.message || "Failed to adjust stock.");
+    }
   };
 
   // Simulate transactions to show Auto Inventory Rules in action
@@ -178,7 +119,7 @@ export default function InventoryPage() {
       setSimFeedback("Simulation skipped: Rule 'Reduce Stock on Online Order' is disabled.");
       return;
     }
-    // pick first product (Kandipappu) to adjust
+    // pick first product to adjust locally for simulator
     setInventory((prev) =>
       prev.map((item, idx) => {
         if (idx === 0) {
@@ -193,7 +134,7 @@ export default function InventoryPage() {
         return item;
       })
     );
-    setSimFeedback("Rule Triggered: 1 unit of Kandipappu allocated (Warehouse stock reduced by 1, Reserved stock increased by 1).");
+    setSimFeedback("Rule Triggered: 1 unit allocated (Warehouse stock reduced by 1, Reserved stock increased by 1).");
   };
 
   const simulateStoreSale = () => {
@@ -213,7 +154,7 @@ export default function InventoryPage() {
         return item;
       })
     );
-    setSimFeedback("Rule Triggered: Direct storefront sale completed. 1 unit of Kandipappu deducted from Retail Store stock.");
+    setSimFeedback("Rule Triggered: Direct storefront sale completed. 1 unit deducted from Retail Store stock.");
   };
 
   const simulateCancellation = () => {
@@ -255,6 +196,7 @@ export default function InventoryPage() {
     );
     setSimFeedback("Rule Triggered: Return processed. 1 returned unit added back to Warehouse inventory.");
   };
+
 
   return (
     <div className="max-w-7xl mx-auto">

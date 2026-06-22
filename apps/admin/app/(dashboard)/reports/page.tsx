@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ChevronRight, 
   BarChart3, 
@@ -12,16 +12,125 @@ import {
   Users2,
   BadgeCent
 } from "lucide-react";
+import { fetchAPI } from "../../../lib/api";
+
+interface SalesBreakdown {
+  period: string;
+  orders: number;
+  conversion: string;
+  revenue: string;
+}
+
+interface ProductReportItem {
+  name: string;
+  sku: string;
+  cat: string;
+  sold: number;
+  kg: number;
+  rev: string;
+}
+
+interface LowStockItem {
+  name: string;
+  left: string;
+}
+
+interface FastMovingItem {
+  name: string;
+  sold: string;
+}
+
+interface DamagedLogItem {
+  name: string;
+  qty: string;
+}
+
+interface AnalyticsData {
+  sales: {
+    grossVolume: string;
+    avgTicketSize: string;
+    netConversions: string;
+    fulfillmentSLA: string;
+    breakdownLog: SalesBreakdown[];
+  };
+  products: ProductReportItem[];
+  inventory: {
+    lowStock: LowStockItem[];
+    fastMoving: FastMovingItem[];
+    damaged: DamagedLogItem[];
+  };
+  customers: {
+    newPercent: number;
+    newCount: number;
+    repeatPercent: number;
+    repeatCount: number;
+    satisfaction: string;
+    lifetimeValue: string;
+  };
+  financial: {
+    grossVolume: string;
+    onlineRevenue: string;
+    codRevenue: string;
+    gstCollected: string;
+    cgst: string;
+    sgst: string;
+    netProfit: string;
+  };
+}
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<"sales" | "products" | "inventory" | "customers" | "financial">("sales");
+  const [activeTab, setActiveTab] = useState<"sales" | "products" | "inventory" | "customers" | "financial" >("sales");
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Sub-filter for Sales
   const [salesRange, setSalesRange] = useState<"daily" | "weekly" | "monthly" | "annual">("monthly");
 
+  const loadAnalytics = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchAPI("/api/reports/analytics");
+      setAnalyticsData(data);
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to load reports data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAnalytics();
+  }, []);
+
   const handleDownloadReport = (name: string) => {
     alert(`Downloading ${name}_Report.csv...`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto flex items-center justify-center min-h-[400px]">
+        <div className="text-gray-500 font-bold flex items-center gap-2">
+          <Activity className="animate-spin text-[var(--primary-green)]" />
+          Loading reports data...
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !analyticsData) {
+    return (
+      <div className="max-w-7xl mx-auto p-8 text-center bg-white rounded-2xl border border-gray-100">
+        <h2 className="text-lg font-bold text-red-600 mb-2">Error Loading Reports</h2>
+        <p className="text-sm text-gray-500 mb-4">{error || "Could not retrieve statistics."}</p>
+        <button onClick={loadAnalytics} className="bg-[var(--primary-green)] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[var(--primary-hover)]">
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -57,7 +166,7 @@ export default function ReportsPage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-5 py-3.5 text-sm font-bold border-b-2 transition-all cursor-pointer ${
                 isActive
-                  ? "border-[var(--primary-green)] text-[var(--primary-green)] bg-white"
+                  ? "border-b-[var(--primary-green)] text-[var(--primary-green)] bg-white"
                   : "border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-300"
               }`}
             >
@@ -109,23 +218,23 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white rounded-xl p-5 border border-gray-150">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Gross Volume</span>
-              <span className="text-xl font-bold text-gray-950 block mt-1">₹4,28,500</span>
-              <span className="text-[10px] text-green-600 font-bold block mt-2">↗ +12.4% vs last period</span>
+              <span className="text-xl font-bold text-gray-950 block mt-1">{analyticsData.sales.grossVolume}</span>
+              <span className="text-[10px] text-green-600 font-bold block mt-2">↗ Real-time volume</span>
             </div>
             <div className="bg-white rounded-xl p-5 border border-gray-150">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Average Ticket Size</span>
-              <span className="text-xl font-bold text-gray-950 block mt-1">₹1,180</span>
-              <span className="text-[10px] text-green-600 font-bold block mt-2">↗ +2.3% vs last period</span>
+              <span className="text-xl font-bold text-gray-950 block mt-1">{analyticsData.sales.avgTicketSize}</span>
+              <span className="text-[10px] text-green-600 font-bold block mt-2">↗ Real-time average</span>
             </div>
             <div className="bg-white rounded-xl p-5 border border-gray-150">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Net Conversions</span>
-              <span className="text-xl font-bold text-gray-950 block mt-1">94.2%</span>
+              <span className="text-xl font-bold text-gray-950 block mt-1">{analyticsData.sales.netConversions}</span>
               <span className="text-[10px] text-gray-400 font-semibold block mt-2">Conversion rate log</span>
             </div>
             <div className="bg-white rounded-xl p-5 border border-gray-150">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Fulfillment SLA</span>
-              <span className="text-xl font-bold text-gray-950 block mt-1">98.5%</span>
-              <span className="text-[10px] text-green-600 font-bold block mt-2">↗ +0.8% ahead of target</span>
+              <span className="text-xl font-bold text-gray-950 block mt-1">{analyticsData.sales.fulfillmentSLA}</span>
+              <span className="text-[10px] text-green-600 font-bold block mt-2">↗ Ahead of target</span>
             </div>
           </div>
 
@@ -135,12 +244,7 @@ export default function ReportsPage() {
               Sales Breakdown Log
             </div>
             <div className="divide-y divide-gray-100 font-semibold text-xs text-gray-700">
-              {[
-                { period: "June 2026", orders: 124, revenue: "₹1,45,000", conversion: "96.4%" },
-                { period: "May 2026", orders: 110, revenue: "₹1,28,000", conversion: "94.2%" },
-                { period: "April 2026", orders: 98, revenue: "₹1,14,000", conversion: "93.1%" },
-                { period: "March 2026", orders: 84, revenue: "₹92,500", conversion: "91.8%" }
-              ].map((row, idx) => (
+              {analyticsData.sales.breakdownLog.map((row, idx) => (
                 <div key={idx} className="p-4 flex justify-between hover:bg-gray-50/20">
                   <span className="font-bold text-gray-900 w-32">{row.period}</span>
                   <span className="text-gray-500 w-24 text-center">{row.orders} orders</span>
@@ -183,12 +287,7 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-gray-700">
-                {[
-                  { name: "Kandipappu", sku: "VPA-DAL-001", cat: "Dals & Pulses", sold: 342, kg: 342, rev: "₹82,080" },
-                  { name: "Desi Cow Ghee", sku: "VPA-GHE-040", cat: "Honey & Ghee", sold: 18, kg: 18, rev: "₹75,600" },
-                  { name: "Wild Forest Honey", sku: "VPA-HNY-037", cat: "Honey & Ghee", sold: 124, kg: 62, rev: "₹52,080" },
-                  { name: "Pachi Karam", sku: "VPA-SPC-007", cat: "Spices & Powders", sold: 82, kg: 20.5, rev: "₹45,920" }
-                ].map((row, idx) => (
+                {analyticsData.products.map((row, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/20 font-medium">
                     <td className="px-6 py-4 font-bold text-gray-900">{row.name}</td>
                     <td className="px-6 py-4 text-center font-mono text-gray-500">{row.sku}</td>
@@ -229,14 +328,12 @@ export default function ReportsPage() {
                 Low Stock Alert Products
               </h3>
               <div className="space-y-2.5 text-xs font-semibold text-gray-700">
-                <div className="flex justify-between">
-                  <span>Desi Cow Ghee (1kg)</span>
-                  <span className="text-red-600 font-bold">2 units left</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Wild Forest Honey (500g)</span>
-                  <span className="text-red-600 font-bold">4 units left</span>
-                </div>
+                {analyticsData.inventory.lowStock.map((row, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>{row.name}</span>
+                    <span className="text-red-600 font-bold">{row.left}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -246,14 +343,12 @@ export default function ReportsPage() {
                 Fast Moving Grains & Staples
               </h3>
               <div className="space-y-2.5 text-xs font-semibold text-gray-700">
-                <div className="flex justify-between">
-                  <span>Kandipappu</span>
-                  <span className="text-emerald-700 font-bold">342 sold this month</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Korralu</span>
-                  <span className="text-emerald-700 font-bold">220 sold this month</span>
-                </div>
+                {analyticsData.inventory.fastMoving.map((row, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>{row.name}</span>
+                    <span className="text-emerald-700 font-bold">{row.sold}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -263,14 +358,12 @@ export default function ReportsPage() {
                 Damaged / Write-off Logs
               </h3>
               <div className="space-y-2.5 text-xs font-semibold text-gray-700">
-                <div className="flex justify-between">
-                  <span>Pottu Minapappu (spill)</span>
-                  <span className="text-gray-500 font-bold">3 kg</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Desi Cow Ghee (breakage)</span>
-                  <span className="text-gray-500 font-bold">1 liter</span>
-                </div>
+                {analyticsData.inventory.damaged.map((row, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>{row.name}</span>
+                    <span className="text-gray-500 font-bold">{row.qty}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -302,15 +395,15 @@ export default function ReportsPage() {
               <div className="space-y-4">
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-gray-600">New Customers</span>
-                  <span className="text-gray-900">412 (32%)</span>
+                  <span className="text-gray-900">{analyticsData.customers.newCount} ({analyticsData.customers.newPercent}%)</span>
                 </div>
                 <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden flex">
-                  <div className="bg-[var(--primary-green)] h-full" style={{ width: "32%" }} />
-                  <div className="bg-teal-500 h-full" style={{ width: "68%" }} />
+                  <div className="bg-[var(--primary-green)] h-full" style={{ width: `${analyticsData.customers.newPercent}%` }} />
+                  <div className="bg-teal-500 h-full" style={{ width: `${analyticsData.customers.repeatPercent}%` }} />
                 </div>
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-gray-600">Repeat Customers</span>
-                  <span className="text-gray-900">872 (68%)</span>
+                  <span className="text-gray-900">{analyticsData.customers.repeatCount} ({analyticsData.customers.repeatPercent}%)</span>
                 </div>
               </div>
             </div>
@@ -321,15 +414,15 @@ export default function ReportsPage() {
               <div className="space-y-3.5 text-xs font-semibold text-gray-700">
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span>Loyalty Rate (2+ Orders)</span>
-                  <span className="text-emerald-700">62.8%</span>
+                  <span className="text-emerald-700">{analyticsData.customers.repeatPercent}%</span>
                 </div>
                 <div className="flex justify-between border-b border-gray-50 pb-2">
                   <span>Average Customer Lifetime Value</span>
-                  <span className="text-gray-900">₹3,450</span>
+                  <span className="text-gray-900">{analyticsData.customers.lifetimeValue}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Churn Rate Estimate</span>
-                  <span className="text-red-600">4.2%</span>
+                  <span>Satisfaction Score</span>
+                  <span className="text-emerald-700 font-bold">{analyticsData.customers.satisfaction}</span>
                 </div>
               </div>
             </div>
@@ -359,16 +452,16 @@ export default function ReportsPage() {
             <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Gross Revenue</span>
-                <span className="text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">₹4,28,500</span>
+                <span className="text-xs font-bold text-green-650 bg-green-50 px-1.5 py-0.5 rounded">{analyticsData.financial.grossVolume}</span>
               </div>
               <div className="space-y-2.5 text-xs font-semibold text-gray-700">
                 <div className="flex justify-between">
                   <span>Online Payments</span>
-                  <span className="text-gray-900">₹3,84,000</span>
+                  <span className="text-gray-900">{analyticsData.financial.onlineRevenue}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Cash on Delivery</span>
-                  <span className="text-gray-900">₹44,500</span>
+                  <span className="text-gray-900">{analyticsData.financial.codRevenue}</span>
                 </div>
               </div>
             </div>
@@ -377,16 +470,16 @@ export default function ReportsPage() {
             <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">GST Tax collected</span>
-                <span className="text-xs font-bold text-indigo-650 bg-indigo-50 px-1.5 py-0.5 rounded">₹38,250</span>
+                <span className="text-xs font-bold text-indigo-650 bg-indigo-50 px-1.5 py-0.5 rounded">{analyticsData.financial.gstCollected}</span>
               </div>
               <div className="space-y-2.5 text-xs font-semibold text-gray-700">
                 <div className="flex justify-between">
                   <span>CGST Collected (50%)</span>
-                  <span className="text-gray-900">₹19,125</span>
+                  <span className="text-gray-900">{analyticsData.financial.cgst}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>SGST Collected (50%)</span>
-                  <span className="text-gray-900">₹19,125</span>
+                  <span className="text-gray-900">{analyticsData.financial.sgst}</span>
                 </div>
               </div>
             </div>
@@ -395,7 +488,7 @@ export default function ReportsPage() {
             <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Net Profit</span>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">₹1,71,400</span>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">{analyticsData.financial.netProfit}</span>
               </div>
               <div className="space-y-2.5 text-xs font-semibold text-gray-700">
                 <div className="flex justify-between">

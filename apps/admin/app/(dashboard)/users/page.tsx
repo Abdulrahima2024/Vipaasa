@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ChevronRight, 
   Search, 
@@ -17,6 +17,7 @@ import {
   Lock,
   Eye
 } from "lucide-react";
+import { fetchAPI } from "../../../lib/api";
 
 interface PermissionSet {
   manageProducts: boolean;
@@ -35,47 +36,9 @@ interface SystemUser {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<SystemUser[]>([
-    {
-      id: "USR-001",
-      name: "Tejesh Kumar",
-      email: "tejesh@vipaasa.com",
-      role: "Super Admin",
-      status: "Active",
-      permissions: {
-        manageProducts: true,
-        manageOrders: true,
-        manageInventory: true,
-        viewReports: true
-      }
-    },
-    {
-      id: "USR-002",
-      name: "Sai Kiran",
-      email: "sai.kiran@vipaasa.com",
-      role: "Store Executive",
-      status: "Active",
-      permissions: {
-        manageProducts: false,
-        manageOrders: true,
-        manageInventory: true,
-        viewReports: false
-      }
-    },
-    {
-      id: "USR-003",
-      name: "Mohan Lal",
-      email: "mohan.lal@vipaasa.com",
-      role: "Store Executive",
-      status: "Inactive",
-      permissions: {
-        manageProducts: false,
-        manageOrders: false,
-        manageInventory: true,
-        viewReports: false
-      }
-    }
-  ]);
+  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Search query
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,6 +56,24 @@ export default function UsersPage() {
   const [formPermOrders, setFormPermOrders] = useState(false);
   const [formPermInventory, setFormPermInventory] = useState(true);
   const [formPermReports, setFormPermReports] = useState(false);
+
+  const loadUsers = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchAPI("/api/users");
+      setUsers(data);
+    } catch (err: any) {
+      console.error("Failed to fetch users:", err);
+      setError("Failed to load users list.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   const handleOpenAddModal = (roleType: SystemUser["role"]) => {
     setEditingUser(null);
@@ -120,51 +101,45 @@ export default function UsersPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteUser = (id: string) => {
-    if (id === "USR-001") {
-      alert("Cannot delete primary Super Admin account.");
-      return;
-    }
+  const handleDeleteUser = async (id: string) => {
     if (confirm("Are you sure you want to delete this system user?")) {
-      setUsers(users.filter(u => u.id !== id));
+      try {
+        await fetchAPI(`/api/users/${id}`, { method: "DELETE" });
+        setUsers(users.filter(u => u.id !== id));
+      } catch (err: any) {
+        alert(err.message || "Failed to delete user.");
+      }
     }
   };
 
-  const handleSaveUser = (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingUser) {
-      // Edit mode
-      setUsers(users.map(u => u.id === editingUser.id ? {
-        ...u,
-        name: formName,
-        email: formEmail,
-        role: formRole,
-        status: formStatus ? "Active" : "Inactive",
-        permissions: {
-          manageProducts: formPermProducts,
-          manageOrders: formPermOrders,
-          manageInventory: formPermInventory,
-          viewReports: formPermReports
-        }
-      } : u));
-    } else {
-      // Add mode
-      const newUser: SystemUser = {
-        id: `USR-${Math.floor(100 + Math.random() * 900)}`,
-        name: formName,
-        email: formEmail,
-        role: formRole,
-        status: formStatus ? "Active" : "Inactive",
-        permissions: {
-          manageProducts: formPermProducts,
-          manageOrders: formPermOrders,
-          manageInventory: formPermInventory,
-          viewReports: formPermReports
-        }
-      };
-      setUsers([...users, newUser]);
+    const payload = {
+      name: formName,
+      email: formEmail,
+      role: formRole,
+      status: formStatus ? "Active" : "Inactive"
+    };
+
+    try {
+      if (editingUser) {
+        // Edit mode
+        await fetchAPI(`/api/users/${editingUser.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // Add mode
+        await fetchAPI("/api/users", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+      }
+      setIsModalOpen(false);
+      loadUsers();
+    } catch (err: any) {
+      alert(err.message || "Failed to save user.");
     }
-    setIsModalOpen(false);
   };
 
   // Filter list
@@ -173,6 +148,7 @@ export default function UsersPage() {
     u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
 
   return (
     <div className="max-w-7xl mx-auto">

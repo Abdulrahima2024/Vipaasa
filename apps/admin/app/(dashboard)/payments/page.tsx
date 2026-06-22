@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CreditCard, Calendar, User, DollarSign, ChevronRight } from "lucide-react";
+import { fetchAPI } from "../../../lib/api";
 
 interface Payment {
   id: string;
@@ -13,48 +14,28 @@ interface Payment {
 }
 
 export default function PaymentsPage() {
-  const [payments] = useState<Payment[]>([
-    {
-      id: "PAY-001",
-      payerName: "Tejesh Kumar",
-      amount: 4680,
-      method: "Razorpay (Online)",
-      date: "2026-06-16",
-      bankDetails: "HDFC Bank - 1234567890",
-    },
-    {
-      id: "PAY-002",
-      payerName: "Sai Kiran",
-      amount: 490,
-      method: "Cash on Delivery",
-      date: "2026-06-15",
-      bankDetails: "Cash Payment - N/A",
-    },
-    {
-      id: "PAY-003",
-      payerName: "Ananya Rao",
-      amount: 468,
-      method: "UPI (Online)",
-      date: "2026-06-14",
-      bankDetails: "Google Pay - 9876543210",
-    },
-    {
-      id: "PAY-004",
-      payerName: "Mohan Lal",
-      amount: 860,
-      method: "Razorpay (Online)",
-      date: "2026-06-13",
-      bankDetails: "ICICI Bank - 1122334455",
-    },
-    {
-      id: "PAY-005",
-      payerName: "Kavitha Reddy",
-      amount: 1060,
-      method: "Razorpay (Online)",
-      date: "2026-06-12",
-      bankDetails: "SBI Bank - 6677889900",
-    },
-  ]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPayments = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchAPI("/api/payments");
+        setPayments(data);
+      } catch (err: any) {
+        console.error(err);
+        setError("Failed to load payment transactions.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPayments();
+  }, []);
+
 
   return (
     <div className="max-w-7xl mx-auto">
