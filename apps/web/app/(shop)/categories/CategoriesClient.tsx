@@ -340,18 +340,7 @@ export default function CategoriesClient() {
       {/* MAIN LAYOUT */}
       <main className="max-w-7xl mx-auto w-full px-6 lg:px-16 py-8 flex-1 flex flex-col gap-6">
 
-        {/* BREADCRUMB */}
-        <nav aria-label="Breadcrumb" className="text-[11px] font-extrabold tracking-wider flex items-center gap-2 text-[#738276] uppercase">
-          <Link href="/" className="hover:text-[#113C27] transition-colors">
-            Home
-          </Link>
-          <span className="text-gray-400 font-light text-[9px]">&gt;</span>
-          <Link href="/categories" className="hover:text-[#113C27] transition-colors">
-            category
-          </Link>
-          <span className="text-gray-400 font-light text-[9px]">&gt;</span>
-          <span className="text-[#113C27] font-extrabold">Pantry Essentials</span>
-        </nav>
+
 
         {/* HERO TITLE & DESCRIPTIONS */}
         <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#EAE6DB] pb-6 gap-6">

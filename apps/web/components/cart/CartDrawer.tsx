@@ -121,7 +121,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <div className="flex-1 flex flex-col justify-start gap-1">
                       <div className="pr-2">
                         <h4 className="font-semibold text-[#113C27] text-sm leading-tight">
-                          {item.name} {item.weight}
+                          {item.name}
                         </h4>
                         <div className="text-sm font-normal text-[#4B594F] mt-0.5">
                           Rs. {item.price.toFixed(2)}

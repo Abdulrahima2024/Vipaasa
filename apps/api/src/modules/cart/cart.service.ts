@@ -153,7 +153,8 @@ export async function updateCartItemQuantity(
       0
     );
 
-    if (quantity > availableStock) {
+    // Only block if we are INCREASING the quantity beyond available stock
+    if (quantity > cartItem.quantity && quantity > availableStock) {
       throw new AppError(
         `Cannot update quantity. Requested quantity is ${quantity}, but available stock is ${availableStock}.`,
         400

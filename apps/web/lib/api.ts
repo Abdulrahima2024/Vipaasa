@@ -55,7 +55,13 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
       : (errorData.error && typeof errorData.error.message === "string")
       ? errorData.error.message
       : `HTTP error! status: ${response.status}`;
-    throw new Error(errorMessage);
+      
+    // Use a plain object to avoid aggressive Next.js dev overlays for handled API errors
+    return Promise.reject({ 
+      isApiError: true, 
+      message: errorMessage, 
+      status: response.status 
+    });
   }
   
   return response.json() as Promise<T>;

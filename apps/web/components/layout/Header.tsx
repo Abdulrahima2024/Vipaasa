@@ -453,7 +453,7 @@ export default function Header({
                   <div className="px-4 py-3 border-b border-[#EAE6DB]/60 bg-[#FAF9F5]">
                     <p className="text-[10px] text-[#738276] font-bold uppercase tracking-wider">Signed in as</p>
                     <p className="text-xs font-bold text-[#113C27] truncate mt-0.5">
-                      {user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ""}` : user?.email}
+                      {user?.profile?.firstName ? `${user.profile.firstName} ${user.profile.lastName || ""}` : (user?.email || "Customer")}
                     </p>
                   </div>
                   <div className="py-1">

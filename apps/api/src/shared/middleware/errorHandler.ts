@@ -17,31 +17,6 @@ export class AppError extends Error {
   }
 }
 
-const handlePrismaError = (err: any) => {
-  if (err.code === "P2002") {
-    const fields = err.meta?.target || "fields";
-    return new AppError(`Duplicate field value for ${fields}. Please use another value!`, 400);
-  }
-  if (err.code === "P2025") {
-    return new AppError(err.meta?.cause || "Record not found", 404);
-  }
-  return new AppError(`Database error: ${err.message}`, 400);
-};
-
-const handleZodError = (err: ZodError) => {
-  const errors = err.issues.map((e: ZodIssue) => ({
-    field: e.path.join("."),
-    message: e.message,
-  }));
-  const message = `Validation failed: ${err.issues.map((e: ZodIssue) => `${e.path.join(".")}: ${e.message}`).join(", ")}`;
-  const error = new AppError(message, 400);
-  (error as any).errors = errors;
-  return error;
-};
-
-const handleJWTError = () => new AppError("Invalid token. Please log in again!", 401);
-const handleJWTExpiredError = () => new AppError("Your token has expired! Please log in again.", 401);
-
 const sendErrorDev = (err: any, res: Response) => {
   res.status(err.statusCode || 500).json({
     status: err.status || "error",
@@ -73,28 +48,41 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
+  // Normalize Prisma/database errors before env-specific formatting
+  if (err.name === "PrismaClientKnownRequestError" || err.code?.startsWith("P")) {
+    if (err.code === "P2002") {
+      const fields = err.meta?.target || "fields";
+      err.statusCode = 400;
+      err.message = `Duplicate field value for ${fields}. Please use another value!`;
+    } else if (err.code === "P2025") {
+      err.statusCode = 404;
+      err.message = err.meta?.cause || "Record not found";
+    } else {
+      err.statusCode = err.statusCode || 400;
+      err.message = `Database error: ${err.message}`;
+    }
+  } else if (err instanceof ZodError) {
+    const errors = err.issues.map((e: ZodIssue) => ({
+      field: e.path.join("."),
+      message: e.message,
+    }));
+    err.statusCode = 400;
+    err.message = `Validation failed: ${err.issues.map((e: ZodIssue) => `${e.path.join(".")}: ${e.message}`).join(", ")}`;
+    (err as any).errors = errors;
+  } else if (err.name === "JsonWebTokenError") {
+    err.statusCode = 401;
+    err.message = "Invalid token. Please log in again!";
+  } else if (err.name === "TokenExpiredError") {
+    err.statusCode = 401;
+    err.message = "Your token has expired! Please log in again.";
+  }
+
   err.statusCode = err.statusCode || 500;
-  err.status = err.status || "error";
+  err.status = `${err.statusCode}`.startsWith("4") ? "fail" : "error";
 
   if (process.env.NODE_ENV === "development") {
     sendErrorDev(err, res);
   } else {
-    let error = { ...err };
-    error.message = err.message;
-    error.stack = err.stack;
-    error.name = err.name;
-    error.code = err.code;
-
-    if (err instanceof ZodError) {
-      error = handleZodError(err);
-    } else if (error.name === "PrismaClientKnownRequestError" || error.code?.startsWith("P")) {
-      error = handlePrismaError(err);
-    } else if (error.name === "JsonWebTokenError") {
-      error = handleJWTError();
-    } else if (error.name === "TokenExpiredError") {
-      error = handleJWTExpiredError();
-    }
-
-    sendErrorProd(error, res);
+    sendErrorProd(err, res);
   }
 };

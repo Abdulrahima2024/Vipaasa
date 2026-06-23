@@ -167,8 +167,8 @@ export default function FavoritesPage() {
               <ProductCard
                 key={product.id}
                 product={product}
-                onAddToCart={(weight) => addToCart(product, weight)}
-                onBuyNow={(weight) => handleBuyNow(product, weight)}
+                onAddToCart={() => addToCart(product, product.weight)}
+                onBuyNow={() => handleBuyNow(product, product.weight)}
                 isFavorite={favorites.includes(product.id)}
                 onToggleFavorite={() => toggleFavorite(product.id)}
                 isAnimatingFavorite={animatingProductId === product.id}

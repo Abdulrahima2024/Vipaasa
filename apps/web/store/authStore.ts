@@ -85,7 +85,7 @@ export const useAuthStore = create<AuthState>()(
 
           return true;
         } catch (err) {
-          console.error("AuthStore login error:", err);
+          console.warn("AuthStore login error:", err);
           set({
             error: "Cannot connect to the authentication server.",
             isLoading: false,
@@ -127,7 +127,7 @@ export const useAuthStore = create<AuthState>()(
 
           return true;
         } catch (err) {
-          console.error("AuthStore register error:", err);
+          console.warn("AuthStore register error:", err);
           set({
             error: "Cannot connect to the authentication server.",
             isLoading: false,
@@ -169,7 +169,7 @@ export const useAuthStore = create<AuthState>()(
 
           return true;
         } catch (err) {
-          console.error("AuthStore Google login error:", err);
+          console.warn("AuthStore Google login error:", err);
           set({
             error: "Cannot connect to the authentication server.",
             isLoading: false,
@@ -205,7 +205,7 @@ export const useAuthStore = create<AuthState>()(
           });
           return true;
         } catch (err) {
-          console.error("AuthStore refresh token error:", err);
+          console.warn("AuthStore refresh token error:", err);
           return false;
         }
       },

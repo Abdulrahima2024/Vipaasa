@@ -12,7 +12,7 @@ async function getCachedProducts(): Promise<any[]> {
     cachedProducts = productsData?.items || [];
     return cachedProducts || [];
   } catch (e) {
-    console.error("Failed to fetch products for cart caching:", e);
+    console.warn("Failed to fetch products for cart caching:", e);
     return [];
   }
 }
@@ -93,7 +93,7 @@ export const useCartStore = create<CartStore>()(
               set({ items: mapBackendCartToFrontend(data) });
             }
           } catch (e) {
-            console.error("Error fetching cart from backend", e);
+            console.warn("Error fetching cart from backend", e);
           }
         }
       },
@@ -133,7 +133,7 @@ export const useCartStore = create<CartStore>()(
                 });
                 console.info(`[mergeGuestCart] Retried ${gItem.name} with quantity 1 due to stock limit.`);
               } catch (retryErr: any) {
-                console.error(`[mergeGuestCart] Retry also failed for ${gItem.name}:`, retryErr.message);
+                console.warn(`[mergeGuestCart] Retry also failed for ${gItem.name}:`, retryErr.message);
               }
             }
           }
@@ -168,7 +168,7 @@ export const useCartStore = create<CartStore>()(
                 grams = resolvedGrams;
               }
             } catch (e) {
-              console.error("Failed to fetch product details to retrieve variant ID:", e);
+              console.warn("Failed to fetch product details to retrieve variant ID:", e);
             }
           }
 
@@ -219,10 +219,12 @@ export const useCartStore = create<CartStore>()(
               console.log("[useCartStore] Client-side mapped cart items for rendering:", mapped);
               set({ items: mapped });
             } catch (e: any) {
-              console.error("Error adding item to backend cart:", e);
+              console.warn("Error adding item to backend cart:", e);
               // Rollback to previous items state on error
               set({ items: previousItems });
-              // Alert removed to prevent ugly popups on token expiry
+              if (e?.message && !e.message.includes("token")) {
+                alert(e.message);
+              }
             }
           } else {
             console.warn("[useCartStore] Failed to add to cart: Could not resolve a product variant ID in the database for weight:", weight, "on product:", product);
@@ -286,10 +288,18 @@ export const useCartStore = create<CartStore>()(
               body: JSON.stringify({ quantity: newQty }),
             });
             set({ items: mapBackendCartToFrontend(res) });
-          } catch (e) {
-            console.error("Error updating quantity in backend cart:", e);
-            // Rollback to exact previous items state on error
-            set({ items: previousItems });
+          } catch (e: any) {
+            console.warn("Error updating quantity in backend cart:", e?.message || e);
+            if (e?.status === 404 || e?.status === 403) {
+              // Sync with backend if the item doesn't exist or isn't ours
+              await state.fetchCart();
+            } else {
+              // Rollback to exact previous items state on other errors
+              set({ items: previousItems });
+              if (e?.message && !e.message.includes("token")) {
+                alert(e.message);
+              }
+            }
           }
         } else {
           set((state) => ({
@@ -318,10 +328,15 @@ export const useCartStore = create<CartStore>()(
               method: "DELETE",
             });
             set({ items: mapBackendCartToFrontend(res) });
-          } catch (e) {
-            console.error("Error removing item from backend cart:", e);
-            // Rollback to exact previous items state on error
-            set({ items: previousItems });
+          } catch (e: any) {
+            console.warn("Error removing item from backend cart:", e?.message || e);
+            if (e?.status === 404 || e?.status === 403) {
+              // Sync with backend if the item doesn't exist or isn't ours
+              await state.fetchCart();
+            } else {
+              // Rollback to exact previous items state on other errors
+              set({ items: previousItems });
+            }
           }
         } else {
           set((state) => ({
@@ -338,8 +353,8 @@ export const useCartStore = create<CartStore>()(
           const user = useAuthStore.getState().user;
           if (user) {
             // Remove item from backend cart directly
-            fetchApi<any>(`/api/cart/items/${id}`, { method: "DELETE" }).catch((e) =>
-              console.error("Error deleting cart item for saveForLater:", e)
+            fetchApi<any>(`/api/cart/items/${id}`, { method: "DELETE" }).catch((e: any) =>
+              console.warn("Error deleting cart item for saveForLater:", e?.message || e)
             );
           }
 
@@ -364,7 +379,7 @@ export const useCartStore = create<CartStore>()(
               .then((res) => {
                 set({ items: mapBackendCartToFrontend(res) });
               })
-              .catch((e) => console.error("Error moving item to cart:", e));
+              .catch((e: any) => console.warn("Error moving item to cart:", e?.message || e));
           }
 
           return {
@@ -407,7 +422,7 @@ export const useCartStore = create<CartStore>()(
             });
             set({ items: [] });
           } catch (e) {
-            console.error("Error clearing backend cart:", e);
+            console.warn("Error clearing backend cart:", e);
           }
         } else {
           set({ items: [] });
@@ -440,7 +455,7 @@ export const useCartStore = create<CartStore>()(
                 const parsed = JSON.parse(savedCart);
                 state.savedItems = parsed.savedItems || [];
               } catch (e) {
-                console.error("Error parsing saved cart during rehydration", e);
+                console.warn("Error parsing saved cart during rehydration", e);
               }
             } else {
               state.savedItems = [];

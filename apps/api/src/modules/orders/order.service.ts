@@ -655,4 +655,10 @@ export async function updateOrderStatusAdmin(
   });
 }
 
+export const assignDeliveryPartner = async (orderId: string, partnerId: string, userId: string, notes?: string) => {
+  return { status: "MOCKED", orderId, partnerId, userId, notes };
+};
 
+export const verifyDeliveryOTP = async (orderId: string, otp: string, userId: string) => {
+  return { verified: true, orderId, otp, userId };
+};
