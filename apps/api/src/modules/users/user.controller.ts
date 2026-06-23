@@ -138,11 +138,10 @@ export async function getAddresses(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const user = await userService.getUserProfile(userId);
-    const fullName = user?.profile ? `${user.profile.firstName} ${user.profile.lastName}`.trim() : "Customer User";
+    const profile = await userService.getUserAddressesAndProfile(userId);
+    const fullName = `${profile.firstName} ${profile.lastName}`.trim() || "Customer User";
 
-    const addresses = await userService.getUserAddresses(userId);
-    const mapped = addresses.map(addr => ({
+    const mapped = profile.addresses.map(addr => ({
       id: addr.id,
       type: addr.addressType === "HOME" ? "Home" : addr.addressType === "WORK" ? "Work" : "Other",
       name: fullName,

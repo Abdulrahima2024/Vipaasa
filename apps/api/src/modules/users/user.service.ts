@@ -223,6 +223,36 @@ export async function getUserAddresses(userId: string) {
   });
 }
 
+export async function getUserAddressesAndProfile(userId: string) {
+  console.log(`[BACKEND] getUserAddressesAndProfile: Fetching profile & addresses for User: ${userId}`);
+  let profile = await prisma.customerProfile.findUnique({
+    where: { userId },
+    include: {
+      addresses: {
+        orderBy: { createdAt: "desc" }
+      }
+    }
+  });
+
+  if (!profile) {
+    const userObj = await prisma.user.findUnique({ where: { id: userId } });
+    profile = await prisma.customerProfile.create({
+      data: {
+        userId,
+        firstName: userObj?.email.split("@")[0] || "Customer",
+        lastName: "User",
+      },
+      include: {
+        addresses: {
+          orderBy: { createdAt: "desc" }
+        }
+      }
+    });
+  }
+
+  return profile;
+}
+
 export async function createUserAddress(
   userId: string,
   data: {

@@ -9,6 +9,7 @@ import Header from "../../../components/layout/Header";
 import Footer from "../../../components/layout/Footer";
 import { useAuthStore } from "../../../store/authStore";
 import { useCartStore } from "../../../store/useCartStore";
+import { fetchApi } from "../../../lib/api";
 
 interface Address {
   id: string;
@@ -60,6 +61,7 @@ export default function ManageAddressesPage() {
 
   const [mounted, setMounted] = useState(false);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
   
   // Modal / Form state
   const [showForm, setShowForm] = useState(false);
@@ -80,19 +82,28 @@ export default function ManageAddressesPage() {
   // Initialize
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem("vipaasa_addresses");
-    if (stored) {
-      try {
-        setAddresses(JSON.parse(stored));
-      } catch (e) {
-        console.error("Failed to parse addresses", e);
-        setAddresses(DEFAULT_MOCK_ADDRESSES);
-      }
-    } else {
-      setAddresses(DEFAULT_MOCK_ADDRESSES);
-      localStorage.setItem("vipaasa_addresses", JSON.stringify(DEFAULT_MOCK_ADDRESSES));
-    }
   }, []);
+
+  // Fetch addresses from backend database
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      setIsLoadingAddresses(true);
+      fetchApi<{ status: string; data: Address[] }>("/api/users/addresses")
+        .then((res) => {
+          if (res && res.data) {
+            setAddresses(res.data);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch addresses from backend", err);
+        })
+        .finally(() => {
+          setIsLoadingAddresses(false);
+        });
+    } else if (mounted && !isAuthenticated) {
+      setIsLoadingAddresses(false);
+    }
+  }, [mounted, isAuthenticated]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -100,12 +111,6 @@ export default function ManageAddressesPage() {
       router.push("/login?redirect=/account/addresses");
     }
   }, [mounted, isAuthenticated, router]);
-
-  // Persist changes
-  const saveToLocalStorage = (newAddresses: Address[]) => {
-    setAddresses(newAddresses);
-    localStorage.setItem("vipaasa_addresses", JSON.stringify(newAddresses));
-  };
 
   const resetForm = () => {
     setType("Home");
@@ -137,84 +142,117 @@ export default function ManageAddressesPage() {
     setShowForm(true);
   };
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = async (id: string) => {
     if (confirm("Are you sure you want to delete this address?")) {
-      const updated = addresses.filter((a) => a.id !== id);
-      // If we deleted the default address and there are other addresses, make the first one default
-      if (addresses.find((a) => a.id === id)?.isDefault && updated.length > 0) {
-        updated[0].isDefault = true;
+      try {
+        await fetchApi(`/api/users/addresses/${id}`, {
+          method: "DELETE",
+        });
+        const updated = addresses.filter((a) => a.id !== id);
+        // If we deleted the default address and there are other addresses, make the first one default
+        if (addresses.find((a) => a.id === id)?.isDefault && updated.length > 0) {
+          updated[0].isDefault = true;
+          await fetchApi(`/api/users/addresses/${updated[0].id}`, {
+            method: "PUT",
+            body: JSON.stringify({ isDefault: true }),
+          });
+        }
+        setAddresses(updated);
+      } catch (err) {
+        console.error("Failed to delete address", err);
+        alert("Failed to delete address.");
       }
-      saveToLocalStorage(updated);
     }
   };
 
-  const handleSetDefault = (id: string) => {
-    const updated = addresses.map((a) => ({
-      ...a,
-      isDefault: a.id === id,
-    }));
-    saveToLocalStorage(updated);
+  const handleSetDefault = async (id: string) => {
+    try {
+      const res = await fetchApi<{ status: string; data: Address }>(`/api/users/addresses/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ isDefault: true }),
+      });
+      if (res && res.data) {
+        setAddresses((prev) =>
+          prev.map((a) => ({
+            ...a,
+            isDefault: a.id === id,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to set default address", err);
+      alert("Failed to set default address.");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !addressLine1 || !city || !state || !postalCode || !phone) {
       alert("Please fill in all required fields.");
       return;
     }
 
-    let updatedList: Address[];
+    try {
+      if (editingAddress) {
+        const res = await fetchApi<{ status: string; data: Address }>(`/api/users/addresses/${editingAddress.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            addressType: type === "Home" ? "HOME" : type === "Work" ? "WORK" : "SHIPPING",
+            addressLine1,
+            addressLine2: addressLine2 || null,
+            city,
+            state,
+            postalCode,
+            country,
+            phone,
+            isDefault,
+          }),
+        });
 
-    if (editingAddress) {
-      const updatedItem: Address = {
-        ...editingAddress,
-        type,
-        name,
-        addressLine1,
-        addressLine2: addressLine2 || undefined,
-        city,
-        state,
-        postalCode,
-        country,
-        phone,
-        isDefault: isDefault || editingAddress.isDefault, // Keep default if it was default
-      };
-
-      updatedList = addresses.map((a) => (a.id === editingAddress.id ? updatedItem : a));
-      
-      // If this address is set to default, unset others
-      if (isDefault && !editingAddress.isDefault) {
-        updatedList = updatedList.map((a) => ({
-          ...a,
-          isDefault: a.id === editingAddress.id,
-        }));
-      }
-    } else {
-      const newId = `addr-${Date.now()}`;
-      const newAddr: Address = {
-        id: newId,
-        type,
-        name,
-        addressLine1,
-        addressLine2: addressLine2 || undefined,
-        city,
-        state,
-        postalCode,
-        country,
-        phone,
-        isDefault: isDefault || addresses.length === 0, // Make default if it's the first one
-      };
-
-      if (isDefault || addresses.length === 0) {
-        updatedList = addresses.map((a) => ({ ...a, isDefault: false }));
-        updatedList.push(newAddr);
+        if (res && res.data) {
+          setAddresses((prev) => {
+            let updated = prev.map((a) => (a.id === editingAddress.id ? res.data : a));
+            if (isDefault) {
+              updated = updated.map((a) => ({
+                ...a,
+                isDefault: a.id === editingAddress.id,
+              }));
+            }
+            return updated;
+          });
+        }
       } else {
-        updatedList = [...addresses, newAddr];
-      }
-    }
+        const res = await fetchApi<{ status: string; data: Address }>("/api/users/addresses", {
+          method: "POST",
+          body: JSON.stringify({
+            addressType: type === "Home" ? "HOME" : type === "Work" ? "WORK" : "SHIPPING",
+            addressLine1,
+            addressLine2: addressLine2 || null,
+            city,
+            state,
+            postalCode,
+            country,
+            phone,
+            isDefault,
+          }),
+        });
 
-    saveToLocalStorage(updatedList);
-    resetForm();
+        if (res && res.data) {
+          setAddresses((prev) => {
+            let updated = [...prev];
+            if (res.data.isDefault) {
+              updated = updated.map((a) => ({ ...a, isDefault: false }));
+            }
+            updated.push(res.data);
+            return updated;
+          });
+        }
+      }
+      resetForm();
+    } catch (err) {
+      console.error("Failed to save address", err);
+      alert("Failed to save address.");
+    }
   };
 
   if (!mounted || !user) {
@@ -283,11 +321,17 @@ export default function ManageAddressesPage() {
 
         {/* Addresses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {addresses.map((addr) => (
-            <div
-              key={addr.id}
-              className="bg-white rounded-2xl border border-[#EAE6DB]/60 p-6 flex flex-col justify-between relative shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.05)] hover:border-[#738276]/30 transition-all duration-300 group min-h-[260px]"
-            >
+          {isLoadingAddresses ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3 bg-white/60 border border-[#EAE6DB]/60 rounded-3xl shadow-sm">
+              <Loader2 className="w-10 h-10 text-[#0F5132] animate-spin" />
+              <span className="text-sm font-semibold text-[#5C6E61]">Fetching saved addresses...</span>
+            </div>
+          ) : (
+            addresses.map((addr) => (
+              <div
+                key={addr.id}
+                className="bg-white rounded-2xl border border-[#EAE6DB]/60 p-6 flex flex-col justify-between relative shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.05)] hover:border-[#738276]/30 transition-all duration-300 group min-h-[260px]"
+              >
               <div>
                 {/* Header Row: Badge */}
                 <div className="flex items-center justify-between mb-4">
@@ -355,7 +399,8 @@ export default function ManageAddressesPage() {
                 </div>
               </div>
             </div>
-          ))}
+          ))
+        )}
 
           {/* Add New Delivery Point Card */}
           <div
