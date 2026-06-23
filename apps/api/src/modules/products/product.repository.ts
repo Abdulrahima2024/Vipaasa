@@ -148,8 +148,27 @@ export async function findProducts(filter: ProductFilter) {
  * Find detailed product by ID (must be active and non-deleted)
  */
 export async function findProductById(id: string, includeInactive: boolean = false) {
+  let targetProductId = id;
+
+  // Check if target matches a product directly
+  const exists = await prisma.product.findFirst({
+    where: { id, isDeleted: false },
+    select: { id: true }
+  });
+
+  if (!exists) {
+    // Check if ID is a variant ID instead
+    const variant = await prisma.productVariant.findUnique({
+      where: { id },
+      select: { productId: true }
+    });
+    if (variant) {
+      targetProductId = variant.productId;
+    }
+  }
+
   const where: Prisma.ProductWhereInput = {
-    id,
+    id: targetProductId,
     isDeleted: false,
   };
 

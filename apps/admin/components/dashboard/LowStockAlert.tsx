@@ -16,7 +16,9 @@ interface LowStockAlertProps {
   loading?: boolean;
 }
 
-export default function LowStockAlert({ items = [], loading }: LowStockAlertProps) {
+const DEFAULT_ITEMS: LowStockItem[] = [];
+
+export default function LowStockAlert({ items = DEFAULT_ITEMS, loading }: LowStockAlertProps) {
   const [localItems, setLocalItems] = useState<LowStockItem[]>([]);
 
   useEffect(() => {

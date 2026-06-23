@@ -161,6 +161,38 @@ export const useCartStore = create<CartStore>()(
           console.log("[useCartStore] Resolved variantId for backend cart:", variantId);
 
           if (variantId) {
+            // Optimistically update frontend state immediately
+            const previousItems = useCartStore.getState().items;
+            const cartItemId = variantId;
+            const existingItem = previousItems.find((item) => item.productId === variantId || item.id === variantId);
+
+            let optimisticItems: CartItem[];
+            if (existingItem) {
+              optimisticItems = previousItems.map((item) =>
+                item.productId === variantId || item.id === variantId
+                  ? { ...item, quantity: item.quantity + quantityToAdd }
+                  : item
+              );
+            } else {
+              const price = product.prices[weight] || 0;
+              const newItem: CartItem = {
+                id: cartItemId, // Temporary id matching variantId
+                productId: variantId,
+                variantId: variantId,
+                name: product.name,
+                description: product.category || "General",
+                spec: `${weight} • Pure Organic`,
+                price: price,
+                quantity: quantityToAdd,
+                image: product.image || "/placeholder.jpg",
+                weight: weight,
+                saved: false,
+              };
+              optimisticItems = [...previousItems, newItem];
+            }
+
+            set({ items: optimisticItems });
+
             try {
               console.log("[useCartStore] Making POST /api/cart/items request to add item:", { variantId, quantity: quantityToAdd });
               const res = await fetchApi<any>("/api/cart/items", {
@@ -174,6 +206,8 @@ export const useCartStore = create<CartStore>()(
               set({ items: mapped });
             } catch (e: any) {
               console.error("Error adding item to backend cart:", e);
+              // Rollback to previous items state on error
+              set({ items: previousItems });
               alert(e.message || "Failed to add item to cart. It might be out of stock.");
             }
           } else {

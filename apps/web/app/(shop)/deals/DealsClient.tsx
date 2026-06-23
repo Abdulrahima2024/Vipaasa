@@ -131,8 +131,7 @@ export default function DealsClient() {
 
     const findProductByName = (name: string) => {
       return apiProducts.find(p => p.name?.toLowerCase() === name.toLowerCase()) || 
-             apiProducts.find(p => p.name?.toLowerCase().includes(name.toLowerCase())) || 
-             apiProducts[0];
+             apiProducts.find(p => p.name?.toLowerCase().includes(name.toLowerCase()));
     };
 
     // 1. Flash Sales
