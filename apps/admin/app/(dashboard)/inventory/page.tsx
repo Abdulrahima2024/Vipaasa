@@ -275,21 +275,21 @@ export default function InventoryPage() {
           <p className="text-xs text-gray-500 mt-0.5">Product Master configurations and stock allocation metrics</p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-600">
+        <div className="w-full">
+          <table className="w-full text-left text-sm text-gray-600 table-auto">
             <thead className="bg-gray-50/50 text-xs uppercase text-gray-500 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4 font-bold">Product Name</th>
-                <th className="px-6 py-4 font-bold">SKU</th>
-                <th className="px-6 py-4 font-bold">Category</th>
-                <th className="px-6 py-4 font-bold text-center">Unit</th>
-                <th className="px-6 py-4 font-bold text-right">Costs & Prices</th>
-                <th className="px-6 py-4 font-bold text-center">Warehouse Stock</th>
-                <th className="px-6 py-4 font-bold text-center">Store Stock</th>
-                <th className="px-6 py-4 font-bold text-center">Reserved</th>
-                <th className="px-6 py-4 font-bold text-center">Available Sellable</th>
-                <th className="px-6 py-4 font-bold text-center">Stock Alert</th>
-                <th className="px-6 py-4 font-bold text-right">Actions</th>
+                <th className="px-3 py-3 font-bold">Product Name</th>
+                <th className="px-3 py-3 font-bold">SKU</th>
+                <th className="px-3 py-3 font-bold">Category</th>
+                <th className="px-3 py-3 font-bold text-center">Unit</th>
+                <th className="px-3 py-3 font-bold text-right">Costs & Prices</th>
+                <th className="px-3 py-3 font-bold text-center">Warehouse Stock</th>
+                <th className="px-3 py-3 font-bold text-center">Store Stock</th>
+                <th className="px-3 py-3 font-bold text-center">Reserved</th>
+                <th className="px-3 py-3 font-bold text-center">Available Sellable</th>
+                <th className="px-3 py-3 font-bold text-center">Stock Alert</th>
+                <th className="px-3 py-3 font-bold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
@@ -300,42 +300,42 @@ export default function InventoryPage() {
 
                 return (
                   <tr key={item.id} className="hover:bg-gray-50/30 transition-colors">
-                    <td className="px-6 py-4 font-bold text-gray-900">{item.name}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-gray-500">{item.sku}</td>
-                    <td className="px-6 py-4">
-                      <span className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-[11px] font-bold text-gray-600">
+                    <td className="px-3 py-3 font-bold text-gray-900 leading-tight min-w-[150px]">{item.name}</td>
+                    <td className="px-3 py-3 font-mono text-xs text-gray-500 min-w-[100px] break-all">{item.sku}</td>
+                    <td className="px-3 py-3">
+                      <span className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-[11px] font-bold text-gray-600 whitespace-nowrap">
                         {item.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center text-xs uppercase font-bold text-gray-500">{item.unitType}</td>
-                    <td className="px-6 py-4 text-right text-xs">
+                    <td className="px-3 py-3 text-center text-xs uppercase font-bold text-gray-500">{item.unitType}</td>
+                    <td className="px-3 py-3 text-right text-xs whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-gray-400">Cost: <span className="text-gray-800 font-bold">₹{item.purchaseCost}</span></span>
                         <span className="text-gray-400">Sell: <span className="text-gray-900 font-bold">₹{item.sellingPrice}</span></span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center font-semibold text-gray-900">{item.warehouseStock}</td>
-                    <td className="px-6 py-4 text-center font-semibold text-gray-900">{item.storeStock}</td>
-                    <td className="px-6 py-4 text-center font-semibold text-amber-600">{item.reservedStock}</td>
-                    <td className="px-6 py-4 text-center font-bold text-gray-900">
+                    <td className="px-3 py-3 text-center font-semibold text-gray-900">{item.warehouseStock}</td>
+                    <td className="px-3 py-3 text-center font-semibold text-gray-900">{item.storeStock}</td>
+                    <td className="px-3 py-3 text-center font-semibold text-amber-600">{item.reservedStock}</td>
+                    <td className="px-3 py-3 text-center font-bold text-gray-900">
                       <span className={isLow ? "text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded" : "text-emerald-700"}>
                         {available}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-3 py-3 text-center">
                       {isLow ? (
-                        <span className="inline-flex items-center gap-1 bg-red-50 border border-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 bg-red-50 border border-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
                           <AlertTriangle className="w-3 h-3 text-red-500" />
                           Low Stock
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-xs font-semibold">Healthy</span>
+                        <span className="text-gray-400 text-xs font-semibold whitespace-nowrap">Healthy</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-3 py-3 text-right">
                       <button
                         onClick={() => handleOpenAdjust(item)}
-                        className="bg-gray-100 hover:bg-[var(--primary-green)] hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95"
+                        className="bg-gray-100 hover:bg-[var(--primary-green)] hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 whitespace-nowrap"
                       >
                         Adjust Stock
                       </button>
@@ -345,142 +345,6 @@ export default function InventoryPage() {
               })}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Auto Inventory Rules & Simulation Panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-        {/* Rules panel */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Settings2 className="w-5 h-5 text-[var(--primary-green)]" />
-              <h2 className="text-lg font-bold text-gray-900 tracking-tight">Auto Inventory Rules</h2>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">Manage how transactions automatically affect system stock.</p>
-          </div>
-
-          <div className="space-y-4 py-2">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="block text-sm font-bold text-gray-800">Reduce Stock on Online Order</span>
-                <span className="block text-xs text-gray-400">Deducts sellable stock immediately on order checkout placement</span>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={ruleOnlineOrder}
-                  onChange={(e) => setRuleOnlineOrder(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary-green)]"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="block text-sm font-bold text-gray-800">Reduce Stock on Store Sale</span>
-                <span className="block text-xs text-gray-400">Deducts active shelf stock on barcode registers scan</span>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={ruleStoreSale}
-                  onChange={(e) => setRuleStoreSale(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary-green)]"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="block text-sm font-bold text-gray-800">Increase Stock on Cancellation</span>
-                <span className="block text-xs text-gray-400">Releases allocated reservation and increments sellable levels</span>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={ruleCancellation}
-                  onChange={(e) => setRuleCancellation(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary-green)]"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="block text-sm font-bold text-gray-800">Increase Stock on Return</span>
-                <span className="block text-xs text-gray-400">Increments warehouse stock upon return authorization receipt</span>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={ruleReturn}
-                  onChange={(e) => setRuleReturn(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary-green)]"></div>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Simulator console */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Sliders className="w-5 h-5 text-teal-600" />
-              <h2 className="text-lg font-bold text-gray-900 tracking-tight">Auto Rules Simulator</h2>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">Trigger transaction simulation scripts to test active rules.</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 my-2">
-            <button
-              onClick={simulateOnlineOrder}
-              className="bg-gray-50 border border-gray-150 hover:bg-emerald-50 hover:border-emerald-200 text-gray-800 hover:text-emerald-800 p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 transition-all group cursor-pointer active:scale-95"
-            >
-              <span className="text-xs font-bold">Online Order Checkout</span>
-              <span className="text-[10px] text-gray-400 group-hover:text-emerald-600 font-semibold uppercase">Trigger Rule</span>
-            </button>
-
-            <button
-              onClick={simulateStoreSale}
-              className="bg-gray-50 border border-gray-150 hover:bg-teal-50 hover:border-teal-200 text-gray-800 hover:text-teal-800 p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 transition-all group cursor-pointer active:scale-95"
-            >
-              <span className="text-xs font-bold">Direct Store Sale</span>
-              <span className="text-[10px] text-gray-400 group-hover:text-teal-600 font-semibold uppercase">Trigger Rule</span>
-            </button>
-
-            <button
-              onClick={simulateCancellation}
-              className="bg-gray-50 border border-gray-150 hover:bg-amber-50 hover:border-amber-200 text-gray-800 hover:text-amber-800 p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 transition-all group cursor-pointer active:scale-95"
-            >
-              <span className="text-xs font-bold">Order Cancelled</span>
-              <span className="text-[10px] text-gray-400 group-hover:text-amber-600 font-semibold uppercase">Trigger Rule</span>
-            </button>
-
-            <button
-              onClick={simulateReturn}
-              className="bg-gray-50 border border-gray-150 hover:bg-purple-50 hover:border-purple-200 text-gray-800 hover:text-purple-800 p-3 rounded-xl flex flex-col items-center justify-center text-center gap-1 transition-all group cursor-pointer active:scale-95"
-            >
-              <span className="text-xs font-bold">Return Processed</span>
-              <span className="text-[10px] text-gray-400 group-hover:text-purple-600 font-semibold uppercase">Trigger Rule</span>
-            </button>
-          </div>
-
-          <div className="bg-[#FAF8F5] border border-[#EAE6DB]/60 p-4 rounded-xl mt-4">
-            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Simulation Log Feed</span>
-            <div className="text-xs font-mono text-gray-700 leading-relaxed min-h-[44px]">
-              {simFeedback ? (
-                <span className="text-emerald-700 font-semibold">{simFeedback}</span>
-              ) : (
-                <span className="text-gray-400 italic">No events triggered. Click a trigger script to test.</span>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 

@@ -33,6 +33,7 @@ export async function fetchAPI<T = any>(endpoint: string, options: RequestOption
   const response = await fetch(url, {
     ...options,
     headers,
+    cache: "no-store",
   });
 
   if (!response.ok) {

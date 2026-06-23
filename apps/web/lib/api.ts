@@ -21,6 +21,7 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
+    cache: "no-store",
   });
   
   if (!response.ok) {
@@ -35,6 +36,7 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
           const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
             ...options,
             headers,
+            cache: "no-store",
           });
           if (retryResponse.ok) {
             return retryResponse.json() as Promise<T>;

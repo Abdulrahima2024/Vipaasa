@@ -70,10 +70,18 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
 
   // Search, Filter & Pagination state
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   // Add/Edit Product Modal State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -119,7 +127,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
 
   useEffect(() => {
     loadProducts();
-  }, [currentPage, selectedCategoryFilter, searchQuery]);
+  }, [currentPage, selectedCategoryFilter, debouncedSearchQuery]);
 
   const getProductImageUrl = (img: any) => {
     if (!img) return "";
@@ -164,9 +172,9 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
       }
 
       let data;
-      if (searchQuery.trim() !== "") {
+      if (debouncedSearchQuery.trim() !== "") {
         data = await fetchAPI("/api/products/search", {
-          params: { q: searchQuery, page: currentPage, limit: 10 }
+          params: { q: debouncedSearchQuery, page: currentPage, limit: 10 }
         });
       } else {
         data = await fetchAPI("/api/products", { params });
@@ -393,7 +401,12 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
           </div>
 
           <button
-            onClick={loadProducts}
+            onClick={() => {
+              setSearchQuery("");
+              setDebouncedSearchQuery("");
+              setSelectedCategoryFilter("All");
+              setCurrentPage(1);
+            }}
             className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-all"
             title="Refresh list"
           >
@@ -429,12 +442,6 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-gray-50/50 text-xs uppercase text-gray-500 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4 w-12">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300 text-[var(--primary-green)] focus:ring-[var(--primary-green)] cursor-pointer"
-                  />
-                </th>
                 <th className="px-6 py-4 font-bold">Product Details</th>
                 <th className="px-6 py-4 font-bold">Category</th>
                 <th className="px-6 py-4 font-bold">Pricing (1kg / 500g / 250g)</th>
@@ -461,12 +468,6 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
 
                 return (
                   <tr key={product.id} className="hover:bg-gray-50/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-[var(--primary-green)] focus:ring-[var(--primary-green)] cursor-pointer"
-                      />
-                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden text-lg bg-gray-50 shadow-sm border border-gray-100">

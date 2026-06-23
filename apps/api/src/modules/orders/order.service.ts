@@ -472,6 +472,7 @@ export async function cancelOrder(userId: string, orderId: string) {
  */
 export async function getAdminOrders() {
   return prisma.order.findMany({
+    take: 100,
     orderBy: { createdAt: "desc" },
     include: {
       user: {
@@ -492,6 +493,29 @@ export async function getAdminOrders() {
       payments: true,
     },
   });
+}
+
+/**
+ * Retrieves aggregate statistics for all valid orders.
+ */
+export async function getAdminOrderStats() {
+  const result = await prisma.order.aggregate({
+    _sum: { totalPayable: true },
+    _count: { id: true },
+    where: {
+      status: {
+        notIn: ["CANCELLED", "RETURNED"]
+      },
+      paymentStatus: {
+        notIn: ["REFUNDED"]
+      }
+    }
+  });
+
+  return {
+    totalRevenue: result._sum.totalPayable || 0,
+    totalOrders: result._count.id || 0,
+  };
 }
 
 /**

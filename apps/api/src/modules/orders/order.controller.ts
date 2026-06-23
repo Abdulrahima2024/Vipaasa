@@ -158,6 +158,22 @@ export async function getAdminOrders(req: AuthenticatedRequest, res: Response, n
 }
 
 /**
+ * Handles fetching order statistics for admin dashboard.
+ * GET /admin/orders/stats
+ */
+export async function getAdminOrderStats(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const stats = await orderService.getAdminOrderStats();
+    return res.status(200).json({
+      status: "success",
+      data: stats,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Handles updating an order status by admin.
  * PATCH /admin/orders/:id/status
  */

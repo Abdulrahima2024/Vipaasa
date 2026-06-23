@@ -13,7 +13,9 @@ import {
   Ban,
   RotateCcw,
   CircleDollarSign,
-  Truck
+  Truck,
+  TrendingUp,
+  ShoppingBag
 } from "lucide-react";
 import { OrderDetailsModal, Order } from "../../../components/OrderDetailsModal";
 import AssignDeliveryModal from "../../../components/orders/AssignDeliveryModal";
@@ -23,6 +25,10 @@ import AssignDeliveryModal from "../../../components/orders/AssignDeliveryModal"
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Stats state
+  const [orderStats, setOrderStats] = useState<{ totalRevenue: number; totalOrders: number } | null>(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,6 +97,16 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchOrders();
+    // Fetch order stats
+    setIsStatsLoading(true);
+    fetchAPI("/api/admin/orders/stats")
+      .then((res: any) => {
+        if (res && res.data) {
+          setOrderStats(res.data);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch order stats:", err))
+      .finally(() => setIsStatsLoading(false));
   }, []);
 
   // Selected Order Detail View State
@@ -119,13 +135,95 @@ export default function OrdersPage() {
   };
 
   const handleSimulateInvoiceDownload = (order: Order) => {
-    alert(`Downloading Invoice_${order.orderNumber}.pdf\nReceipt Total: ₹${order.total}\nCustomer: ${order.customerName}`);
+    const invoiceHtml = `
+      <html>
+        <head>
+          <title>Invoice - ${order.orderNumber}</title>
+          <style>
+            body { font-family: system-ui, sans-serif; padding: 40px; color: #333; }
+            .header { border-bottom: 2px solid #22c55e; padding-bottom: 20px; margin-bottom: 30px; }
+            .title { font-size: 24px; font-weight: bold; margin: 0; }
+            .details { margin-bottom: 30px; display: flex; justify-content: space-between; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+            th { background-color: #f8fafc; font-weight: 600; }
+            .total { font-size: 18px; font-weight: bold; text-align: right; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 class="title">INVOICE</h1>
+            <p>Vipaasa Organics</p>
+          </div>
+          <div class="details">
+            <div>
+              <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+              <p><strong>Date:</strong> ${order.date}</p>
+              <p><strong>Status:</strong> ${order.status}</p>
+            </div>
+            <div>
+              <p><strong>Bill To:</strong></p>
+              <p>${order.customerName}<br>${order.shippingAddress}</p>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Weight</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td>${item.weight}</td>
+                  <td>${item.qty}</td>
+                  <td>₹${item.price}</td>
+                  <td>₹${item.price * item.qty}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+          <div class="total">
+            <p>Grand Total: ₹${order.total}</p>
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(invoiceHtml);
+      printWindow.document.close();
+    } else {
+      alert("Please allow popups to download the invoice.");
+    }
   };
 
   // Filter calculations
   const filteredOrders = orders.filter((o) => {
-    const matchesSearch = o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          o.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+    const orderNumStr = String(o.orderNumber || "").toLowerCase();
+    const custNameStr = String(o.customerName || "").toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+    
+    let matchesSearch = true;
+    if (query !== "") {
+      const isUUID = orderNumStr.length === 36 && orderNumStr.includes("-");
+      if (isUUID) {
+         matchesSearch = custNameStr.includes(query) || orderNumStr === query;
+      } else {
+         matchesSearch = orderNumStr.includes(query) || custNameStr.includes(query);
+      }
+    }
     const matchesStatus = selectedStatusFilter === "All" || o.status === selectedStatusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -144,6 +242,51 @@ export default function OrdersPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight font-serif">Order Management</h1>
           <p className="text-sm text-gray-500 mt-1">View status, handle returns/refunds, and manage invoices.</p>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+        {/* Total Revenue Card */}
+        <div className="relative bg-white rounded-2xl p-6 shadow-sm border border-gray-100 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/60 via-white to-white pointer-events-none" />
+          <div className="relative flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Order Revenue</p>
+              {isStatsLoading ? (
+                <div className="h-8 w-32 bg-gray-100 animate-pulse rounded-lg" />
+              ) : (
+                <p className="text-3xl font-bold text-gray-900">
+                  ₹{Number(orderStats?.totalRevenue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              )}
+              <p className="text-xs text-gray-400 mt-1.5 font-semibold">Excluding cancelled & refunded orders</p>
+            </div>
+            <div className="p-4 bg-emerald-100 rounded-2xl">
+              <TrendingUp className="w-7 h-7 text-emerald-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Total Orders Card */}
+        <div className="relative bg-white rounded-2xl p-6 shadow-sm border border-gray-100 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 via-white to-white pointer-events-none" />
+          <div className="relative flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Total Orders</p>
+              {isStatsLoading ? (
+                <div className="h-8 w-16 bg-gray-100 animate-pulse rounded-lg" />
+              ) : (
+                <p className="text-3xl font-bold text-gray-900">
+                  {(orderStats?.totalOrders || 0).toLocaleString("en-IN")}
+                </p>
+              )}
+              <p className="text-xs text-gray-400 mt-1.5 font-semibold">Showing last 100 loaded orders below</p>
+            </div>
+            <div className="p-4 bg-blue-100 rounded-2xl">
+              <ShoppingBag className="w-7 h-7 text-blue-600" />
+            </div>
+          </div>
         </div>
       </div>
 

@@ -19,7 +19,7 @@ export default function ProductsPage() {
       setLoading(true);
       const data = await fetchAPI("/api/products/stats");
       setStats({
-        total: data.totalProducts,
+        total: Math.round(data.totalProducts * (data.activePercentage / 100)),
         activePercent: `${data.activePercentage.toFixed(1)}%`,
         lowStock: data.lowStockCount,
         valuation: `₹${data.totalValuation.toLocaleString("en-IN")}`,

@@ -446,6 +446,7 @@ export async function createProduct(payload: {
 
     return product;
   }, {
+    maxWait: 15000,
     timeout: 30000
   });
 }
@@ -662,6 +663,7 @@ export async function updateProduct(id: string, payload: {
       },
     });
   }, {
+    maxWait: 15000,
     timeout: 30000
   });
 }
