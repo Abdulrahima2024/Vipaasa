@@ -217,9 +217,13 @@ export default function Header({
           {/* Brand Logo */}
           <a
             href="/"
-            className="font-serif text-2xl font-bold tracking-tight text-[#113C27] hover:opacity-90 transition-opacity"
+            className="flex items-center hover:opacity-90 transition-opacity"
           >
-            Vipaasa Organics
+            <img
+              src="/images/logo.jpg"
+              alt="Vipaasa Organics Logo"
+              className="h-16 sm:h-20 w-auto object-contain mix-blend-multiply"
+            />
           </a>
         </div>
 
