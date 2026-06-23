@@ -13,6 +13,7 @@
     "lint": "turbo run lint"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "prisma": "^5.18.0",
     "turbo": "^1.12.4"
   },

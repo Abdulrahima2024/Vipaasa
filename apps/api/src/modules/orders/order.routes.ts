@@ -8,6 +8,8 @@ import {
   cancelOrder,
   getAdminOrders,
   updateOrderStatus,
+  assignDelivery,
+  verifyDelivery,
 } from "./order.controller";
 
 const router = Router();
@@ -23,5 +25,7 @@ router.patch("/orders/:id/cancel", authenticate, cancelOrder);
 // Admin Orders management
 router.get("/admin/orders", authenticate, authorize(["SUPER_ADMIN"]), getAdminOrders);
 router.patch("/admin/orders/:id/status", authenticate, authorize(["SUPER_ADMIN"]), updateOrderStatus);
+router.post("/admin/orders/:id/assign-delivery", authenticate, authorize(["SUPER_ADMIN"]), assignDelivery);
+router.post("/admin/orders/:id/verify-delivery", authenticate, authorize(["SUPER_ADMIN"]), verifyDelivery);
 
 export default router;

@@ -32,6 +32,8 @@ export default function DealsSection() {
   const token = useAuthStore((state) => state.token);
   const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
+  const [serverDeals, setServerDeals] = useState<any[]>([]);
+
   useEffect(() => {
     if (!_hasHydrated) return;
     async function loadProducts() {
@@ -44,11 +46,57 @@ export default function DealsSection() {
         console.warn("DealsSection: Failed to fetch API products, falling back to local data.", err);
       }
     }
+    
+    async function loadActiveDeals() {
+      try {
+        const res = await fetchApi<{ data: any[] }>("/api/deals/active");
+        if (res && res.data) {
+          setServerDeals(res.data);
+        }
+      } catch (err) {
+        console.warn("DealsSection: Failed to fetch active deals.", err);
+      }
+    }
+
     loadProducts();
+    loadActiveDeals();
   }, [token, _hasHydrated]);
 
-  // Mock deals matching real products in database
   const deals = useMemo<DealItem[]>(() => {
+    if (serverDeals.length > 0 && apiProducts.length > 0) {
+      return serverDeals.map(dbDeal => {
+        // Try to match with an actual product if productIds exists
+        let product: any = null;
+        if (dbDeal.productIds && dbDeal.productIds.length > 0) {
+          product = apiProducts.find(p => p.id === dbDeal.productIds[0]);
+        }
+        
+        // If no explicit product ID match, try to match by name roughly or just fallback to first product
+        if (!product) {
+          product = apiProducts[0];
+        }
+
+        const basePrice = product.price || 500;
+        const discountPct = Number(dbDeal.discountPercentage) || 0;
+
+        return {
+          id: product.id,
+          name: dbDeal.title || product.name,
+          category: product.category?.name || "Deals",
+          image: dbDeal.imageUrl || (product.images && product.images[0]) || product.image,
+          originalPrice: basePrice,
+          dealPrice: Math.round(basePrice * (1 - discountPct / 100)),
+          weight: "1kg",
+          badge: `${discountPct}% OFF`,
+          claimedPercentage: Math.floor(Math.random() * 50) + 40, // Simulated claim
+          stars: 4.8,
+          reviewsCount: 150,
+          variants: product.variants
+        };
+      });
+    }
+
+    // Fallback static deals...
     const defaultDeals: DealItem[] = [
       {
         id: "40", // Desi Cow Ghee
@@ -91,77 +139,8 @@ export default function DealsSection() {
       },
     ];
 
-    if (apiProducts.length === 0) return defaultDeals;
-
-    const findProductByName = (name: string) => {
-      return apiProducts.find(p => p.name?.toLowerCase() === name.toLowerCase()) || 
-             apiProducts.find(p => p.name?.toLowerCase().includes(name.toLowerCase()));
-    };
-
-    const dealsList: DealItem[] = [];
-
-    // 1. Ghee
-    const gheeProduct = findProductByName("Desi Cow Ghee");
-    if (gheeProduct) {
-      const basePrice250g = gheeProduct.price || 0;
-      dealsList.push({
-        id: gheeProduct.id,
-        name: gheeProduct.name || "Desi Cow Ghee (A2 Vedic Churned)",
-        category: gheeProduct.category?.name || "Honey & Ghee",
-        image: (gheeProduct.images && gheeProduct.images[0]) || gheeProduct.image || "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=400",
-        originalPrice: Math.round(basePrice250g * 3.2),
-        dealPrice: Math.round(basePrice250g * 3.2 * 0.83), // ~17% off
-        weight: "1kg",
-        badge: "Best Seller • Save 17%",
-        claimedPercentage: 82,
-        stars: 4.9,
-        reviewsCount: 1842,
-        variants: gheeProduct.variants,
-      });
-    }
-
-    // 2. Honey
-    const honeyProduct = findProductByName("Wild Forest Honey");
-    if (honeyProduct) {
-      const basePrice250g = honeyProduct.price || 0;
-      dealsList.push({
-        id: honeyProduct.id,
-        name: honeyProduct.name || "Raw Wild Forest Honey",
-        category: honeyProduct.category?.name || "Honey & Ghee",
-        image: (honeyProduct.images && honeyProduct.images[0]) || honeyProduct.image || "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
-        originalPrice: Math.round(basePrice250g * 3.2),
-        dealPrice: Math.round(basePrice250g * 3.2 * 0.71), // ~29% off
-        weight: "1kg",
-        badge: "Deal of the Day • Save 29%",
-        claimedPercentage: 64,
-        stars: 4.8,
-        reviewsCount: 894,
-        variants: honeyProduct.variants,
-      });
-    }
-
-    // 3. Kandipappu
-    const dalProduct = findProductByName("Kandipappu");
-    if (dalProduct) {
-      const basePrice250g = dalProduct.price || 0;
-      dealsList.push({
-        id: dalProduct.id,
-        name: dalProduct.name || "Premium Kandipappu (Toor Dal)",
-        category: dalProduct.category?.name || "Dals & Pulses",
-        image: (dalProduct.images && dalProduct.images[0]) || dalProduct.image || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
-        originalPrice: Math.round(basePrice250g * 3.2),
-        dealPrice: Math.round(basePrice250g * 3.2 * 0.70), // ~30% off
-        weight: "1kg",
-        badge: "Lightning Deal • Save 30%",
-        claimedPercentage: 47,
-        stars: 4.7,
-        reviewsCount: 1230,
-        variants: dalProduct.variants,
-      });
-    }
-
-    return dealsList.length === 3 ? dealsList : defaultDeals;
-  }, [apiProducts]);
+    return defaultDeals;
+  }, [apiProducts, serverDeals]);
 
   useEffect(() => {
     setMounted(true);

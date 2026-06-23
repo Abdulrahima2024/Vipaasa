@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import { 
   ChevronRight, 
   Search, 
@@ -9,9 +11,16 @@ import {
   Shield,
   Edit2,
   Trash2,
-  Lock
+  Lock,
+  Package,
+  ShoppingBag,
+  RefreshCw,
+  ChevronLeft,
+  Users2,
+  IndianRupee
 } from "lucide-react";
 import { fetchAPI } from "../../../lib/api";
+import { OrderDetailsModal, Order } from "../../../components/OrderDetailsModal";
 
 interface PermissionSet {
   manageProducts: boolean;
@@ -24,15 +33,24 @@ interface SystemUser {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   role: "Admin" | "Super Admin" | string;
   status: "Active" | "Inactive";
   permissions: PermissionSet;
+  createdAt?: string;
+  totalOrders?: number;
+  totalSpent?: number;
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Dashboard Stats
+  const [dashboardStats, setDashboardStats] = useState({ totalUsers: 0, totalOrders: 0, totalRevenue: 0 });
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   // Search query
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,6 +58,14 @@ export default function UsersPage() {
   // Add/Edit user Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
+
+  // Order History State
+  const [selectedUserForOrders, setSelectedUserForOrders] = useState<SystemUser | null>(null);
+  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [ordersPagination, setOrdersPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<Order | null>(null);
 
   // Form inputs
   const [formName, setFormName] = useState("");
@@ -64,8 +90,23 @@ export default function UsersPage() {
     }
   };
 
+  const loadDashboardStats = async () => {
+    setIsStatsLoading(true);
+    try {
+      const data = await fetchAPI("/api/users/dashboard-stats");
+      if (data) {
+        setDashboardStats(data);
+      }
+    } catch (err) {
+      console.error("Failed to load dashboard stats:", err);
+    } finally {
+      setIsStatsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadUsers();
+    loadDashboardStats();
   }, []);
 
   const handleOpenAddModal = () => {
@@ -161,6 +202,100 @@ export default function UsersPage() {
     }
   };
 
+  const loadUserOrders = async (userId: string, page: number = 1) => {
+    setOrdersLoading(true);
+    setOrdersError(null);
+    try {
+      const response = await fetchAPI(`/api/users/${userId}/orders?page=${page}&limit=10`);
+      if (response && response.success) {
+        setUserOrders(response.data);
+        setOrdersPagination(response.pagination);
+      } else {
+        setOrdersError("Failed to load order history.");
+      }
+    } catch (err: any) {
+      setOrdersError("Failed to load order history. Please try again.");
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const handleOpenOrderHistory = (user: SystemUser) => {
+    setSelectedUserForOrders(user);
+    loadUserOrders(user.id, 1);
+  };
+
+  const handleOpenOrderDetails = async (orderId: string) => {
+    // Fetch all admin orders and find the specific one. 
+    // This uses the existing order details API behavior.
+    try {
+      const res = await fetchAPI("/api/admin/orders");
+      if (res && res.data) {
+        const found = res.data.find((o: any) => o.id === orderId || o.orderNumber === orderId);
+        if (found) {
+          const formattedItems = (found.items || []).map((item: any) => ({
+            name: item.variant?.product?.name || "Product",
+            qty: item.quantity,
+            weight: item.variant?.weightGrams ? `${item.variant.weightGrams}g` : "250g",
+            price: Number(item.unitPrice),
+          }));
+
+          const addr = `${found.shippingAddressLine1}${found.shippingAddressLine2 ? ', ' + found.shippingAddressLine2 : ''}, ${found.shippingCity}, ${found.shippingState}, ${found.shippingPostalCode}`;
+
+          let status: Order["status"] = "Pending";
+          if (found.status === "PROCESSING") status = "Processing";
+          else if (found.status === "SHIPPED") status = "Shipped";
+          else if (found.status === "DELIVERED") status = "Delivered";
+          else if (found.status === "CANCELLED") status = "Cancelled";
+          else if (found.status === "RETURNED") status = "Returned";
+          if (found.paymentStatus === "REFUNDED") status = "Refunded";
+
+          const mappedOrder: Order = {
+            id: found.id,
+            orderNumber: found.orderNumber || found.id,
+            customerName: found.user?.profile ? `${found.user.profile.firstName} ${found.user.profile.lastName}`.trim() : "Customer",
+            email: found.user?.email || "",
+            date: new Date(found.createdAt).toISOString().split("T")[0],
+            items: formattedItems,
+            total: Number(found.totalPayable),
+            status,
+            paymentMethod: found.paymentStatus === "PAID" ? "Paid" : "Cash on Delivery",
+            paymentId: found.payments?.[0]?.gatewayPaymentIntentId || "",
+            bankDetails: found.payments?.[0]?.gatewayName || "COD",
+            shippingAddress: addr,
+          };
+          setSelectedOrderDetail(mappedOrder);
+        } else {
+          alert("Order details not found.");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load order details:", err);
+      alert("Failed to load order details.");
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, newStatus: Order["status"]) => {
+    try {
+      const response = await fetchAPI(`/api/admin/orders/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (response && response.status === "success") {
+        if (selectedOrderDetail && selectedOrderDetail.id === id) {
+          setSelectedOrderDetail({ ...selectedOrderDetail, status: newStatus });
+        }
+        // Also refresh the history list if needed
+        if (selectedUserForOrders) {
+          loadUserOrders(selectedUserForOrders.id, ordersPagination.page);
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to update order status:", err);
+      alert(err.message || "Failed to update order status.");
+    }
+  };
+
   // Filter list
   // Specifically filter out the legacy "Store Executive" roles from the UI display entirely.
   const filteredUsers = users.filter((u) => {
@@ -188,27 +323,54 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Info grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="p-3 bg-gray-50 rounded-lg text-[var(--primary-green)] bg-emerald-50">
-            <Shield className="w-6 h-6" />
+      {/* Hero Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        
+        {/* Card 1: Total Users */}
+        <div 
+          onClick={() => loadUsers()}
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4 cursor-pointer hover:-translate-y-1 hover:shadow-md transition-all duration-200 group"
+        >
+          <div className="p-3 bg-emerald-50 rounded-lg text-[var(--primary-green)] group-hover:scale-110 transition-transform">
+            <Users2 className="w-6 h-6" />
           </div>
           <div>
             <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Total Users</span>
             <span className="block text-2xl font-bold text-gray-900 mt-0.5">
-              {filteredUsers.length}
+              {isStatsLoading ? "..." : dashboardStats.totalUsers}
             </span>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="p-3 bg-gray-50 rounded-lg text-red-600 bg-red-50">
-            <Lock className="w-6 h-6" />
+        {/* Card 2: Total Orders */}
+        <div 
+          onClick={() => router.push("/orders")}
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4 cursor-pointer hover:-translate-y-1 hover:shadow-md transition-all duration-200 group"
+        >
+          <div className="p-3 bg-blue-50 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
+            <ShoppingBag className="w-6 h-6" />
           </div>
           <div>
-            <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Role Permissions Lock</span>
-            <span className="block text-2xl font-bold text-gray-900 mt-0.5">RBAC Enabled</span>
+            <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Total Orders</span>
+            <span className="block text-2xl font-bold text-gray-900 mt-0.5">
+              {isStatsLoading ? "..." : dashboardStats.totalOrders}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Total Revenue */}
+        <div 
+          onClick={() => router.push("/reports")}
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center gap-4 cursor-pointer hover:-translate-y-1 hover:shadow-md transition-all duration-200 group"
+        >
+          <div className="p-3 bg-indigo-50 rounded-lg text-indigo-600 group-hover:scale-110 transition-transform">
+            <IndianRupee className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Total Revenue</span>
+            <span className="block text-2xl font-bold text-gray-900 mt-0.5">
+              {isStatsLoading ? "..." : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(dashboardStats.totalRevenue)}
+            </span>
           </div>
         </div>
       </div>
@@ -249,7 +411,12 @@ export default function UsersPage() {
             <thead className="bg-gray-50/50 text-xs uppercase text-gray-500 border-b border-gray-100">
               <tr>
                 <th className="px-6 py-4 font-bold">User Name</th>
-                <th className="px-6 py-4 font-bold">Role</th>
+                <th className="hidden md:table-cell px-6 py-4 font-bold">Email</th>
+                <th className="hidden md:table-cell px-6 py-4 font-bold">Phone</th>
+                <th className="hidden md:table-cell px-6 py-4 font-bold">Role</th>
+                <th className="hidden lg:table-cell px-6 py-4 font-bold">Registration Date</th>
+                <th className="px-6 py-4 font-bold text-center">Total Orders</th>
+                <th className="hidden md:table-cell px-6 py-4 font-bold text-right">Total Spent</th>
                 <th className="px-6 py-4 font-bold text-center">Status</th>
                 <th className="px-6 py-4 font-bold text-right">Actions</th>
               </tr>
@@ -266,18 +433,45 @@ export default function UsersPage() {
                   roleStyle = "bg-blue-50 border-blue-100 text-blue-700";
                 }
 
+                // Default fallbacks
+                const phoneDisplay = user.phone || "-";
+                const dateDisplay = user.createdAt ? format(new Date(user.createdAt), "dd-MMM-yyyy") : "-";
+                const totalOrdersDisplay = user.totalOrders || 0;
+                
+                // Currency formatter for INR
+                const formattedSpent = new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 0
+                }).format(user.totalSpent || 0);
+
                 return (
                   <tr key={user.id} className="hover:bg-gray-50/30 transition-colors">
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-gray-900 font-bold">{user.name}</div>
-                        <div className="text-xs text-gray-400 font-semibold">{user.email}</div>
+                        <div className="text-xs text-gray-400 font-semibold md:hidden">{user.email}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="hidden md:table-cell px-6 py-4 text-gray-600">
+                      {user.email}
+                    </td>
+                    <td className="hidden md:table-cell px-6 py-4 text-gray-600">
+                      {phoneDisplay}
+                    </td>
+                    <td className="hidden md:table-cell px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${roleStyle}`}>
                         {user.role}
                       </span>
+                    </td>
+                    <td className="hidden lg:table-cell px-6 py-4 text-gray-600 whitespace-nowrap">
+                      {dateDisplay}
+                    </td>
+                    <td className="px-6 py-4 text-center font-bold text-gray-900">
+                      {totalOrdersDisplay}
+                    </td>
+                    <td className="hidden md:table-cell px-6 py-4 text-right font-bold text-[var(--primary-green)]">
+                      {formattedSpent}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
@@ -295,6 +489,13 @@ export default function UsersPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenOrderHistory(user)}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all active:scale-95"
+                          title="View Order History"
+                        >
+                          <Package className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleOpenEditModal(user)}
                           disabled={isSuper}
@@ -445,6 +646,188 @@ export default function UsersPage() {
             </form>
           </div>
         </div>
+      )}
+      {/* ORDER HISTORY MODAL */}
+      {selectedUserForOrders && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 tracking-tight">Order History</h3>
+                <div className="flex items-center gap-4 mt-2 text-sm">
+                  <div className="flex gap-1.5">
+                    <span className="text-gray-400 font-semibold">Customer:</span>
+                    <span className="text-gray-900 font-bold">{selectedUserForOrders.name}</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <span className="text-gray-400 font-semibold">Email:</span>
+                    <span className="text-gray-900 font-bold">{selectedUserForOrders.email}</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <span className="text-gray-400 font-semibold">Total Orders:</span>
+                    <span className="text-[var(--primary-green)] font-extrabold">{ordersPagination.total}</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <span className="text-gray-400 font-semibold">Lifetime Spend:</span>
+                    <span className="text-gray-900 font-bold">
+                      ₹{((ordersPagination as any).lifetimeSpend || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedUserForOrders(null)} 
+                className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Table Area */}
+            <div className="flex-1 overflow-auto bg-gray-50/30">
+              {ordersLoading ? (
+                <div className="p-12 text-center text-gray-500 font-semibold flex flex-col items-center justify-center gap-3">
+                  <RefreshCw className="h-6 w-6 animate-spin text-[var(--primary-green)]" />
+                  <span>Loading Order History...</span>
+                </div>
+              ) : ordersError ? (
+                <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
+                  <p className="text-red-500 font-bold">{ordersError}</p>
+                  <button 
+                    onClick={() => loadUserOrders(selectedUserForOrders.id, ordersPagination.page)}
+                    className="px-4 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : userOrders.length === 0 ? (
+                <div className="p-16 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mb-4">
+                    <ShoppingBag className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-lg font-bold text-gray-900">No Orders Found</h4>
+                  <p className="text-sm text-gray-500 mt-1">This user hasn't placed any orders yet.</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-sm text-gray-600 bg-white">
+                  <thead className="bg-gray-50 text-xs uppercase text-gray-500 border-b border-gray-100 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-6 py-4 font-bold">Order ID</th>
+                      <th className="px-6 py-4 font-bold">Date</th>
+                      <th className="px-6 py-4 font-bold">Products</th>
+                      <th className="px-6 py-4 font-bold">Amount</th>
+                      <th className="px-6 py-4 font-bold text-center">Payment Status</th>
+                      <th className="px-6 py-4 font-bold text-center">Order Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 font-medium">
+                    {userOrders.map((order) => {
+                      // Payment Badge Styles
+                      let paymentClass = "bg-yellow-50 text-yellow-700 border-yellow-100";
+                      if (order.paymentStatus === "PAID") paymentClass = "bg-green-50 text-green-700 border-green-100";
+                      else if (order.paymentStatus === "FAILED") paymentClass = "bg-red-50 text-red-700 border-red-100";
+                      else if (order.paymentStatus === "REFUNDED") paymentClass = "bg-blue-50 text-blue-700 border-blue-100";
+
+                      // Order Badge Styles
+                      let orderClass = "bg-gray-100 text-gray-800 border-gray-200";
+                      switch (order.orderStatus) {
+                        case "PENDING":
+                          orderClass = "bg-amber-50 text-amber-700 border-amber-100";
+                          break;
+                        case "PROCESSING":
+                          orderClass = "bg-blue-50 text-blue-700 border-blue-100";
+                          break;
+                        case "SHIPPED":
+                          orderClass = "bg-indigo-50 text-indigo-700 border-indigo-100";
+                          break;
+                        case "DELIVERED":
+                          orderClass = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                          break;
+                        case "CANCELLED":
+                          orderClass = "bg-red-50 text-red-700 border-red-100";
+                          break;
+                        case "RETURNED":
+                          orderClass = "bg-purple-50 text-purple-700 border-purple-100";
+                          break;
+                      }
+
+                      // Format Order Status
+                      const displayOrderStatus = order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1).toLowerCase();
+                      const displayPaymentStatus = order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1).toLowerCase();
+
+                      return (
+                        <tr key={order.orderId} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <button 
+                              onClick={() => handleOpenOrderDetails(order.orderId)}
+                              className="font-mono font-bold text-[var(--primary-green)] hover:underline hover:text-[var(--primary-hover)] text-left"
+                            >
+                              {order.orderId}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-semibold text-gray-500">
+                            {new Date(order.createdAt).toISOString().split("T")[0]}
+                          </td>
+                          <td className="px-6 py-4 text-xs font-semibold text-gray-700 truncate max-w-[200px]" title={order.products}>
+                            {order.products}
+                          </td>
+                          <td className="px-6 py-4 font-bold text-gray-900">
+                            ₹{order.totalAmount.toLocaleString('en-IN')}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${paymentClass}`}>
+                              {displayPaymentStatus}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${orderClass}`}>
+                              {displayOrderStatus}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Pagination Footer */}
+            {userOrders.length > 0 && ordersPagination.pages > 1 && (
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-white rounded-b-2xl shrink-0">
+                <span className="text-xs font-semibold text-gray-500">
+                  Page {ordersPagination.page} of {ordersPagination.pages} ({ordersPagination.total} total)
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={ordersPagination.page <= 1 || ordersLoading}
+                    onClick={() => loadUserOrders(selectedUserForOrders!.id, ordersPagination.page - 1)}
+                    className="p-1.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-all"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    disabled={ordersPagination.page >= ordersPagination.pages || ordersLoading}
+                    onClick={() => loadUserOrders(selectedUserForOrders!.id, ordersPagination.page + 1)}
+                    className="p-1.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-all"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* SHARED ORDER DETAILS DIALOG */}
+      {selectedOrderDetail && (
+        <OrderDetailsModal 
+          selectedOrder={selectedOrderDetail} 
+          onClose={() => setSelectedOrderDetail(null)} 
+          onUpdateStatus={handleUpdateStatus} 
+        />
       )}
     </div>
   );

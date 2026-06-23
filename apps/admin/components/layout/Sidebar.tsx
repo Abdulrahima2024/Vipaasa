@@ -13,6 +13,11 @@ import {
   ClipboardList,
   Settings,
   CreditCard,
+  Truck,
+  Tag,
+  Ticket,
+  LineChart,
+  Bell,
 } from "lucide-react";
 
 const mainNavItems = [
@@ -20,8 +25,13 @@ const mainNavItems = [
   { name: "Orders", href: "/orders", icon: ShoppingCart },
   { name: "Products", href: "/products", icon: Package },
   { name: "Inventory", href: "/inventory", icon: ClipboardList },
+  { name: "Delivery Partners", href: "/delivery-partners", icon: Truck },
   { name: "Payments", href: "/payments", icon: CreditCard },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Top Deals", href: "/deals", icon: Tag },
+  { name: "Coupons", href: "/coupons", icon: Ticket },
+  { name: "Analytics", href: "/analytics", icon: LineChart },
+  { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Users", href: "/users", icon: Users },
 ];
 

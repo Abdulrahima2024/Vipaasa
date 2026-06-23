@@ -139,55 +139,27 @@ export default function Header({
   const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!mounted || !_hasHydrated || !isAuthenticated) {
-      setNotifications([]);
-      return;
+    if (mounted && isAuthenticated) {
+      loadNotifications();
     }
+  }, [mounted, isAuthenticated]);
 
-    async function loadNotifications() {
-      try {
-        const res = await fetchApi<{ status: string; data: any[] }>("/api/orders");
-        if (res && Array.isArray(res.data) && res.data.length > 0) {
-          const newNotifications = res.data.map((order: any) => {
-            let title = "Order Placed 📦";
-            let description = `Your order ${order.orderNumber || "#" + order.id.slice(0, 8)} has been received and is being processed.`;
-            if (order.status === "SHIPPED") {
-              title = "Order Dispatched 🚚";
-              description = `Your order ${order.orderNumber || "#" + order.id.slice(0, 8)} has been shipped.`;
-            } else if (order.status === "DELIVERED") {
-              title = "Order Delivered 🎉";
-              description = `Your order ${order.orderNumber || "#" + order.id.slice(0, 8)} has been successfully delivered.`;
-            } else if (order.status === "CANCELLED") {
-              title = "Order Cancelled ❌";
-              description = `Your order ${order.orderNumber || "#" + order.id.slice(0, 8)} has been cancelled.`;
-            }
-
-            const timeStr = new Date(order.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " at " + new Date(order.createdAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-
-            return {
-              id: order.id,
-              title,
-              description,
-              timestamp: timeStr,
-              isRead: false,
-            };
-          });
-
-          // Sort by ID/Date most recent first
-          newNotifications.sort((a, b) => b.id.localeCompare(a.id));
-
-          setNotifications(newNotifications);
-        } else {
-          setNotifications([]);
-        }
-      } catch (err) {
-        console.error("Failed to load notifications from orders:", err);
-        setNotifications([]);
+  const loadNotifications = async () => {
+    try {
+      const res = await fetchApi<{ data: any[] }>("/api/notifications");
+      if (res && res.data) {
+        setNotifications(res.data.map(n => ({
+          id: n.id,
+          title: n.notification?.title || "Notification",
+          description: n.notification?.message || "",
+          timestamp: new Date(n.createdAt).toLocaleDateString(),
+          isRead: n.isRead
+        })));
       }
+    } catch (err) {
+      console.error("Failed to load notifications", err);
     }
-
-    loadNotifications();
-  }, [mounted, _hasHydrated, isAuthenticated]);
+  };
 
   const hasUnread = notifications.some((n) => !n.isRead);
 
@@ -211,7 +183,11 @@ export default function Header({
   }, [isNotificationsOpen, isUserMenuOpen]);
 
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.isRead);
+    for (const n of unread) {
+      await fetchApi(`/api/notifications/${n.id}/read`, { method: "PUT" });
+    }
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
@@ -219,10 +195,14 @@ export default function Header({
     setNotifications([]);
   };
 
-  const toggleRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n))
-    );
+  const toggleRead = async (id: string) => {
+    const notif = notifications.find(n => n.id === id);
+    if (notif && !notif.isRead) {
+      await fetchApi(`/api/notifications/${id}/read`, { method: "PUT" });
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+    }
   };
 
   const deleteNotification = (id: string, e: React.MouseEvent) => {

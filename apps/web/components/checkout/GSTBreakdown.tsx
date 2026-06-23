@@ -1,13 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { CartItem } from "../../store/useCartStore";
+import { fetchApi } from "../../lib/api";
 
 interface GSTBreakdownProps {
   items: CartItem[];
+  couponCode: string;
+  setCouponCode: (code: string) => void;
+  couponDiscount: number;
+  setCouponDiscount: (discount: number) => void;
 }
 
-export default function GSTBreakdown({ items }: GSTBreakdownProps) {
+export default function GSTBreakdown({ items, couponCode, setCouponCode, couponDiscount, setCouponDiscount }: GSTBreakdownProps) {
   const activeItems = items.filter(item => !item.saved);
   const itemCount = activeItems.reduce((acc, item) => acc + item.quantity, 0);
+  
+  const [inputCode, setInputCode] = useState(couponCode);
+  const [couponError, setCouponError] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
   
   // Subtotal Calculation
   const subtotal = activeItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -22,7 +31,38 @@ export default function GSTBreakdown({ items }: GSTBreakdownProps) {
   const estimatedTax = parseFloat((subtotal * taxRate).toFixed(2));
   
   // Total payable
-  const total = parseFloat((subtotal + shippingFee + estimatedTax).toFixed(2));
+  const total = parseFloat((subtotal + shippingFee + estimatedTax - couponDiscount).toFixed(2));
+
+  const handleApplyCoupon = async () => {
+    if (!inputCode.trim()) return;
+    setIsValidating(true);
+    setCouponError("");
+    
+    try {
+      const res = await fetchApi<{ status: string, data: any }>("/api/coupons/validate", {
+        method: "POST",
+        body: JSON.stringify({ code: inputCode, orderAmount: subtotal })
+      });
+      
+      if (res && res.data) {
+        setCouponCode(inputCode);
+        setCouponDiscount(res.data.discountAmount);
+      }
+    } catch (err: any) {
+      setCouponError(err.message || "Invalid coupon code");
+      setCouponCode("");
+      setCouponDiscount(0);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode("");
+    setInputCode("");
+    setCouponDiscount(0);
+    setCouponError("");
+  };
 
   return (
     <div className="bg-white border border-[#EAE6DB] rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.02)] space-y-6">
@@ -51,9 +91,48 @@ export default function GSTBreakdown({ items }: GSTBreakdownProps) {
           <span>Tax (GST 5%)</span>
           <span className="text-[#113C27] tabular-nums">₹{estimatedTax.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
+
+        {/* Coupon Discount */}
+        {couponDiscount > 0 && (
+          <div className="flex justify-between items-center text-[#A84444]">
+            <span>Discount ({couponCode})</span>
+            <span className="tabular-nums font-bold">-₹{couponDiscount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+        )}
       </div>
 
       <hr className="border-[#EAE6DB]" />
+
+      {/* Coupon Input */}
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <input 
+            type="text" 
+            placeholder="Discount code" 
+            value={inputCode}
+            onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+            disabled={couponDiscount > 0 || isValidating}
+            className="flex-1 bg-[#FAF8F5] border border-[#EAE6DB] rounded-xl px-4 py-2 text-sm font-semibold text-[#113C27] focus:outline-none focus:border-[#2D6A4F] disabled:opacity-50"
+          />
+          {couponDiscount > 0 ? (
+            <button 
+              onClick={handleRemoveCoupon}
+              className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors"
+            >
+              Remove
+            </button>
+          ) : (
+            <button 
+              onClick={handleApplyCoupon}
+              disabled={!inputCode || isValidating}
+              className="bg-[#113C27] text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-[#2D6A4F] transition-colors disabled:opacity-50"
+            >
+              {isValidating ? "..." : "Apply"}
+            </button>
+          )}
+        </div>
+        {couponError && <p className="text-red-500 text-xs font-bold">{couponError}</p>}
+      </div>
 
       {/* Total Section */}
       <div className="flex justify-between items-baseline py-1">

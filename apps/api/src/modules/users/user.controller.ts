@@ -349,4 +349,30 @@ export async function deleteSystemUser(req: AuthenticatedRequest, res: Response)
   }
 }
 
+export async function getUserOrdersHandler(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    if (!id) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
 
+    const result = await userService.getUserOrders(id, page, limit);
+    return res.status(200).json(result);
+  } catch (error: any) {
+    console.error("GetUserOrdersHandler controller error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+
+export async function getDashboardStats(req: AuthenticatedRequest, res: Response) {
+  try {
+    const stats = await userService.getUsersDashboardStats();
+    return res.status(200).json(stats);
+  } catch (error) {
+    console.error("GetDashboardStats controller error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}

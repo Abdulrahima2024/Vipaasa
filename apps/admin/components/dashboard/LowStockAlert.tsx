@@ -16,12 +16,13 @@ interface LowStockAlertProps {
   loading?: boolean;
 }
 
-const DEFAULT_ITEMS: LowStockItem[] = [];
+const EMPTY_ARRAY: LowStockItem[] = [];
 
-export default function LowStockAlert({ items = DEFAULT_ITEMS, loading }: LowStockAlertProps) {
+export default function LowStockAlert({ items = EMPTY_ARRAY, loading }: LowStockAlertProps) {
   const [localItems, setLocalItems] = useState<LowStockItem[]>([]);
 
   useEffect(() => {
+    // Only update if items have actually changed to prevent infinite loops
     setLocalItems(items);
   }, [items]);
 

@@ -407,7 +407,13 @@ export async function getAllUsers() {
     },
     include: {
       role: true,
-      profile: true
+      profile: true,
+      orders: {
+        select: {
+          totalPayable: true,
+          status: true
+        }
+      }
     },
     orderBy: {
       createdAt: "desc"
@@ -434,13 +440,22 @@ export async function getAllUsers() {
       permissions = { manageProducts: true, manageOrders: true, manageInventory: true, viewReports: true };
     }
 
+    const totalOrders = u.orders?.length || 0;
+    const totalSpent = (u.orders || [])
+      .filter((order) => order.status !== "CANCELLED" && order.status !== "RETURNED")
+      .reduce((sum, order) => sum + Number(order.totalPayable), 0);
+
     return {
       id: u.id,
       name: u.profile ? `${u.profile.firstName} ${u.profile.lastName}`.trim() : "System User",
       email: u.email,
+      phone: u.phoneNumber || "-",
       role: roleName,
       status: u.status === "ACTIVE" ? "Active" : "Inactive",
-      permissions
+      permissions,
+      createdAt: u.createdAt.toISOString(),
+      totalOrders,
+      totalSpent
     };
   });
 }
@@ -583,4 +598,90 @@ export async function deleteSystemUser(id: string) {
   });
 }
 
+export async function getUserOrders(userId: string, page: number = 1, limit: number = 10) {
+  const skip = (page - 1) * limit;
 
+  const [orders, total, aggregate] = await Promise.all([
+    prisma.order.findMany({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            variant: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit
+    }),
+    prisma.order.count({
+      where: { userId }
+    }),
+    prisma.order.aggregate({
+      where: { userId, status: { notIn: ["CANCELLED", "RETURNED"] } },
+      _sum: { totalPayable: true }
+    })
+  ]);
+
+  const mappedOrders = orders.map((order) => {
+    const products = order.items.map((item) => item.variant?.product?.name || "Product");
+    
+    // Format products list: "Organic Rice, Honey +2 more"
+    let productsDisplay = products.join(", ");
+    if (products.length > 2) {
+      productsDisplay = `${products.slice(0, 2).join(", ")} +${products.length - 2} more`;
+    } else if (products.length === 0) {
+      productsDisplay = "No products";
+    }
+
+    return {
+      orderId: order.orderNumber || order.id,
+      createdAt: order.createdAt,
+      products: productsDisplay,
+      totalAmount: Number(order.totalPayable),
+      paymentStatus: order.paymentStatus,
+      orderStatus: order.status
+    };
+  });
+
+  return {
+    success: true,
+    data: mappedOrders,
+    meta: {
+      lifetimeSpend: aggregate._sum.totalPayable ? Number(aggregate._sum.totalPayable) : 0
+    },
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  };
+}
+
+export async function getUsersDashboardStats() {
+  const [totalUsers, totalOrders, aggregateRevenue] = await Promise.all([
+    prisma.user.count({
+      where: { isDeleted: false }
+    }),
+    prisma.order.count(),
+    prisma.order.aggregate({
+      where: {
+        paymentStatus: "PAID",
+        status: { notIn: ["CANCELLED", "RETURNED"] }
+      },
+      _sum: { totalPayable: true }
+    })
+  ]);
+
+  return {
+    totalUsers,
+    totalOrders,
+    totalRevenue: aggregateRevenue._sum.totalPayable ? Number(aggregateRevenue._sum.totalPayable) : 0
+  };
+}

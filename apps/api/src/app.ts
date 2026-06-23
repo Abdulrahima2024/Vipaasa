@@ -13,6 +13,11 @@ import inventoryRoutes from "./modules/inventory/inventory.routes";
 import paymentRoutes from "./modules/payments/payment.routes";
 import settingsRoutes from "./modules/settings/settings.routes";
 import customerRoutes from "./modules/customers/customer.routes";
+import deliveryPartnerRoutes from "./modules/delivery-partners/delivery-partner.routes";
+import marketingRoutes from "./modules/marketing/marketing.routes";
+import couponRoutes from "./modules/coupons/coupon.routes";
+import analyticsRoutes from "./modules/analytics/analytics.routes";
+import notificationRoutes from "./modules/notifications/notification.routes";
 import { requestLogger } from "./shared/middleware/requestLogger";
 import { rateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
@@ -46,6 +51,11 @@ app.use("/api", inventoryRoutes);
 app.use("/api", paymentRoutes);
 app.use("/api", settingsRoutes);
 app.use("/api", customerRoutes);
+app.use("/api/admin/delivery-partners", deliveryPartnerRoutes);
+app.use("/api", marketingRoutes);
+app.use("/api", couponRoutes);
+app.use("/api", analyticsRoutes);
+app.use("/api", notificationRoutes);
 
 
 

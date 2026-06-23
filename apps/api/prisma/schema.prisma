@@ -4,7 +4,7 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["relationJoins"]
 }
 
@@ -69,6 +69,9 @@ enum AdjustmentReason {
 
 enum OrderStatus {
   PENDING
+  PENDING_PAYMENT
+  PAYMENT_FAILED
+  PAYMENT_SUCCESS
   CONFIRMED
   PROCESSING
   PACKED
@@ -76,7 +79,10 @@ enum OrderStatus {
   OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
+  DELIVERY_FAILED
+  RETURN_REQUESTED
   RETURNED
+  REFUNDED
 
   @@map("order_status")
 }
@@ -99,6 +105,23 @@ enum DeliveryStatus {
   RETURNED
 
   @@map("delivery_status")
+}
+
+enum DeliveryPartnerStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+
+  @@map("delivery_partner_status")
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  ACCEPTED
+  DELIVERED
+  FAILED
+
+  @@map("assignment_status")
 }
 
 enum PaymentMethod {
@@ -265,10 +288,11 @@ model User {
   tickets             Ticket[]             @relation("CustomerTickets")
   assignedTickets     Ticket[]             @relation("ExecutiveTickets")
   ticketMessages      TicketMessage[]
-  notifications       Notification[]
+  userNotifications   UserNotification[]
   reportSnapshots     ReportSnapshot[]
   activityLogs        ActivityLog[]
   cart                Cart?
+  OrderAssignment     OrderAssignment[]
 
   @@index([email])
   @@index([phoneNumber])
@@ -662,14 +686,19 @@ model Order {
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
 
-  user          User                 @relation("CustomerOrders", fields: [userId], references: [id], onDelete: Restrict)
-  executive     User?                @relation("ExecutiveOrders", fields: [executiveId], references: [id], onDelete: Restrict)
-  items         OrderItem[]
-  statusHistory OrderStatusHistory[]
-  invoice       Invoice?
-  payments      Payment[]
-  delivery      Delivery?
-  reservations  StockReservation[]
+  user            User                 @relation("CustomerOrders", fields: [userId], references: [id], onDelete: Restrict)
+  executive       User?                @relation("ExecutiveOrders", fields: [executiveId], references: [id], onDelete: Restrict)
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+  invoice         Invoice?
+  payments        Payment[]
+  delivery        Delivery?
+  reservations    StockReservation[]
+  OrderAssignment OrderAssignment?
+  DeliveryOTP     DeliveryOTP?
+  couponId        String?              @map("coupon_id") @db.Uuid
+  coupon          Coupon?              @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  couponUsage     CouponUsage?
 
   @@index([userId])
   @@index([executiveId])
@@ -911,22 +940,74 @@ model TicketAttachment {
   @@map("ticket_attachments")
 }
 
-model Notification {
-  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId           String           @map("user_id") @db.Uuid
-  title            String
-  body             String
-  notificationType NotificationType @map("notification_type")
-  isRead           Boolean          @default(false) @map("is_read")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
+model DeliveryPartner {
+  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  phone         String                @unique
+  email         String?               @unique
+  vehicleNumber String                @map("vehicle_number")
+  vehicleType   String                @map("vehicle_type")
+  licenseNumber String                @map("license_number")
+  status        DeliveryPartnerStatus @default(OFFLINE)
+  isActive      Boolean               @default(true) @map("is_active")
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
 
-  user User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  logs NotificationLog[]
+  assignments OrderAssignment[]
+
+  @@map("delivery_partners")
+}
+
+model OrderAssignment {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId           String           @unique @map("order_id") @db.Uuid
+  deliveryPartnerId String           @map("delivery_partner_id") @db.Uuid
+  assignedById      String           @map("assigned_by_id") @db.Uuid
+  assignedAt        DateTime         @default(now()) @map("assigned_at")
+  acceptedAt        DateTime?        @map("accepted_at")
+  deliveredAt       DateTime?        @map("delivered_at")
+  status            AssignmentStatus @default(ASSIGNED)
+  notes             String?
+
+  order           Order           @relation(fields: [orderId], references: [id])
+  deliveryPartner DeliveryPartner @relation(fields: [deliveryPartnerId], references: [id])
+  assignedBy      User            @relation(fields: [assignedById], references: [id])
+
+  @@index([deliveryPartnerId])
+  @@index([assignedById])
+  @@map("order_assignments")
+}
+
+model DeliveryOTP {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId    String    @unique @map("order_id") @db.Uuid
+  otp        String
+  expiresAt  DateTime  @map("expires_at")
+  verifiedAt DateTime? @map("verified_at")
+  attempts   Int       @default(0)
+  isUsed     Boolean   @default(false) @map("is_used")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("delivery_otps")
+}
+
+model UserNotification {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  notificationId String    @map("notification_id") @db.Uuid
+  isRead         Boolean   @default(false) @map("is_read")
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([notificationId])
   @@index([isRead])
-  @@map("notifications")
+  @@map("user_notifications")
 }
 
 model NotificationLog {
@@ -993,15 +1074,15 @@ model ActivityLog {
 }
 
 model Organic {
-  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   description String?
-  price       Decimal        @db.Decimal(10, 2)
-  isActive    Boolean        @default(true) @map("is_active")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
+  price       Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  images      OrganicImage[]
+  images OrganicImage[]
 
   @@map("organics")
 }
@@ -1014,8 +1095,81 @@ model OrganicImage {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  organic   Organic  @relation(fields: [organicId], references: [id], onDelete: Cascade)
+  organic Organic @relation(fields: [organicId], references: [id], onDelete: Cascade)
 
   @@index([organicId])
   @@map("organic_images")
+}
+
+model Deal {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title              String
+  description        String?
+  imageUrl           String   @map("image_url")
+  discountPercentage Decimal  @map("discount_percentage") @db.Decimal(5, 2)
+  startDate          DateTime @map("start_date")
+  endDate            DateTime @map("end_date")
+  status             String   @default("ACTIVE") // ACTIVE, INACTIVE, SCHEDULED
+  priority           Int      @default(0)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  productIds         String[] @map("product_ids") @db.Uuid
+
+  @@map("deals")
+}
+
+model Coupon {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String       @unique
+  description    String?
+  discountType   DiscountType @default(PERCENTAGE) @map("discount_type")
+  discountValue  Decimal      @map("discount_value") @db.Decimal(10, 2)
+  minOrderAmount Decimal      @default(0) @map("min_order_amount") @db.Decimal(10, 2)
+  maxDiscount    Decimal?     @map("max_discount") @db.Decimal(10, 2)
+  startDate      DateTime     @map("start_date")
+  endDate        DateTime     @map("end_date")
+  usageLimit     Int?         @map("usage_limit")
+  perUserLimit   Int          @default(1) @map("per_user_limit")
+  status         String       @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  usages CouponUsage[]
+  orders Order[]
+
+  @@map("coupons")
+}
+
+model CouponUsage {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  couponId String   @map("coupon_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  orderId  String   @unique @map("order_id") @db.Uuid
+  discount Decimal  @map("discount") @db.Decimal(10, 2)
+  usedAt   DateTime @default(now()) @map("used_at")
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([couponId])
+  @@index([userId])
+  @@map("coupon_usages")
+}
+
+model Notification {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title          String
+  message        String
+  imageUrl       String?   @map("image_url")
+  type           String // Offer, Promotion, Order Update, Announcement, System Alert
+  targetAudience String    @map("target_audience") // All Users, Selected Users, New Users, Premium Customers
+  scheduledFor   DateTime? @map("scheduled_for")
+  status         String    @default("PENDING") // PENDING, SENT, CANCELLED
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  userNotifications UserNotification[]
+  logs              NotificationLog[]
+
+  @@map("notification_campaigns")
 }

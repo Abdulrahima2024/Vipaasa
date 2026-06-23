@@ -13,15 +13,19 @@ import {
   getAllUsers,
   createSystemUser,
   updateSystemUser,
-  deleteSystemUser
+  deleteSystemUser,
+  getUserOrdersHandler,
+  getDashboardStats
 } from "./user.controller";
 
 const router = Router();
 
+router.get("/dashboard-stats", authenticate, getDashboardStats);
 router.get("/", authenticate, getAllUsers);
 router.post("/", authenticate, createSystemUser);
 router.put("/:id", authenticate, updateSystemUser);
 router.delete("/:id", authenticate, deleteSystemUser);
+router.get("/:id/orders", authenticate, getUserOrdersHandler);
 
 router.get("/profile", authenticate, getProfile);
 router.put("/profile", authenticate, updateProfile);

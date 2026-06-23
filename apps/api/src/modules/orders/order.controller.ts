@@ -187,4 +187,46 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
   }
 }
 
+export async function assignDelivery(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError("Unauthorized", 401);
 
+    const { id: orderId } = req.params;
+    const { partnerId, notes } = req.body;
+
+    if (!partnerId) throw new AppError("Partner ID is required", 400);
+
+    const result = await orderService.assignDeliveryPartner(orderId, partnerId, userId, notes);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Delivery partner assigned successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verifyDelivery(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError("Unauthorized", 401);
+
+    const { id: orderId } = req.params;
+    const { otp } = req.body;
+
+    if (!otp) throw new AppError("OTP is required", 400);
+
+    const result = await orderService.verifyDeliveryOTP(orderId, otp, userId);
+
+    return res.status(200).json({
+      status: "success",
+      message: "OTP verified successfully. Order delivered.",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+}

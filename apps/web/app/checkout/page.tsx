@@ -25,6 +25,8 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [placedOrder, setPlacedOrder] = useState<any>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -78,7 +80,7 @@ export default function CheckoutPage() {
   const isFreeShipping = subtotal >= 1000;
   const shippingFee = isFreeShipping ? 0 : 100;
   const estimatedTax = parseFloat((subtotal * 0.18).toFixed(2)); // 18% standard tax to match backend
-  const finalTotal = parseFloat((subtotal + shippingFee + estimatedTax).toFixed(2));
+  const finalTotal = parseFloat((subtotal + shippingFee + estimatedTax - couponDiscount).toFixed(2));
 
   // Address Handlers
   const handleAddAddress = async (newAddr: Omit<Address, "id">) => {
@@ -169,6 +171,9 @@ export default function CheckoutPage() {
       } else {
         payload.shippingAddress = rawAddress;
         payload.billingAddress = rawAddress;
+      }
+      if (couponCode) {
+        payload.couponCode = couponCode;
       }
 
       const result = await fetchApi<{ status: string; data: any }>("/api/checkout", {
@@ -511,7 +516,13 @@ export default function CheckoutPage() {
                   postalCode={selectedAddress?.postalCode || ""}
                 />
               )}
-              <GSTBreakdown items={items} />
+              <GSTBreakdown 
+                items={items} 
+                couponCode={couponCode} 
+                setCouponCode={setCouponCode} 
+                couponDiscount={couponDiscount} 
+                setCouponDiscount={setCouponDiscount} 
+              />
             </div>
           </div>
         )}
