@@ -144,6 +144,7 @@ export default function ProductDetailPage() {
   const [selectedWeight, setSelectedWeight] = useState<"250g" | "500g" | "1kg">("250g");
   const [quantity, setQuantity] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // API state for this product
   const [product, setProduct] = useState<Product | null>(null);
@@ -276,18 +277,33 @@ export default function ProductDetailPage() {
 
   const price = product.prices[selectedWeight];
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      const shareData = {
+        title: product?.name || 'Vipaasa Organics',
+        text: `Check out ${product?.name} at Vipaasa Organics!`,
+        url: window.location.href,
+      };
+
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (error) {
+          console.error('Error sharing:', error);
+        }
+      } else {
+        // Fallback for browsers that don't support Web Share API
+        navigator.clipboard.writeText(window.location.href);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      }
     }
   };
 
   const handleAddToCartClick = () => {
     addToCart(product, selectedWeight, quantity);
-    // Visual feedback / Alert
-    alert(`Successfully added ${quantity} x ${product.name} (${selectedWeight}) to your basket.`);
+    setToastMessage(`Added ${quantity} x ${product.name} (${selectedWeight}) to your basket`);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleBuyNowClick = () => {
@@ -399,7 +415,12 @@ export default function ProductDetailPage() {
               {/* Heart/Favorite Toggle Overlay */}
               <button
                 type="button"
-                onClick={() => toggleFavorite(product.id)}
+                onClick={() => {
+                  toggleFavorite(product.id);
+                  const isNowFavorite = !favorites.includes(product.id);
+                  setToastMessage(isNowFavorite ? "Product added into your Wishlist" : "Product removed from your Wishlist");
+                  setTimeout(() => setToastMessage(null), 3000);
+                }}
                 className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm hover:bg-white p-3 rounded-full transition-all shadow-md active:scale-90 transform z-10"
                 aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
               >
@@ -599,6 +620,16 @@ export default function ProductDetailPage() {
 
       {/* Footer component */}
       <Footer />
+
+      {/* Global Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in pointer-events-none">
+          <div className="bg-[#113C27] text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-3">
+            <Check className="w-5 h-5 text-[#C1F2D0]" />
+            <span className="font-semibold text-sm">{toastMessage}</span>
+          </div>
+        </div>
+      )}
 
     </div>
   );

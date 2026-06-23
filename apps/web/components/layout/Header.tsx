@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu, X, Flame } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useCartStore } from "../../store/useCartStore";
+import CartDrawer from "../cart/CartDrawer";
 
 interface HeaderProps {
   showSearch?: boolean;
@@ -32,6 +33,7 @@ export default function Header({
   const { isAuthenticated, user, logout, _hasHydrated } = useAuthStore();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -428,7 +430,7 @@ export default function Header({
           </div>
 
           {/* Cart Icon Link */}
-          <a href="/cart" className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="Shopping Cart">
+          <button type="button" onClick={() => setIsCartDrawerOpen(true)} className="relative p-1 text-[#113C27] hover:opacity-80 transition-opacity" aria-label="Shopping Cart">
             <svg className="w-6 h-6 stroke-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
             </svg>
@@ -437,7 +439,7 @@ export default function Header({
                 {displayCartCount}
               </span>
             )}
-          </a>
+          </button>
 
           {/* User Profile Link */}
           {_hasHydrated && isAuthenticated ? (
@@ -774,6 +776,9 @@ export default function Header({
         </span>
         <span className="animate-pulse text-amber-400">⚡</span>
       </div>
+
+      {/* Cart Sidebar Drawer */}
+      <CartDrawer isOpen={isCartDrawerOpen} onClose={() => setIsCartDrawerOpen(false)} />
     </header>
   );
 }

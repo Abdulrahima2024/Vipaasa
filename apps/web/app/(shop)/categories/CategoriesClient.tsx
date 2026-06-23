@@ -8,6 +8,7 @@ import { useCartStore } from "../../../store/useCartStore";
 import { useAuthStore } from "../../../store/authStore";
 import { fetchApi } from "../../../lib/api";
 import { parseEmojiImage } from "../../../lib/image";
+import { Check } from "lucide-react";
 
 
 // Real API product shape (used only for internal state)
@@ -46,7 +47,7 @@ export default function CategoriesClient() {
   ]);
 
   // Cart/Favorites store
-  const { items, favorites, addToCart, toggleFavorite } = useCartStore();
+  const { items, favorites, addToCart, toggleFavorite, updateQuantity, removeItem } = useCartStore();
   const { isAuthenticated, token } = useAuthStore();
 
   // Search input query
@@ -70,6 +71,14 @@ export default function CategoriesClient() {
 
   // Adding to cart animation track
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleToggleFavorite = (productId: string) => {
+    toggleFavorite(productId);
+    const isNowFavorite = !favorites.includes(productId);
+    setToastMessage(isNowFavorite ? "Product added into your Wishlist" : "Product removed from your Wishlist");
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -580,6 +589,14 @@ export default function CategoriesClient() {
                   const isFavorite = mounted && favorites.includes(product.id);
                   const price = product.prices[product.weight];
                   const isAdding = addingId === product.id;
+                  
+                  const cartItem = items.find(item => 
+                    (item.productId === product.id || 
+                     product.variants?.some(v => v.id === item.productId || v.id === item.variantId) ||
+                     item.name === product.name) && 
+                    item.weight === product.weight
+                  );
+                  const cartQuantity = cartItem?.quantity || 0;
 
                   return (
                     <div
@@ -619,7 +636,7 @@ export default function CategoriesClient() {
                         {/* Favorite button */}
                         <button
                           type="button"
-                          onClick={() => toggleFavorite(product.id)}
+                          onClick={() => handleToggleFavorite(product.id)}
                           className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm hover:bg-white p-2 rounded-full transition-all shadow-sm active:scale-90 transform z-10"
                           aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
                         >
@@ -714,34 +731,64 @@ export default function CategoriesClient() {
                               Buy Now
                             </button>
 
-                            {/* Add to Cart button */}
-                            <button
-                              onClick={() => handleAddToCart(product)}
-                              disabled={!product.inStock || isAdding}
-                              className={`flex items-center justify-center gap-1.5 text-xs font-bold px-2 py-2 sm:px-3.5 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${!product.inStock
-                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                : isAdding
-                                  ? "bg-[#2D6A4F] text-white"
-                                  : "bg-[#113C27] text-white hover:bg-[#2D6A4F]"
-                                }`}
-                              aria-label={`Add ${product.name} to cart`}
-                            >
-                              {isAdding ? (
-                                <>
-                                  <svg className="w-3.5 h-3.5 stroke-[3.5] animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            {/* Add to Cart or Quantity Selector */}
+                            {cartQuantity > 0 ? (
+                              <div className="flex items-center bg-white border border-[#EAE6DB] rounded-lg sm:rounded-xl overflow-hidden shadow-sm">
+                                <button
+                                  onClick={() => {
+                                    if (cartQuantity === 1) {
+                                      removeItem(cartItem!.id);
+                                    } else {
+                                      updateQuantity(cartItem!.id, -1);
+                                    }
+                                  }}
+                                  className="px-2 py-1.5 sm:py-2.5 text-[#113C27] hover:bg-[#FAF9F5] transition-colors"
+                                >
+                                  <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
                                   </svg>
-                                  <span className="hidden sm:inline">Added!</span>
-                                </>
-                              ) : (
-                                <>
-                                  <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                </button>
+                                <span className="w-6 text-center text-[11px] sm:text-xs font-bold text-[#113C27]">
+                                  {cartQuantity}
+                                </span>
+                                <button
+                                  onClick={() => updateQuantity(cartItem!.id, 1)}
+                                  className="px-2 py-1.5 sm:py-2.5 text-[#113C27] hover:bg-[#FAF9F5] transition-colors"
+                                >
+                                  <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                   </svg>
-                                  <span className="hidden sm:inline">Add</span>
-                                </>
-                              )}
-                            </button>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleAddToCart(product)}
+                                disabled={!product.inStock || isAdding}
+                                className={`flex items-center justify-center gap-1.5 text-xs font-bold px-2 py-2 sm:px-3.5 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${!product.inStock
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                  : isAdding
+                                    ? "bg-[#2D6A4F] text-white"
+                                    : "bg-[#113C27] text-white hover:bg-[#2D6A4F]"
+                                  }`}
+                                aria-label={`Add ${product.name} to cart`}
+                              >
+                                {isAdding ? (
+                                  <>
+                                    <svg className="w-3.5 h-3.5 stroke-[3.5] animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                    </svg>
+                                    <span className="hidden sm:inline">Added!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                    </svg>
+                                    <span className="hidden sm:inline">Add</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -1009,6 +1056,15 @@ export default function CategoriesClient() {
         </div>
       </div>
 
+      {/* Global Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in pointer-events-none">
+          <div className="bg-[#113C27] text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-3">
+            <Check className="w-5 h-5 text-[#C1F2D0]" />
+            <span className="font-semibold text-sm">{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

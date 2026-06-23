@@ -72,6 +72,9 @@ export default function FavoritesPage() {
               isNew: item.stockStatus === "IN_STOCK",
               rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
               variants: item.variants,
+              description: item.description || `${item.name} — 100% pure organic staple.`,
+              weight: item.variants?.[0]?.weightGrams === 1000 ? "1kg" : item.variants?.[0]?.weightGrams === 500 ? "500g" : "250g",
+              inStock: item.stockStatus === "IN_STOCK",
             };
           });
           setApiProducts(mapped);
