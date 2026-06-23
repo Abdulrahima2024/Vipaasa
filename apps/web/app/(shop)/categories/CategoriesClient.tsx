@@ -328,7 +328,7 @@ export default function CategoriesClient() {
         favoritesCount={mounted ? favorites.length : 0}
         activeNav="Categories"
         onNavChange={(navItem) => {
-          if (navItem === "Shop") {
+          if (navItem === "Home") {
             window.location.href = "/";
           }
         }}

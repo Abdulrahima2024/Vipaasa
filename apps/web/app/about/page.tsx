@@ -120,6 +120,7 @@ export default function AboutPage() {
       {/* HEADER SECTION */}
       <Header
         showSearch={true}
+        activeNav="About Vipaasa"
         cartCount={mounted ? items.reduce((acc, item) => acc + item.quantity, 0) : 0}
         favoritesCount={mounted ? favorites.length : 0}
         onFavoritesClick={() => {

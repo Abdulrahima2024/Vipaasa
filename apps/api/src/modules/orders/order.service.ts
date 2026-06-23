@@ -527,8 +527,14 @@ export async function updateOrderStatusAdmin(
     } else if (inputStatusLower === "processing") {
       dbOrderStatus = OrderStatus.PROCESSING;
       dbDeliveryStatus = DeliveryStatus.PENDING;
+    } else if (inputStatusLower === "packed") {
+      dbOrderStatus = OrderStatus.PACKED;
+      dbDeliveryStatus = DeliveryStatus.PENDING;
     } else if (inputStatusLower === "shipped") {
       dbOrderStatus = OrderStatus.SHIPPED;
+      dbDeliveryStatus = DeliveryStatus.IN_TRANSIT;
+    } else if (inputStatusLower === "out_for_delivery") {
+      dbOrderStatus = OrderStatus.OUT_FOR_DELIVERY;
       dbDeliveryStatus = DeliveryStatus.IN_TRANSIT;
     } else if (inputStatusLower === "delivered") {
       dbOrderStatus = OrderStatus.DELIVERED;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu, X, Flame } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useCartStore } from "../../store/useCartStore";
+import { fetchApi } from "../../lib/api";
 import CartDrawer from "../cart/CartDrawer";
 
 interface HeaderProps {
@@ -24,7 +25,7 @@ export default function Header({
   onSearchChange,
   cartCount = 0,
   favoritesCount = 0,
-  activeNav = "Shop",
+  activeNav = "Home",
   onNavChange,
   onFavoritesClick,
 }: HeaderProps) {
@@ -135,30 +136,58 @@ export default function Header({
     }
   };
 
-  // Mock notifications data matching VIPAASA Organics premium products and events
-  const [notifications, setNotifications] = useState([
-    {
-      id: "1",
-      title: "Fresh Harvest Alert 🌿",
-      description: "Our premium Matcha green tea has just been restocked. Grab yours before it's gone!",
-      timestamp: "2 hours ago",
-      isRead: false,
-    },
-    {
-      id: "2",
-      title: "Order Dispatched 📦",
-      description: "Your order #VP-8921 has been shipped and is on its way to your organic sanctuary.",
-      timestamp: "1 day ago",
-      isRead: false,
-    },
-    {
-      id: "3",
-      title: "Ethos Update 🌸",
-      description: "Read about our new regenerative farming partner in Southern India on our blog.",
-      timestamp: "3 days ago",
-      isRead: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!mounted || !_hasHydrated || !isAuthenticated) {
+      setNotifications([]);
+      return;
+    }
+
+    async function loadNotifications() {
+      try {
+        const res = await fetchApi<{ status: string; data: any[] }>("/api/orders");
+        if (res && Array.isArray(res.data) && res.data.length > 0) {
+          const newNotifications = res.data.map((order: any) => {
+            let title = "Order Placed 📦";
+            let description = `Your order ${order.orderNumber || "#" + order.id.slice(0, 8)} has been received and is being processed.`;
+            if (order.status === "SHIPPED") {
+              title = "Order Dispatched 🚚";
+              description = `Your order ${order.orderNumber || "#" + order.id.slice(0, 8)} has been shipped.`;
+            } else if (order.status === "DELIVERED") {
+              title = "Order Delivered 🎉";
+              description = `Your order ${order.orderNumber || "#" + order.id.slice(0, 8)} has been successfully delivered.`;
+            } else if (order.status === "CANCELLED") {
+              title = "Order Cancelled ❌";
+              description = `Your order ${order.orderNumber || "#" + order.id.slice(0, 8)} has been cancelled.`;
+            }
+
+            const timeStr = new Date(order.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " at " + new Date(order.createdAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+
+            return {
+              id: order.id,
+              title,
+              description,
+              timestamp: timeStr,
+              isRead: false,
+            };
+          });
+
+          // Sort by ID/Date most recent first
+          newNotifications.sort((a, b) => b.id.localeCompare(a.id));
+
+          setNotifications(newNotifications);
+        } else {
+          setNotifications([]);
+        }
+      } catch (err) {
+        console.error("Failed to load notifications from orders:", err);
+        setNotifications([]);
+      }
+    }
+
+    loadNotifications();
+  }, [mounted, _hasHydrated, isAuthenticated]);
 
   const hasUnread = notifications.some((n) => !n.isRead);
 
@@ -216,9 +245,9 @@ export default function Header({
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          {["Shop", "Categories", "Deals"].map((navItem) => {
-            if (navItem === "Categories" || navItem === "Deals" || navItem === "Shop") {
-              const href = navItem === "Shop" ? "/" : navItem === "Categories" ? "/categories" : "/deals";
+          {["Home", "Categories", "About Vipaasa"].map((navItem) => {
+            if (navItem === "Categories" || navItem === "Home" || navItem === "About Vipaasa") {
+              const href = navItem === "Home" ? "/" : navItem === "Categories" ? "/categories" : "/about";
               return (
                 <Link
                   key={navItem}
@@ -226,14 +255,7 @@ export default function Header({
                   className={`text-sm font-medium transition-colors relative py-1 ${activeNav === navItem ? "text-[#113C27] font-semibold" : "text-[#4B594F] hover:text-[#113C27]"
                     }`}
                 >
-                  {navItem === "Deals" ? (
-                    <span className="bg-[#A84444] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 transition-all duration-200 hover:bg-[#913939] shadow-sm">
-                      {navItem}
-                      <Flame className="w-3.5 h-3.5 text-white fill-white animate-pulse" />
-                    </span>
-                  ) : (
-                    <span>{navItem}</span>
-                  )}
+                  <span>{navItem}</span>
                   {activeNav === navItem && (
                     <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#113C27] rounded-full" />
                   )}
@@ -255,18 +277,6 @@ export default function Header({
               </button>
             );
           })}
-          {/* My Orders link — only shown when authenticated */}
-          {mounted && _hasHydrated && isAuthenticated && (
-            <Link
-              href="/orders"
-              className="text-sm font-medium text-[#4B594F] hover:text-[#113C27] transition-colors relative py-1 flex items-center gap-1.5"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
-              </svg>
-              My Orders
-            </Link>
-          )}
         </nav>
 
         {/* Header Right Interactions */}
@@ -564,9 +574,9 @@ export default function Header({
       {isMobileMenuOpen && (
         <div className="px-6 py-4 border-t border-[#EAE6DB]/40 md:hidden bg-[#F9F7F2]/95 animate-fade-in flex flex-col gap-3 shadow-inner">
           <nav className="flex flex-col gap-2">
-            {["Shop", "Categories", "Deals"].map((navItem) => {
-              if (navItem === "Categories" || navItem === "Deals" || navItem === "Shop") {
-                const href = navItem === "Shop" ? "/" : navItem === "Categories" ? "/categories" : "/deals";
+            {["Home", "Categories", "About Vipaasa"].map((navItem) => {
+              if (navItem === "Categories" || navItem === "Home" || navItem === "About Vipaasa") {
+                const href = navItem === "Home" ? "/" : navItem === "Categories" ? "/categories" : "/about";
                 return (
                   <Link
                     key={navItem}
@@ -577,16 +587,9 @@ export default function Header({
                       : "text-[#4B594F] hover:bg-[#FAF9F5] hover:text-[#113C27]"
                       }`}
                   >
-                    {navItem === "Deals" ? (
-                      <span className="bg-[#A84444] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                        {navItem}
-                        <Flame className="w-3.5 h-3.5 text-white fill-white animate-pulse" />
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5">
-                        {navItem}
-                      </span>
-                    )}
+                    <span className="flex items-center gap-1.5">
+                      {navItem}
+                    </span>
                   </Link>
                 );
               }

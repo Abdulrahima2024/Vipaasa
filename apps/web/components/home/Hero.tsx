@@ -20,7 +20,7 @@ export default function Hero() {
       <Sprout className="absolute bottom-[20%] right-[16%] text-[#40916C] opacity-[0.15] w-5 h-5 md:w-8 md:h-8 animate-float-2 z-30 pointer-events-none" />
       <Wheat className="absolute bottom-[22%] left-[10%] text-[#1B4332] opacity-[0.12] w-6 h-6 md:w-8 md:h-8 animate-float-3 z-30 pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 md:pt-1 md:pb-10">
         <div className="relative w-full aspect-[4/3] sm:aspect-[3/2] md:aspect-[16/9] bg-white overflow-hidden">
           {/* Clean Background Image (no baked-in text) */}
           <Image

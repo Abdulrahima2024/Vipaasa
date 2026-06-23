@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Header from "../layout/Header";
 import ProductListing from "./ProductListing";
-import DealsSection from "./DealsSection";
 import { useCartStore } from "../../store/useCartStore";
 
 interface HomeClientLayoutProps {
@@ -22,7 +21,7 @@ export default function HomeClientLayout({
   footer,
 }: HomeClientLayoutProps) {
   // Navigation active state
-  const [activeNav, setActiveNav] = useState("Shop");
+  const [activeNav, setActiveNav] = useState("Home");
 
   // Search input state
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,8 +99,7 @@ export default function HomeClientLayout({
           setShowFavoritesOnly={setShowFavoritesOnly}
         />
 
-        {/* HIGH-CONTRAST FLASH DEALS */}
-        <DealsSection />
+
 
         {/* Benefits Section (Server Component) */}
         {benefits}
