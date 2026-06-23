@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CartItem } from "../../store/useCartStore";
 import { fetchApi } from "../../lib/api";
+import { io, Socket } from "socket.io-client";
 
 interface GSTBreakdownProps {
   items: CartItem[];
@@ -17,6 +18,27 @@ export default function GSTBreakdown({ items, couponCode, setCouponCode, couponD
   const [inputCode, setInputCode] = useState(couponCode);
   const [couponError, setCouponError] = useState("");
   const [isValidating, setIsValidating] = useState(false);
+  const [newLiveCoupons, setNewLiveCoupons] = useState<any[]>([]);
+
+  // Socket.io integration for real-time coupons
+  useEffect(() => {
+    // Initialize socket connection
+    const socket: Socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000", {
+      transports: ["websocket"]
+    });
+
+    socket.on("coupon_created", (newCoupon: any) => {
+      setNewLiveCoupons((prev) => {
+        // Prevent duplicates
+        if (prev.find(c => c.code === newCoupon.code)) return prev;
+        return [newCoupon, ...prev];
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
   
   // Subtotal Calculation
   const subtotal = activeItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -133,6 +155,31 @@ export default function GSTBreakdown({ items, couponCode, setCouponCode, couponD
         </div>
         {couponError && <p className="text-red-500 text-xs font-bold">{couponError}</p>}
       </div>
+
+      {/* Live Available Coupons from Socket */}
+      {newLiveCoupons.length > 0 && couponDiscount === 0 && (
+        <div className="space-y-2 animate-fade-in">
+          <p className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            New Live Coupons!
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {newLiveCoupons.map((c) => (
+              <button
+                key={c.code}
+                onClick={() => setInputCode(c.code)}
+                className="bg-[#EAF5EC] border border-[#2D6A4F]/20 px-3 py-1.5 rounded-lg text-xs font-bold text-[#113C27] hover:bg-[#C1F2D0] hover:border-[#2D6A4F] transition-all flex flex-col items-start"
+              >
+                <span>{c.code}</span>
+                <span className="text-[10px] text-[#5C6E61] font-medium">{c.discountType === "PERCENTAGE" ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Total Section */}
       <div className="flex justify-between items-baseline py-1">

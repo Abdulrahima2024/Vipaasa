@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../../shared/middleware/authenticate";
 import * as couponService from "./coupon.service";
+import { getIO } from "../../socket/socket.server";
 
 export async function createCoupon(req: AuthenticatedRequest, res: Response) {
   try {
@@ -18,6 +19,20 @@ export async function createCoupon(req: AuthenticatedRequest, res: Response) {
       perUserLimit: data.perUserLimit || 1,
       status: data.status || "ACTIVE"
     });
+
+    // Emit websocket event
+    try {
+      getIO().emit("coupon_created", {
+        id: coupon.id,
+        code: coupon.code,
+        description: coupon.description,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue
+      });
+    } catch (e) {
+      console.warn("Could not emit coupon_created socket event", e);
+    }
+
     return res.status(201).json({ status: "success", data: coupon });
   } catch (error: any) {
     console.error("CreateCoupon error:", error);
@@ -66,7 +81,7 @@ export async function getAllCoupons(req: AuthenticatedRequest, res: Response) {
 export async function validateCoupon(req: AuthenticatedRequest, res: Response) {
   try {
     const { code, orderAmount } = req.body;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
     if (!code || !orderAmount) return res.status(400).json({ error: "Coupon code and order amount are required" });

@@ -44,7 +44,7 @@ export async function sendCampaign(req: AuthenticatedRequest, res: Response) {
 
 export async function getUserNotifications(req: AuthenticatedRequest, res: Response) {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     const notifications = await notificationService.getUserNotifications(userId);
@@ -57,7 +57,7 @@ export async function getUserNotifications(req: AuthenticatedRequest, res: Respo
 
 export async function markAsRead(req: AuthenticatedRequest, res: Response) {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 

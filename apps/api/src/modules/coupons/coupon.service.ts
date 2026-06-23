@@ -10,6 +10,7 @@ export async function updateCoupon(id: string, data: any) {
 }
 
 export async function deleteCoupon(id: string) {
+  await prisma.couponUsage.deleteMany({ where: { couponId: id } });
   return prisma.coupon.delete({ where: { id } });
 }
 

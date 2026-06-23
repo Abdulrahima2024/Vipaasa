@@ -98,6 +98,7 @@ export default function MyOrdersPage() {
   const [activeTab, setActiveTab] = useState<StatusFilter>("All Orders");
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [selectedOrderDetail, setSelectedOrderDetail] = useState<OrderItem | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
@@ -190,7 +191,7 @@ export default function MyOrdersPage() {
           }
         })
         .catch((err) => {
-          console.error("Failed to load customer orders:", err);
+          setPageError(err?.message || "Failed to load orders");
         });
     }
   }, [isAuthenticated, items]);
@@ -209,6 +210,18 @@ export default function MyOrdersPage() {
           <Loader2 className="w-12 h-12 text-[#0F5132] animate-spin" />
           <span className="text-sm font-semibold text-[#5C6E61]">Loading your orders...</span>
         </div>
+      </div>
+    );
+  }
+
+  if (pageError) {
+    return (
+      <div className="min-h-screen bg-[#F9F7F2] flex flex-col items-center justify-center text-[#1F3E2F]">
+        <h2 className="text-2xl font-bold mb-2 text-[#113C27]">Oops!</h2>
+        <p className="text-sm text-[#5C6E61] mb-6">{pageError}</p>
+        <button onClick={() => window.location.reload()} className="bg-[#113C27] text-white px-6 py-2.5 rounded-xl font-bold">
+          Retry
+        </button>
       </div>
     );
   }

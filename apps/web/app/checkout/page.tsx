@@ -486,7 +486,14 @@ export default function CheckoutPage() {
                   onSelect={setSelectedAddressId}
                   onAdd={handleAddAddress}
                   onEdit={handleEditAddress}
-                  onProceed={() => setStep(2)}
+                  onProceed={() => {
+                    if (!selectedAddressId || !selectedAddress) {
+                      setErrorMessage("Please add and select a delivery address first.");
+                      return;
+                    }
+                    setErrorMessage(null);
+                    setStep(2);
+                  }}
                   onBackToCart={() => window.location.href = "/cart"}
                 />
               )}

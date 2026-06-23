@@ -4,11 +4,14 @@ import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Ticket, Percent, Users, Coins } from "lucide-react";
 import { fetchAPI } from "../../../lib/api";
 import { format } from "date-fns";
+import AddCouponModal from "../../../components/coupons/AddCouponModal";
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<any>(null);
 
   useEffect(() => {
     loadCoupons();
@@ -63,7 +66,13 @@ export default function CouponsPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Manage discount coupons and track usage</p>
         </div>
-        <button className="bg-[var(--primary-green)] text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[var(--secondary-green)] transition-all shadow-sm flex items-center gap-2">
+        <button 
+          onClick={() => {
+            setEditingCoupon(null);
+            setIsAddModalOpen(true);
+          }}
+          className="bg-[var(--primary-green)] text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[var(--secondary-green)] transition-all shadow-sm flex items-center gap-2"
+        >
           <Plus className="w-5 h-5" />
           Create Coupon
         </button>
@@ -144,7 +153,13 @@ export default function CouponsPage() {
                       </button>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button 
+                        onClick={() => {
+                          setEditingCoupon(coupon);
+                          setIsAddModalOpen(true);
+                        }}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(coupon.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
@@ -158,6 +173,21 @@ export default function CouponsPage() {
           </table>
         </div>
       </div>
+
+      {isAddModalOpen && (
+        <AddCouponModal
+          initialData={editingCoupon}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setEditingCoupon(null);
+          }}
+          onSuccess={() => {
+            setIsAddModalOpen(false);
+            setEditingCoupon(null);
+            loadCoupons();
+          }}
+        />
+      )}
     </div>
   );
 }
