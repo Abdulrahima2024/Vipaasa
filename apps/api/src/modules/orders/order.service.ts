@@ -206,7 +206,7 @@ export async function checkout(
     const order = await tx.order.create({
       data: {
         userId,
-        status: OrderStatus.PENDING,
+        status: OrderStatus.CONFIRMED,
         totalItemsPrice,
         discountAmount,
         taxAmount,
@@ -287,7 +287,7 @@ export async function checkout(
     await tx.orderStatusHistory.create({
       data: {
         orderId: order.id,
-        status: OrderStatus.PENDING,
+        status: OrderStatus.CONFIRMED,
         changedByUserId: userId,
         notes: "Order created successfully via checkout.",
       },
@@ -398,8 +398,8 @@ export async function cancelOrder(userId: string, orderId: string) {
       throw new AppError("Order not found.", 404);
     }
 
-    if (order.status !== OrderStatus.PENDING) {
-      throw new AppError(`Cannot cancel order. Order status is currently "${order.status}". Only pending orders can be cancelled.`, 400);
+    if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.CONFIRMED) {
+      throw new AppError(`Cannot cancel order. Order status is currently "${order.status}". Only pending or confirmed orders can be cancelled.`, 400);
     }
 
     // 1. Update order status
@@ -547,6 +547,9 @@ export async function updateOrderStatusAdmin(
 
     if (inputStatusLower === "pending") {
       dbOrderStatus = OrderStatus.PENDING;
+      dbDeliveryStatus = DeliveryStatus.PENDING;
+    } else if (inputStatusLower === "confirmed") {
+      dbOrderStatus = OrderStatus.CONFIRMED;
       dbDeliveryStatus = DeliveryStatus.PENDING;
     } else if (inputStatusLower === "processing") {
       dbOrderStatus = OrderStatus.PROCESSING;
