@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useCartStore } from "../../store/useCartStore";
 import { useAuthStore } from "../../store/authStore";
 import { fetchApi } from "../../lib/api";
-import { LayoutGrid, Leaf, Wheat, Sparkles, Sprout, Layers, Droplet } from "lucide-react";
+import { LayoutGrid, Leaf, Wheat, Sparkles, Sprout, Layers, Droplet, Check } from "lucide-react";
 import { parseEmojiImage } from "../../lib/image";
 import { useOrganicSocket } from "../../hooks/useOrganicSocket";
 
@@ -19,9 +19,12 @@ export interface Product {
     "500g": number;
     "250g": number;
   };
+  weight: "1kg" | "500g" | "250g";
   image: string;
   isNew?: boolean;
-  rating?: number;
+  inStock: boolean;
+  description: string;
+  rating: number;
   variants?: any[];
 }
 
@@ -36,21 +39,30 @@ export function ProductCard({
   onRemoveFavorite,
 }: {
   product: Product;
-  onAddToCart: (weight: "1kg" | "500g" | "250g") => void;
-  onBuyNow: (weight: "1kg" | "500g" | "250g") => void;
+  onAddToCart: () => void;
+  onBuyNow: () => void;
   isFavorite: boolean;
   onToggleFavorite: () => void;
   isAnimatingFavorite: boolean;
   onRemoveFavorite?: () => void;
 }) {
-  const [selectedWeight, setSelectedWeight] = useState<"1kg" | "500g" | "250g">("1kg");
   const emojiInfo = parseEmojiImage(product.image);
+  
+  const { items, updateQuantity, removeItem } = useCartStore();
+  const cartItem = items.find(item => 
+    (item.productId === product.id || 
+     product.variants?.some(v => v.id === item.productId || v.id === item.variantId) ||
+     item.name === product.name) && 
+    item.weight === product.weight
+  );
+  const cartQuantity = cartItem?.quantity || 0;
+  const price = product.prices[product.weight];
 
   return (
-    <div className="bg-white border border-[#EAE6DB]/30 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-[0_8px_24px_rgba(0,0,0,0.02)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.05)] hover:border-[#EAE6DB]/60 transition-all duration-300 group relative">
+    <div className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.04)] hover:border-[#EAE6DB]/80 transition-all duration-300 group relative">
       
-      {/* Product Image using next/image */}
-      <div className="relative w-full aspect-square bg-white rounded-xl overflow-hidden mb-4">
+      {/* Product Image and Overlay Labels */}
+      <div className="relative w-full aspect-square bg-[#FAF9F5] rounded-xl overflow-hidden mb-4">
         <Link href={`/products/${product.id}`} className="block w-full h-full relative">
           {emojiInfo.isEmoji ? (
             <div
@@ -60,69 +72,78 @@ export function ProductCard({
               {emojiInfo.emoji}
             </div>
           ) : (
-            <Image
+            <img
               src={emojiInfo.imageUrl}
               alt={product.name}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
             />
           )}
-          {product.isNew && (
-            <span className="absolute top-2.5 left-2.5 bg-[#A84444] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full z-10">
-              New
-            </span>
-          )}
         </Link>
-        
-        {/* Favorite Heart Button Overlay */}
+
+        {/* Organic Label / Custom tag */}
+        {product.isNew && (
+          <span className="absolute top-2.5 left-2.5 bg-[#C1F2D0] text-[#113C27] text-[10px] font-bold px-2.5 py-0.5 rounded-full z-10 select-none shadow-sm">
+            In Stock
+          </span>
+        )}
+
+        {/* Favorite button */}
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onToggleFavorite();
           }}
-          className="absolute top-2.5 right-2.5 bg-white/80 backdrop-blur-md hover:bg-white p-2 rounded-full transition-all shadow-sm active:scale-95 transform z-10"
+          className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm hover:bg-white p-2 rounded-full transition-all shadow-sm active:scale-90 transform z-10"
           aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
         >
           <svg
-            className="w-4 h-4 stroke-[2.5] transition-colors duration-300"
+            className="w-4 h-4 stroke-[2.5] transition-all duration-300"
             fill={isFavorite ? "#A84444" : "none"}
             stroke={isFavorite ? "#A84444" : "#113C27"}
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
           </svg>
         </button>
       </div>
 
-      {/* Product Title and Category */}
+      {/* Product Content Details */}
       <div className="space-y-3 flex-1 flex flex-col justify-between">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[#738276]">
-            {product.category}
-          </span>
+          {/* Stock Status + Name Row */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#738276]">
+              {product.category}
+            </span>
+            <span
+              className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${product.inStock
+                ? "bg-[#C1F2D0]/50 text-[#113C27]"
+                : "bg-red-50 text-red-600"
+                }`}
+            >
+              {product.inStock ? "In Stock" : "Out of Stock"}
+            </span>
+          </div>
+
           <Link href={`/products/${product.id}`} className="block">
-            <h4 className="font-sans text-xs sm:text-base font-bold text-[#113C27] tracking-tight mt-0.5 leading-tight hover:text-[#2d6a4f] transition-colors">
+            <h4 className="font-serif text-xs sm:text-base font-extrabold text-[#113C27] tracking-tight mt-1 hover:text-[#2d6a4f] transition-colors leading-tight">
               {product.name}
             </h4>
           </Link>
-          
-          {/* Rating Review Stars (Yellowish Gold) */}
+
+          {/* Rating Review Stars */}
           <div className="flex items-center gap-1 mt-1">
             <div className="flex items-center text-[#F5A623]">
               {[...Array(5)].map((_, i) => {
                 const starVal = i + 1;
-                // Generate a stable rating between 4.5 and 4.9 based on product ID
-                const prodRating = product.rating || (4.5 + (parseInt(product.id) % 5) * 0.1);
-                const isFull = starVal <= Math.floor(prodRating);
-                const isHalf = !isFull && starVal - 0.5 <= prodRating;
+                const isFull = starVal <= Math.floor(product.rating);
+                const isHalf = !isFull && starVal - 0.5 <= product.rating;
                 return (
                   <svg
                     key={i}
-                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current"
+                    className="w-3.5 h-3.5 fill-current"
                     viewBox="0 0 24 24"
                   >
                     {isFull ? (
@@ -137,41 +158,27 @@ export function ProductCard({
               })}
             </div>
             <span className="text-[10px] font-bold text-[#738276] leading-none mt-0.5 ml-1">
-              {(product.rating || (4.5 + (parseInt(product.id) % 5) * 0.1)).toFixed(1)}
-            </span>
-          </div>
-        </div>
-
-        {/* Weight Toggle Buttons */}
-        <div className="flex gap-1 sm:gap-1.5 p-0.5 sm:p-1 bg-[#ECE9E0]/60 rounded-lg">
-          {(["250g", "500g", "1kg"] as const).map((w) => (
-            <button
-              key={w}
-              type="button"
-              onClick={() => setSelectedWeight(w)}
-              className={`flex-1 text-[8px] sm:text-[10px] font-extrabold py-0.5 sm:py-1 px-1 sm:px-1.5 rounded transition-all whitespace-nowrap ${
-                selectedWeight === w
-                  ? "bg-white text-[#113C27] shadow-sm"
-                  : "text-[#5C6E61] hover:text-[#113C27]"
-              }`}
-            >
-              {w}
-            </button>
-          ))}
-        </div>
-
-        {/* Price & Add to Cart button */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex flex-col">
-            <span className="font-sans text-xs sm:text-base font-bold text-[#113C27] tabular-nums">
-              ₹{product.prices[selectedWeight]}
-            </span>
-            <span className="text-[8px] sm:text-[9px] text-[#738276] font-medium leading-none">
-              ({selectedWeight})
+              {product.rating.toFixed(1)}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <p className="text-xs text-[#738276] font-medium mt-1.5">
+            {product.description}
+          </p>
+        </div>
+
+        {/* Price & Action Buttons */}
+        <div className="flex flex-col gap-2.5 pt-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs sm:text-lg font-bold text-[#113C27]">
+              ₹{price}
+            </span>
+            <span className="text-[10px] text-[#738276] font-bold uppercase tracking-wider bg-[#FAF8F5] px-2 py-0.5 rounded-md border border-[#EAE6DB]/60">
+              {product.weight}
+            </span>
+          </div>
+
+          <div className="flex gap-2">
             {/* Remove from Favorites button — only shown when onRemoveFavorite is passed */}
             {onRemoveFavorite && (
               <button
@@ -181,7 +188,7 @@ export function ProductCard({
                 aria-label={`Remove ${product.name} from favorites`}
                 className="bg-[#FEF2F2] text-[#A84444] hover:bg-[#A84444] hover:text-white border border-[#F5C6C6] hover:border-[#A84444] p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl transition-all duration-200 shadow-sm active:scale-95 transform"
               >
-                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                 </svg>
               </button>
@@ -189,22 +196,58 @@ export function ProductCard({
 
             {/* Buy Now button */}
             <button
-              onClick={() => onBuyNow(selectedWeight)}
-              className="bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-[9px] sm:text-[11px] font-bold px-1.5 py-2 sm:px-3 sm:py-2.5 rounded-lg sm:rounded-xl transition-colors shadow-sm active:scale-95 transform whitespace-nowrap"
+              onClick={onBuyNow}
+              disabled={!product.inStock}
+              className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-[9px] sm:text-xs font-bold px-1.5 py-2 sm:px-3 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform text-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Buy Now
             </button>
 
-            {/* Add to Cart button */}
-            <button
-              onClick={() => onAddToCart(selectedWeight)}
-              className="bg-[#113C27] text-white hover:bg-[#2D6A4F] p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl transition-colors shadow-sm active:scale-95 transform"
-              aria-label={`Add ${product.name} to cart`}
-            >
-              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-            </button>
+            {/* Add to Cart or Quantity Selector */}
+            {cartQuantity > 0 ? (
+              <div className="flex items-center bg-white border border-[#EAE6DB] rounded-lg sm:rounded-xl overflow-hidden shadow-sm">
+                <button
+                  onClick={() => {
+                    if (cartQuantity === 1) {
+                      removeItem(cartItem!.id);
+                    } else {
+                      updateQuantity(cartItem!.id, -1);
+                    }
+                  }}
+                  className="px-2 py-1.5 sm:py-2.5 text-[#113C27] hover:bg-[#FAF9F5] transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
+                  </svg>
+                </button>
+                <span className="w-6 text-center text-[11px] sm:text-xs font-bold text-[#113C27]">
+                  {cartQuantity}
+                </span>
+                <button
+                  onClick={() => updateQuantity(cartItem!.id, 1)}
+                  className="px-2 py-1.5 sm:py-2.5 text-[#113C27] hover:bg-[#FAF9F5] transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onAddToCart}
+                disabled={!product.inStock}
+                className={`flex items-center justify-center gap-1.5 text-xs font-bold px-2 py-2 sm:px-3.5 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${!product.inStock
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-[#113C27] text-white hover:bg-[#2D6A4F]"
+                  }`}
+                aria-label={`Add ${product.name} to cart`}
+              >
+                <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                </svg>
+                <span className="hidden sm:inline">Add</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -231,7 +274,6 @@ export function ProductCard({
           </span>
         </div>
       )}
-
     </div>
   );
 }
@@ -258,6 +300,9 @@ const mapOrganicToProduct = (item: any): Product => {
     image: (item.images && (item.images[0]?.url || item.images[0])) || "/placeholder.jpg",
     isNew: true,
     rating: 4.8,
+    inStock: true,
+    description: "100% pure organic staple.",
+    weight: "250g",
   };
 };
 
@@ -275,6 +320,7 @@ export default function ProductListing({
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useOrganicSocket(
     (created: any) => {
@@ -295,6 +341,13 @@ export default function ProductListing({
     addToCart,
     toggleFavorite,
   } = useCartStore();
+
+  const handleToggleFavorite = (productId: string) => {
+    toggleFavorite(productId);
+    const isNowFavorite = !favorites.includes(productId);
+    setToastMessage(isNowFavorite ? "Product added into your Wishlist" : "Product removed from your Wishlist");
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const token = useAuthStore((state) => state.token);
@@ -352,7 +405,10 @@ export default function ProductListing({
               category: item.category?.name || "General",
               prices,
               image: (item.images && (item.images[0]?.url || item.images[0])) || "/placeholder.jpg",
-              isNew: item.stockStatus === "IN_STOCK",
+              isNew: true,
+              inStock: item.stockStatus === "IN_STOCK",
+              description: item.description || `${item.name} — 100% pure organic staple.`,
+              weight: item.variants?.[0]?.weightGrams === 1000 ? "1kg" : item.variants?.[0]?.weightGrams === 500 ? "500g" : "250g",
               rating: 4.5 + (parseInt((item.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
               variants: item.variants,
             };
@@ -596,10 +652,10 @@ export default function ProductListing({
               <ProductCard
                 key={product.id}
                 product={product}
-                onAddToCart={(weight) => addToCart(product, weight)}
-                onBuyNow={(weight) => handleBuyNow(product, weight)}
+                onAddToCart={() => addToCart(product, product.weight)}
+                onBuyNow={() => handleBuyNow(product, product.weight)}
                 isFavorite={mounted && favorites.includes(product.id)}
-                onToggleFavorite={() => toggleFavorite(product.id)}
+                onToggleFavorite={() => handleToggleFavorite(product.id)}
                 isAnimatingFavorite={animatingProductId === product.id}
               />
             ))}
@@ -607,6 +663,16 @@ export default function ProductListing({
           )
         )}
       </section>
+
+      {/* Global Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in pointer-events-none">
+          <div className="bg-[#113C27] text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-3">
+            <Check className="w-5 h-5 text-[#C1F2D0]" />
+            <span className="font-semibold text-sm">{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
