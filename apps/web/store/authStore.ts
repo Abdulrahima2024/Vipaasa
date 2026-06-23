@@ -19,6 +19,7 @@ interface User {
 interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   error: string | null;
   isLoading: boolean;
@@ -31,6 +32,7 @@ interface AuthState {
     captchaToken?: string
   ) => Promise<boolean>;
   loginWithGoogle: (accessToken: string) => Promise<boolean>;
+  refreshSession: () => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
   updateUser: (user: User) => void;
@@ -40,9 +42,10 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
       error: null,
       isLoading: false,
@@ -74,6 +77,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: data.user,
             token: data.accessToken,
+            refreshToken: data.refreshToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -115,6 +119,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: data.user,
             token: data.accessToken,
+            refreshToken: data.refreshToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -156,6 +161,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: data.user,
             token: data.accessToken,
+            refreshToken: data.refreshToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
@@ -172,6 +178,38 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      refreshSession: async () => {
+        const { refreshToken } = get();
+        if (!refreshToken) return false;
+
+        try {
+          const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+          const response = await fetch(`${apiBaseUrl}/api/auth/refresh-token`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          if (!response.ok) {
+            get().logout();
+            return false;
+          }
+
+          const data = await response.json();
+          set({
+            token: data.accessToken,
+            refreshToken: data.refreshToken || refreshToken,
+            isAuthenticated: true,
+          });
+          return true;
+        } catch (err) {
+          console.error("AuthStore refresh token error:", err);
+          return false;
+        }
+      },
+
       clearError: () => {
         set({ error: null });
       },
@@ -184,6 +222,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           token: null,
+          refreshToken: null,
           isAuthenticated: false,
           error: null,
         });
@@ -194,6 +233,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         token: state.token,
+        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {

@@ -100,29 +100,43 @@ export const useCartStore = create<CartStore>()(
 
       mergeGuestCart: async (guestItems) => {
         if (guestItems.length === 0) return;
-        try {
-          const allProducts = await getCachedProducts();
-          for (const gItem of guestItems) {
-            let variantId = gItem.variantId;
-            const grams = gItem.weight === "1kg" ? 1000 : gItem.weight === "500g" ? 500 : 250;
+        const allProducts = await getCachedProducts();
 
-            if (!variantId && gItem.productId) {
-              const parentProduct = allProducts.find((p: any) => p.id === gItem.productId);
-              if (parentProduct && parentProduct.variants) {
-                const variant = parentProduct.variants.find((v: any) => v.weightGrams === grams);
-                variantId = variant?.id;
-              }
-            }
+        for (const gItem of guestItems) {
+          let variantId = gItem.variantId;
+          const grams = gItem.weight === "1kg" ? 1000 : gItem.weight === "500g" ? 500 : 250;
 
-            if (variantId) {
-              await fetchApi("/api/cart/items", {
-                method: "POST",
-                body: JSON.stringify({ productId: variantId, quantity: gItem.quantity }),
-              });
+          if (!variantId && gItem.productId) {
+            const parentProduct = allProducts.find((p: any) => p.id === gItem.productId);
+            if (parentProduct && parentProduct.variants) {
+              const variant = parentProduct.variants.find((v: any) => v.weightGrams === grams);
+              variantId = variant?.id;
             }
           }
-        } catch (e) {
-          console.error("Error merging guest cart", e);
+
+          if (!variantId) continue;
+
+          // Each item is merged independently so one stock error doesn't break the whole merge
+          try {
+            await fetchApi("/api/cart/items", {
+              method: "POST",
+              body: JSON.stringify({ productId: variantId, quantity: gItem.quantity }),
+            });
+          } catch (e: any) {
+            console.warn(`[mergeGuestCart] Failed to merge item ${gItem.name} (qty: ${gItem.quantity}):`, e.message);
+            // If quantity exceeds stock, retry with quantity 1 as a safe fallback
+            if (e.message && (e.message.toLowerCase().includes("stock") || e.message.toLowerCase().includes("quantity"))) {
+              try {
+                await fetchApi("/api/cart/items", {
+                  method: "POST",
+                  body: JSON.stringify({ productId: variantId, quantity: 1 }),
+                });
+                console.info(`[mergeGuestCart] Retried ${gItem.name} with quantity 1 due to stock limit.`);
+              } catch (retryErr: any) {
+                console.error(`[mergeGuestCart] Retry also failed for ${gItem.name}:`, retryErr.message);
+              }
+            }
+          }
         }
       },
 
@@ -208,11 +222,11 @@ export const useCartStore = create<CartStore>()(
               console.error("Error adding item to backend cart:", e);
               // Rollback to previous items state on error
               set({ items: previousItems });
-              alert(e.message || "Failed to add item to cart. It might be out of stock.");
+              // Alert removed to prevent ugly popups on token expiry
             }
           } else {
             console.warn("[useCartStore] Failed to add to cart: Could not resolve a product variant ID in the database for weight:", weight, "on product:", product);
-            alert("Could not resolve a product variant ID for this product weight.");
+            // Alert removed to prevent ugly popups
           }
         } else {
           // Guest mode: local state update

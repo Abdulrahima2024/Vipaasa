@@ -24,10 +24,28 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
   });
   
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      useAuthStore.getState().logout();
+      // Try to refresh the token
+      const refreshed = await useAuthStore.getState().refreshSession();
+      if (refreshed) {
+        // Retry the original request with the new token
+        const newToken = useAuthStore.getState().token;
+        if (newToken) {
+          (headers as Record<string, string>)["Authorization"] = `Bearer ${newToken}`;
+          const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
+            ...options,
+            headers,
+          });
+          if (retryResponse.ok) {
+            return retryResponse.json() as Promise<T>;
+          }
+        }
+      } else {
+        useAuthStore.getState().logout();
+      }
     }
+
+    const errorData = await response.json().catch(() => ({}));
     const errorMessage = typeof errorData.error === "string" 
       ? errorData.error 
       : errorData.message 
