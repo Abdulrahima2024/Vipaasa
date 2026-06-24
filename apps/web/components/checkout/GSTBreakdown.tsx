@@ -18,17 +18,30 @@ export default function GSTBreakdown({ items, couponCode, setCouponCode, couponD
   const [inputCode, setInputCode] = useState(couponCode);
   const [couponError, setCouponError] = useState("");
   const [isValidating, setIsValidating] = useState(false);
-  const [newLiveCoupons, setNewLiveCoupons] = useState<any[]>([]);
+  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
+  const [showCouponsList, setShowCouponsList] = useState(false);
 
-  // Socket.io integration for real-time coupons
+  // Load existing and real-time coupons
   useEffect(() => {
+    const loadCoupons = async () => {
+      try {
+        const res = await fetchApi<{ data: any[] }>("/api/coupons");
+        if (res && res.data) {
+          setAvailableCoupons(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load active coupons:", err);
+      }
+    };
+    loadCoupons();
+
     // Initialize socket connection
     const socket: Socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000", {
       transports: ["websocket"]
     });
 
     socket.on("coupon_created", (newCoupon: any) => {
-      setNewLiveCoupons((prev) => {
+      setAvailableCoupons((prev) => {
         // Prevent duplicates
         if (prev.find(c => c.code === newCoupon.code)) return prev;
         return [newCoupon, ...prev];
@@ -156,28 +169,60 @@ export default function GSTBreakdown({ items, couponCode, setCouponCode, couponD
         {couponError && <p className="text-red-500 text-xs font-bold">{couponError}</p>}
       </div>
 
-      {/* Live Available Coupons from Socket */}
-      {newLiveCoupons.length > 0 && couponDiscount === 0 && (
+      {/* Available Coupons */}
+      {availableCoupons.length > 0 && couponDiscount === 0 && (
         <div className="space-y-2 animate-fade-in">
-          <p className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider flex items-center gap-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          <button
+            type="button"
+            onClick={() => setShowCouponsList(!showCouponsList)}
+            className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider flex items-center gap-1.5 hover:opacity-85 transition-opacity focus:outline-none w-full justify-between py-1 border-b border-dashed border-[#EAE6DB]"
+          >
+            <span className="flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-[#2D6A4F]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581a1.44 1.44 0 0 0 2.037 0l4.318-4.318a1.44 1.44 0 0 0 0-2.037L10.03 3.659A2.25 2.25 0 0 0 8.432 3Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 7.5h.008v.008H7.5V7.5Z" />
+              </svg>
+              Available Coupons
             </span>
-            New Live Coupons!
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {newLiveCoupons.map((c) => (
-              <button
-                key={c.code}
-                onClick={() => setInputCode(c.code)}
-                className="bg-[#EAF5EC] border border-[#2D6A4F]/20 px-3 py-1.5 rounded-lg text-xs font-bold text-[#113C27] hover:bg-[#C1F2D0] hover:border-[#2D6A4F] transition-all flex flex-col items-start"
-              >
-                <span>{c.code}</span>
-                <span className="text-[10px] text-[#5C6E61] font-medium">{c.discountType === "PERCENTAGE" ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`}</span>
-              </button>
-            ))}
-          </div>
+            <svg 
+              className={`w-3.5 h-3.5 transition-transform duration-200 text-[#2D6A4F] ${showCouponsList ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2.5" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          
+          {showCouponsList && (
+            <div className="flex flex-wrap gap-2 pt-1.5 animate-fade-in">
+              {availableCoupons.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => {
+                    setInputCode(c.code);
+                    setCouponError("");
+                  }}
+                  title={c.description || ""}
+                  className={`border px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex flex-col items-start min-w-[100px] ${
+                    inputCode === c.code 
+                      ? "bg-[#C1F2D0] border-[#2D6A4F] text-[#113C27]" 
+                      : "bg-[#F9F7F2] border-[#EAE6DB] text-[#4B594F] hover:bg-[#FAF8F5] hover:border-[#2D6A4F]"
+                  }`}
+                >
+                  <span className="font-extrabold tracking-wider">{c.code}</span>
+                  <span className="text-[10px] text-[#2D6A4F] mt-0.5">
+                    {c.discountType === "PERCENTAGE" ? `${Number(c.discountValue)}% OFF` : `₹${Number(c.discountValue)} OFF`}
+                  </span>
+                  {c.minOrderAmount > 0 && (
+                    <span className="text-[8px] text-[#738276] mt-0.5">Min: ₹{Number(c.minOrderAmount)}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

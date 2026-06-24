@@ -167,8 +167,11 @@ export async function createProduct(req: AuthenticatedRequest, res: Response) {
       message: "Product created successfully",
       product,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating product:", error);
+    if (error.message === "A product can have a maximum of 3 images") {
+      return res.status(400).json({ error: error.message });
+    }
     return res.status(500).json({ error: "Failed to create product" });
   }
 }
@@ -254,8 +257,11 @@ export async function updateProduct(req: AuthenticatedRequest, res: Response) {
       message: "Product updated successfully",
       product: updated,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error updating product ID ${req.params.id}:`, error);
+    if (error.message === "A product can have a maximum of 3 images") {
+      return res.status(400).json({ error: error.message });
+    }
     return res.status(500).json({ error: "Failed to update product" });
   }
 }

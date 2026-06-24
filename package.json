@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "node apps/api/scripts/kill-port.js && turbo run dev",
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint"

@@ -1,4 +1,4 @@
-import { OrderStatus, ReservationStatus, PaymentStatus, DeliveryStatus } from "@prisma/client";
+import { OrderStatus, ReservationStatus, PaymentStatus, DeliveryStatus, AssignmentStatus } from "@prisma/client";
 import { AppError } from "../../shared/middleware/errorHandler";
 import { prisma } from "../../config/database";
 
@@ -29,6 +29,7 @@ export async function checkout(
       country: string;
       phone?: string | null;
     };
+    couponCode?: string;
   }
 ) {
   return prisma.$transaction(async (tx) => {
@@ -193,20 +194,67 @@ export async function checkout(
 
     const taxAmount = Math.round(totalItemsPrice * 0.18 * 100) / 100; // 18% standard tax
     const shippingFee = totalItemsPrice >= 1000 ? 0 : 100; // Free shipping above 1000
-    const discountAmount = 0;
+    
+    let discountAmount = 0;
+    let appliedCouponId = null;
+
+    if (payload.couponCode) {
+      const coupon = await tx.coupon.findUnique({ where: { code: payload.couponCode } });
+      if (!coupon) throw new AppError("Invalid coupon code", 400);
+      if (coupon.status !== "ACTIVE") throw new AppError("Coupon is not active", 400);
+      
+      const now = new Date();
+      if (now < coupon.startDate || now > coupon.endDate) {
+        throw new AppError("Coupon has expired or is not yet active", 400);
+      }
+
+      if (Number(totalItemsPrice) < Number(coupon.minOrderAmount)) {
+        throw new AppError(`Minimum order amount must be ₹${coupon.minOrderAmount}`, 400);
+      }
+
+      if (coupon.usageLimit) {
+        const totalUsage = await tx.couponUsage.count({ where: { couponId: coupon.id } });
+        if (totalUsage >= coupon.usageLimit) {
+          throw new AppError("Coupon usage limit reached", 400);
+        }
+      }
+
+      const userUsage = await tx.couponUsage.count({
+        where: { couponId: coupon.id, userId }
+      });
+
+      if (userUsage >= coupon.perUserLimit) {
+        throw new AppError("You have already reached the usage limit for this coupon", 400);
+      }
+
+      if (coupon.discountType === "PERCENTAGE") {
+        discountAmount = (totalItemsPrice * Number(coupon.discountValue)) / 100;
+        if (coupon.maxDiscount && discountAmount > Number(coupon.maxDiscount)) {
+          discountAmount = Number(coupon.maxDiscount);
+        }
+      } else {
+        discountAmount = Number(coupon.discountValue);
+      }
+      
+      appliedCouponId = coupon.id;
+    }
+
     const totalPayable = totalItemsPrice + taxAmount + shippingFee - discountAmount;
 
     console.log(`[BACKEND] Step 5: Calculated Order Totals:`);
     console.log(`          - Items Subtotal: INR ${totalItemsPrice}`);
     console.log(`          - Shipping Fee:   INR ${shippingFee}`);
     console.log(`          - GST Tax (18%):  INR ${taxAmount}`);
+    if (discountAmount > 0) {
+      console.log(`          - Discount:       INR ${discountAmount}`);
+    }
     console.log(`          - Total Payable:  INR ${totalPayable}`);
 
     // 6. Create Order
     const order = await tx.order.create({
       data: {
         userId,
-        status: OrderStatus.PENDING,
+        status: OrderStatus.CONFIRMED,
         totalItemsPrice,
         discountAmount,
         taxAmount,
@@ -226,8 +274,22 @@ export async function checkout(
         billingCountry: billingAddress.country,
         paymentStatus: PaymentStatus.UNPAID,
         deliveryStatus: DeliveryStatus.PENDING,
+        couponId: appliedCouponId,
       },
     });
+
+    if (appliedCouponId) {
+      await tx.couponUsage.create({
+        data: {
+          couponId: appliedCouponId,
+          userId,
+          orderId: order.id,
+          discount: discountAmount,
+        }
+      });
+      console.log(`[BACKEND] Step 6b: Recorded Coupon Usage for coupon ID ${appliedCouponId}.`);
+    }
+
     console.log(`[BACKEND] Step 6: Order successfully created in Database.`);
     console.log(`          - Database ID:  ${order.id}`);
     console.log(`          - Order Number: ${order.orderNumber}`);
@@ -287,7 +349,7 @@ export async function checkout(
     await tx.orderStatusHistory.create({
       data: {
         orderId: order.id,
-        status: OrderStatus.PENDING,
+        status: OrderStatus.CONFIRMED,
         changedByUserId: userId,
         notes: "Order created successfully via checkout.",
       },
@@ -398,8 +460,8 @@ export async function cancelOrder(userId: string, orderId: string) {
       throw new AppError("Order not found.", 404);
     }
 
-    if (order.status !== OrderStatus.PENDING) {
-      throw new AppError(`Cannot cancel order. Order status is currently "${order.status}". Only pending orders can be cancelled.`, 400);
+    if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.CONFIRMED) {
+      throw new AppError(`Cannot cancel order. Order status is currently "${order.status}". Only pending or confirmed orders can be cancelled.`, 400);
     }
 
     // 1. Update order status
@@ -470,29 +532,61 @@ export async function cancelOrder(userId: string, orderId: string) {
 /**
  * Retrieves all orders for the administration dashboard.
  */
-export async function getAdminOrders() {
-  return prisma.order.findMany({
-    take: 100,
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: {
-        include: {
-          profile: true,
+export async function getAdminOrders(page = 1, limit = 20, search?: string, statusFilter?: string) {
+  const where: any = {};
+  
+  if (statusFilter && statusFilter !== "All") {
+    where.status = statusFilter;
+  }
+  
+  if (search) {
+    where.OR = [
+      { orderNumber: { contains: search, mode: "insensitive" } },
+      { user: { email: { contains: search, mode: "insensitive" } } },
+      { user: { profile: { firstName: { contains: search, mode: "insensitive" } } } }
+    ];
+  }
+
+  const [data, totalCount] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      take: limit,
+      skip: (page - 1) * limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
         },
-      },
-      items: {
-        include: {
-          variant: {
-            include: {
-              product: true,
+        items: {
+          include: {
+            variant: {
+              include: {
+                product: true,
+              },
             },
           },
         },
+        statusHistory: true,
+        payments: true,
+        OrderAssignment: {
+          include: {
+            deliveryPartner: true,
+          }
+        }
       },
-      statusHistory: true,
-      payments: true,
-    },
-  });
+    }),
+    prisma.order.count({ where })
+  ]);
+
+  return {
+    data,
+    totalCount,
+    page,
+    limit,
+    totalPages: Math.ceil(totalCount / limit)
+  };
 }
 
 /**
@@ -501,20 +595,20 @@ export async function getAdminOrders() {
 export async function getAdminOrderStats() {
   const result = await prisma.order.aggregate({
     _sum: { totalPayable: true },
-    _count: { id: true },
+    _count: true,
     where: {
       status: {
-        notIn: ["CANCELLED", "RETURNED"]
+        notIn: [OrderStatus.CANCELLED, OrderStatus.RETURNED]
       },
       paymentStatus: {
-        notIn: ["REFUNDED"]
+        notIn: [PaymentStatus.REFUNDED]
       }
     }
   });
 
   return {
     totalRevenue: result._sum.totalPayable || 0,
-    totalOrders: result._count.id || 0,
+    totalOrders: result._count || 0,
   };
 }
 
@@ -547,6 +641,9 @@ export async function updateOrderStatusAdmin(
 
     if (inputStatusLower === "pending") {
       dbOrderStatus = OrderStatus.PENDING;
+      dbDeliveryStatus = DeliveryStatus.PENDING;
+    } else if (inputStatusLower === "confirmed") {
+      dbOrderStatus = OrderStatus.CONFIRMED;
       dbDeliveryStatus = DeliveryStatus.PENDING;
     } else if (inputStatusLower === "processing") {
       dbOrderStatus = OrderStatus.PROCESSING;
@@ -656,9 +753,105 @@ export async function updateOrderStatusAdmin(
 }
 
 export const assignDeliveryPartner = async (orderId: string, partnerId: string, userId: string, notes?: string) => {
-  return { status: "MOCKED", orderId, partnerId, userId, notes };
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new AppError("Order not found", 404);
+
+    const partner = await tx.deliveryPartner.findUnique({ where: { id: partnerId } });
+    if (!partner) throw new AppError("Delivery partner not found", 404);
+
+    const assignment = await tx.orderAssignment.upsert({
+      where: { orderId },
+      update: {
+        deliveryPartnerId: partnerId,
+        assignedById: userId,
+        status: AssignmentStatus.ASSIGNED,
+        notes,
+        assignedAt: new Date(),
+      },
+      create: {
+        orderId,
+        deliveryPartnerId: partnerId,
+        assignedById: userId,
+        status: AssignmentStatus.ASSIGNED,
+        notes,
+      }
+    });
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: { deliveryStatus: DeliveryStatus.ASSIGNED }
+    });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await tx.deliveryOTP.upsert({
+      where: { orderId },
+      update: {
+        otp,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        isUsed: false,
+        attempts: 0,
+      },
+      create: {
+        orderId,
+        otp,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      }
+    });
+
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        status: order.status,
+        changedByUserId: userId,
+        notes: `Delivery assigned to partner ${partner.name}. Notes: ${notes || ''}`,
+      }
+    });
+
+    return { assignment, generatedOtp: otp };
+  });
 };
 
 export const verifyDeliveryOTP = async (orderId: string, otp: string, userId: string) => {
-  return { verified: true, orderId, otp, userId };
+  return prisma.$transaction(async (tx) => {
+    const deliveryOtp = await tx.deliveryOTP.findUnique({ where: { orderId } });
+    if (!deliveryOtp) throw new AppError("OTP not generated for this order", 404);
+    if (deliveryOtp.isUsed) throw new AppError("OTP already used", 400);
+    if (deliveryOtp.expiresAt < new Date()) throw new AppError("OTP expired", 400);
+    
+    if (deliveryOtp.otp !== otp) {
+      await tx.deliveryOTP.update({ where: { id: deliveryOtp.id }, data: { attempts: { increment: 1 } } });
+      throw new AppError("Invalid OTP", 400);
+    }
+
+    await tx.deliveryOTP.update({
+      where: { id: deliveryOtp.id },
+      data: { isUsed: true, verifiedAt: new Date() }
+    });
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: { 
+        status: OrderStatus.DELIVERED,
+        deliveryStatus: DeliveryStatus.DELIVERED,
+        paymentStatus: PaymentStatus.PAID,
+      }
+    });
+
+    await tx.orderAssignment.update({
+      where: { orderId },
+      data: { status: AssignmentStatus.DELIVERED, deliveredAt: new Date() }
+    });
+
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        status: OrderStatus.DELIVERED,
+        changedByUserId: userId,
+        notes: "Order delivered successfully via OTP verification.",
+      }
+    });
+
+    return { verified: true, orderId };
+  });
 };

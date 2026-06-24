@@ -6,7 +6,7 @@ import { getDashboardStats, getAnalyticsStats } from "./report.controller";
 const router = Router();
 
 // GET /reports/dashboard - Fetch dashboard reports and analytics (Admin only)
-router.get("/reports/dashboard", authenticate, authorize(["SUPER_ADMIN"]), getDashboardStats);
+router.get("/reports/dashboard", authenticate, authorize(["ADMIN", "SUPER_ADMIN"]), getDashboardStats);
 
 // GET /reports/analytics - Fetch advanced analytical reports across tabs
 router.get("/reports/analytics", authenticate, getAnalyticsStats);
