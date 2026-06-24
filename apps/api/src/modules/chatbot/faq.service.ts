@@ -49,5 +49,5 @@ export async function getFAQResponse(question: string): Promise<string> {
   }
 
   // 4. Default fallback answer if question is not in DB
-  return "I'm sorry, I couldn't find an answer to your question. Please try asking another question or contact support.";
+  return "Please contact with phone number: +91 99887 76655";
 }

@@ -20,11 +20,24 @@ const faqData: Record<string, string> = {
   "How do I partner as a farmer?": "We are always looking for regenerative farmers! Please email us at info@vipaasaorganics.com or submit the partner form on our /about page."
 };
 
+const menuOptions = {
+  orders: ["Track my order", "Recent orders"],
+  cart: ["My cart", "Cart summary"],
+  profile: ["My profile", "Account details"],
+  payment: ["Payment methods", "Refund policy"],
+  other: [
+    "What makes Vipaasa Organics unique?",
+    "Where are your store branches located?",
+    "What are your delivery timings?"
+  ]
+};
+
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const _hasHydrated = useAuthStore((state) => state._hasHydrated);
@@ -114,7 +127,7 @@ export default function Chatbot() {
         const botMsg: ChatMessage = {
           id: `bot-${Date.now()}`,
           sender: "bot",
-          text: "Please sign in to your Vipaasa account to use the chat assistant. This helps us retrieve your orders, cart, and profile information securely.",
+          text: "you are valuable customer please sign in",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         setMessages((prev) => [...prev, botMsg]);
@@ -138,7 +151,7 @@ export default function Chatbot() {
       setMessages((prev) => [...prev, botMsg]);
     } catch (error: any) {
       console.warn("Chatbot message error:", error);
-      const errorMessage = error?.message || "I don't have an idea on that topic. Please feel free to reach out to our team at info@vipaasaorganics.com or call +91 99887 76655!";
+      const errorMessage = error?.message || "Please contact with phone number: +91 99887 76655";
       const botMsg: ChatMessage = {
         id: `bot-${Date.now()}`,
         sender: "bot",
@@ -263,7 +276,13 @@ export default function Chatbot() {
                         : "bg-white text-[#113C27] border border-[#EAE6DB] rounded-tl-none shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
                     }`}
                   >
-                    {msg.text}
+                    {msg.text === "you are valuable customer please sign in" ? (
+                      <span>
+                        You are valuable customer please <a href="/login" className="underline font-bold text-[#2D6A4F] hover:text-[#113C27]">sign in</a>
+                      </span>
+                    ) : (
+                      msg.text
+                    )}
                   </div>
                   <span className="text-[9px] text-[#738276] font-semibold block px-1 text-right">
                     {msg.timestamp}
@@ -291,15 +310,39 @@ export default function Chatbot() {
 
           {/* Quick FAQ buttons */}
           <div className="px-4 py-2 border-t border-[#EAE6DB]/40 bg-white/40 flex flex-wrap gap-2 justify-start max-h-[120px] overflow-y-auto">
-            {Object.keys(faqData).map((question) => (
-              <button
-                key={question}
-                onClick={() => handleSendMessage(question)}
-                className="text-[10px] font-bold text-[#113C27] bg-white border border-[#EAE6DB] px-3 py-1.5 rounded-full hover:bg-[#C1F2D0] hover:border-[#113C27]/40 transition-colors shadow-sm text-left leading-normal"
-              >
-                {question}
-              </button>
-            ))}
+            {!isAuthenticated ? (
+              null
+            ) : selectedCategory === null ? (
+              <>
+                {(["orders", "cart", "profile", "payment", "other"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className="text-[10px] font-bold text-[#113C27] bg-white border border-[#EAE6DB] px-3 py-1.5 rounded-full hover:bg-[#C1F2D0] hover:border-[#113C27]/40 transition-colors shadow-sm text-left leading-normal capitalize"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className="text-[10px] font-extrabold text-white bg-[#113C27] border border-[#113C27] px-3 py-1.5 rounded-full hover:bg-[#2D6A4F] transition-colors shadow-sm text-left leading-normal"
+                >
+                  ← Back
+                </button>
+                {menuOptions[selectedCategory as keyof typeof menuOptions].map((question) => (
+                  <button
+                    key={question}
+                    onClick={() => handleSendMessage(question)}
+                    className="text-[10px] font-bold text-[#113C27] bg-white border border-[#EAE6DB] px-3 py-1.5 rounded-full hover:bg-[#C1F2D0] hover:border-[#113C27]/40 transition-colors shadow-sm text-left leading-normal"
+                  >
+                    {question}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Message input form */}
