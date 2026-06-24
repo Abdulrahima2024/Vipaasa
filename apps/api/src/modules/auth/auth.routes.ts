@@ -23,7 +23,7 @@ const forgotPasswordLimiter = createRedisRateLimiter({
   keyPrefix: "forgot-password",
 });
 
-router.post("/login", validateCaptcha, loginLimiter, login);
+router.post("/login", loginLimiter, login);
 router.post("/register", validateCaptcha, registerLimiter, register);
 router.post("/google", loginLimiter, googleLogin);
 router.post("/forgot-password", validateCaptcha, forgotPasswordLimiter, forgotPassword);

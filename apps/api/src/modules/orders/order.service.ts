@@ -470,29 +470,61 @@ export async function cancelOrder(userId: string, orderId: string) {
 /**
  * Retrieves all orders for the administration dashboard.
  */
-export async function getAdminOrders() {
-  return prisma.order.findMany({
-    take: 100,
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: {
-        include: {
-          profile: true,
+export async function getAdminOrders(page = 1, limit = 20, search?: string, statusFilter?: string) {
+  const where: any = {};
+  
+  if (statusFilter && statusFilter !== "All") {
+    where.status = statusFilter;
+  }
+  
+  if (search) {
+    where.OR = [
+      { orderNumber: { contains: search, mode: "insensitive" } },
+      { user: { email: { contains: search, mode: "insensitive" } } },
+      { user: { profile: { firstName: { contains: search, mode: "insensitive" } } } }
+    ];
+  }
+
+  const [data, totalCount] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      take: limit,
+      skip: (page - 1) * limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          include: {
+            profile: true,
+          },
         },
-      },
-      items: {
-        include: {
-          variant: {
-            include: {
-              product: true,
+        items: {
+          include: {
+            variant: {
+              include: {
+                product: true,
+              },
             },
           },
         },
+        statusHistory: true,
+        payments: true,
+        OrderAssignment: {
+          include: {
+            deliveryPartner: true,
+          }
+        }
       },
-      statusHistory: true,
-      payments: true,
-    },
-  });
+    }),
+    prisma.order.count({ where })
+  ]);
+
+  return {
+    data,
+    totalCount,
+    page,
+    limit,
+    totalPages: Math.ceil(totalCount / limit)
+  };
 }
 
 /**
@@ -655,10 +687,108 @@ export async function updateOrderStatusAdmin(
   });
 }
 
+import { AssignmentStatus } from "@prisma/client";
+
 export const assignDeliveryPartner = async (orderId: string, partnerId: string, userId: string, notes?: string) => {
-  return { status: "MOCKED", orderId, partnerId, userId, notes };
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new AppError("Order not found", 404);
+
+    const partner = await tx.deliveryPartner.findUnique({ where: { id: partnerId } });
+    if (!partner) throw new AppError("Delivery partner not found", 404);
+
+    const assignment = await tx.orderAssignment.upsert({
+      where: { orderId },
+      update: {
+        deliveryPartnerId: partnerId,
+        assignedById: userId,
+        status: AssignmentStatus.ASSIGNED,
+        notes,
+        assignedAt: new Date(),
+      },
+      create: {
+        orderId,
+        deliveryPartnerId: partnerId,
+        assignedById: userId,
+        status: AssignmentStatus.ASSIGNED,
+        notes,
+      }
+    });
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: { deliveryStatus: DeliveryStatus.ASSIGNED }
+    });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await tx.deliveryOTP.upsert({
+      where: { orderId },
+      update: {
+        otp,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        isUsed: false,
+        attempts: 0,
+      },
+      create: {
+        orderId,
+        otp,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      }
+    });
+
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        status: order.status,
+        changedByUserId: userId,
+        notes: `Delivery assigned to partner ${partner.name}. Notes: ${notes || ''}`,
+      }
+    });
+
+    return { assignment, generatedOtp: otp };
+  });
 };
 
 export const verifyDeliveryOTP = async (orderId: string, otp: string, userId: string) => {
-  return { verified: true, orderId, otp, userId };
+  return prisma.$transaction(async (tx) => {
+    const deliveryOtp = await tx.deliveryOTP.findUnique({ where: { orderId } });
+    if (!deliveryOtp) throw new AppError("OTP not generated for this order", 404);
+    if (deliveryOtp.isUsed) throw new AppError("OTP already used", 400);
+    if (deliveryOtp.expiresAt < new Date()) throw new AppError("OTP expired", 400);
+    
+    if (deliveryOtp.otp !== otp) {
+      await tx.deliveryOTP.update({ where: { id: deliveryOtp.id }, data: { attempts: { increment: 1 } } });
+      throw new AppError("Invalid OTP", 400);
+    }
+
+    await tx.deliveryOTP.update({
+      where: { id: deliveryOtp.id },
+      data: { isUsed: true, verifiedAt: new Date() }
+    });
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: { 
+        status: OrderStatus.DELIVERED,
+        deliveryStatus: DeliveryStatus.DELIVERED,
+        paymentStatus: PaymentStatus.PAID,
+      }
+    });
+
+    await tx.orderAssignment.update({
+      where: { orderId },
+      data: { status: AssignmentStatus.DELIVERED, deliveredAt: new Date() }
+    });
+
+    await tx.orderStatusHistory.create({
+      data: {
+        orderId,
+        status: OrderStatus.DELIVERED,
+        changedByUserId: userId,
+        notes: "Order delivered successfully via OTP verification.",
+      }
+    });
+
+    return { verified: true, orderId };
+  });
 };
