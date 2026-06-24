@@ -101,6 +101,10 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (uploadedImages.length >= 3) {
+      alert("You can upload a maximum of 3 images.");
+      return;
+    }
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -225,6 +229,11 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (uploadedImages.length > 3) {
+      alert("A product can have a maximum of 3 images.");
+      return;
+    }
+    
     // Construct variants payload based on input prices
     const variants = [];
     if (formPrice1kg > 0) {
@@ -267,10 +276,11 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
     formData.append("isActive", String(formStatus));
     formData.append("variants", JSON.stringify(variants));
 
-    // Append existing Image URLs
-    if (formImageUrl.trim() !== "") {
-      formData.append("images", formImageUrl.trim());
-    }
+    // Append existing Image URLs (excluding newly added base64 files)
+    const existingUrls = uploadedImages.filter((img) => !img.startsWith("data:"));
+    existingUrls.forEach((url) => {
+      formData.append("images", url);
+    });
 
     // Append raw files instead of base64
     uploadedFiles.forEach((file) => {
@@ -748,7 +758,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Upload Image File</label>
                   <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold text-gray-600 bg-white">
+                    <label className={`flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold text-gray-600 bg-white ${uploadedImages.length >= 3 ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}`}>
                       <Upload className="w-4 h-4 text-gray-500" />
                       Choose File
                       <input
@@ -756,6 +766,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
+                        disabled={uploadedImages.length >= 3}
                       />
                     </label>
                     {uploadedImages.length > 0 && (
