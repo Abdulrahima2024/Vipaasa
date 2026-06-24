@@ -223,6 +223,39 @@ async function main() {
     },
   });
 
+  // 6. Seed FAQs
+  console.log('Seeding FAQs...');
+  const faqs = [
+    {
+      question: "what is your refund policy?",
+      answer: "We offer a 30-day refund policy for all organic produce and items. If you are unsatisfied, please submit a return request from your order history panel.",
+      category: "Returns"
+    },
+    {
+      question: "how long does shipping take?",
+      answer: "Standard shipping typically takes 2-4 business days. For express delivery in Bengaluru, it is delivered within 24 hours.",
+      category: "Shipping"
+    },
+    {
+      question: "do you deliver to my area?",
+      answer: "We deliver across all major pin codes in India, with primary operations in Bengaluru, Mumbai, and Delhi NCR.",
+      category: "Shipping"
+    },
+    {
+      question: "are your products certified organic?",
+      answer: "Yes! All products on Vipaasa are certified organic by NPOP India and meet the USDA organic regulations.",
+      category: "Products"
+    }
+  ];
+
+  for (const faq of faqs) {
+    await prisma.fAQ.upsert({
+      where: { question: faq.question },
+      update: { answer: faq.answer, category: faq.category },
+      create: faq
+    });
+  }
+
   console.log('Seed operations completed successfully.');
 }
 

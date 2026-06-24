@@ -82,6 +82,16 @@ export async function getAllCoupons(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function getActiveCoupons(req: AuthenticatedRequest, res: Response) {
+  try {
+    const coupons = await couponService.getActiveCoupons();
+    return res.status(200).json({ status: "success", data: coupons });
+  } catch (error) {
+    console.error("GetActiveCoupons error:", error);
+    return res.status(500).json({ error: "Failed to fetch active coupons" });
+  }
+}
+
 export async function validateCoupon(req: AuthenticatedRequest, res: Response) {
   try {
     const { code, orderAmount } = req.body;

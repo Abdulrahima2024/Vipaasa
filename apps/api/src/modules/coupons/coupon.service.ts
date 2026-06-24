@@ -48,6 +48,18 @@ export async function getAllCoupons(page = 1, limit = 20, search?: string) {
   };
 }
 
+export async function getActiveCoupons() {
+  const now = new Date();
+  return prisma.coupon.findMany({
+    where: {
+      status: "ACTIVE",
+      startDate: { lte: now },
+      endDate: { gte: now }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+}
+
 export async function validateCoupon(code: string, userId: string, orderAmount: number) {
   const coupon = await prisma.coupon.findUnique({ where: { code } });
   

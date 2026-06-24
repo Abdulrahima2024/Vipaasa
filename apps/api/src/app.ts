@@ -19,6 +19,7 @@ import marketingRoutes from "./modules/marketing/marketing.routes";
 import couponRoutes from "./modules/coupons/coupon.routes";
 import analyticsRoutes from "./modules/analytics/analytics.routes";
 import notificationRoutes from "./modules/notifications/notification.routes";
+import chatbotRoutes from "./modules/chatbot/chatbot.routes";
 import { requestLogger } from "./shared/middleware/requestLogger";
 import { rateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
@@ -58,6 +59,7 @@ app.use("/api", marketingRoutes);
 app.use("/api", couponRoutes);
 app.use("/api", analyticsRoutes);
 app.use("/api", notificationRoutes);
+app.use("/api", chatbotRoutes);
 
 
 
