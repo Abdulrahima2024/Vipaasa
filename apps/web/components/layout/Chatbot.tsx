@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Sprout, X, Send, Bot, User, Sparkles } from "lucide-react";
+import { Sprout, X, Send, Bot, User, Sparkles, Trash2 } from "lucide-react";
+import { useAuthStore } from "../../store/authStore";
+import { fetchApi } from "../../lib/api";
 
 interface ChatMessage {
   id: string;
@@ -24,6 +26,9 @@ export default function Chatbot() {
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const _hasHydrated = useAuthStore((state) => state._hasHydrated);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize with welcome message
@@ -39,12 +44,57 @@ export default function Chatbot() {
     ]);
   }, []);
 
+  // Load chat history when the chatbot is opened and user is authenticated
+  useEffect(() => {
+    if (isOpen && isAuthenticated && _hasHydrated) {
+      loadHistory();
+    }
+  }, [isOpen, isAuthenticated, _hasHydrated]);
+
   // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const handleSendMessage = (textToSend: string) => {
+  const loadHistory = async () => {
+    try {
+      const history = await fetchApi<any[]>("/api/chatbot/history");
+      if (history && history.length > 0) {
+        const mappedMessages = history.map((msg) => ({
+          id: msg.id,
+          sender: (msg.role === "user" ? "user" : "bot") as "user" | "bot",
+          text: msg.message,
+          timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }));
+        setMessages(mappedMessages);
+      }
+    } catch (error) {
+      console.warn("Failed to load chat history:", error);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (confirm("Are you sure you want to clear your chat history?")) {
+      try {
+        await fetchApi("/api/chatbot/history", {
+          method: "DELETE",
+        });
+        const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setMessages([
+          {
+            id: "welcome",
+            sender: "bot",
+            text: "Chat history cleared. How can I assist you today?",
+            timestamp: timeString
+          }
+        ]);
+      } catch (error) {
+        console.warn("Failed to clear chat history:", error);
+      }
+    }
+  };
+
+  const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim()) return;
 
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -59,18 +109,46 @@ export default function Chatbot() {
     setInputMessage("");
     setIsTyping(true);
 
-    // Simulate bot thinking/typing
-    setTimeout(() => {
-      const responseText = faqData[textToSend] || "I don't have an idea on that topic. Please feel free to reach out to our team at info@vipaasaorganics.com or call +91 99887 76655!";
+    if (!_hasHydrated || !isAuthenticated) {
+      setTimeout(() => {
+        const botMsg: ChatMessage = {
+          id: `bot-${Date.now()}`,
+          sender: "bot",
+          text: "Please sign in to your Vipaasa account to use the chat assistant. This helps us retrieve your orders, cart, and profile information securely.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages((prev) => [...prev, botMsg]);
+        setIsTyping(false);
+      }, 800);
+      return;
+    }
+
+    try {
+      const response = await fetchApi<{ type: string; answer: string }>("/api/chatbot/message", {
+        method: "POST",
+        body: JSON.stringify({ message: textToSend }),
+      });
+
       const botMsg: ChatMessage = {
         id: `bot-${Date.now()}`,
         sender: "bot",
-        text: responseText,
+        text: response.answer,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, botMsg]);
+    } catch (error: any) {
+      console.warn("Chatbot message error:", error);
+      const errorMessage = error?.message || "I don't have an idea on that topic. Please feel free to reach out to our team at info@vipaasaorganics.com or call +91 99887 76655!";
+      const botMsg: ChatMessage = {
+        id: `bot-${Date.now()}`,
+        sender: "bot",
+        text: errorMessage,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages((prev) => [...prev, botMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -135,13 +213,25 @@ export default function Chatbot() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors"
-              aria-label="Close chat"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              {isAuthenticated && _hasHydrated && messages.length > 1 && (
+                <button
+                  onClick={handleClearHistory}
+                  className="p-1 rounded-lg hover:bg-white/10 text-[#C1F2D0] hover:text-white transition-colors"
+                  title="Clear Chat History"
+                  aria-label="Clear Chat History"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+                aria-label="Close chat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Messages display box */}

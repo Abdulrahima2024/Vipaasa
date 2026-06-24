@@ -293,6 +293,7 @@ model User {
   activityLogs        ActivityLog[]
   cart                Cart?
   OrderAssignment     OrderAssignment[]
+  chatSessions        ChatSession[]
 
   @@index([email])
   @@index([phoneNumber])
@@ -1172,4 +1173,42 @@ model Notification {
   logs              NotificationLog[]
 
   @@map("notification_campaigns")
+}
+
+model ChatSession {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  messages   ChatMessage[]
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId   String   @map("session_id") @db.Uuid
+
+  role        String
+  message     String
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  session     ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model FAQ {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  question    String   @unique
+  answer      String
+  category    String?
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("faqs")
 }
