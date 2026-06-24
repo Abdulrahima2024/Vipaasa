@@ -8,6 +8,11 @@ import logger from "../utils/logger";
  */
 export async function validateCaptcha(req: Request, res: Response, next: NextFunction) {
   try {
+    // Bypass check for requests from admin portal
+    if (req.headers["x-app-source"] === "admin") {
+      return next();
+    }
+
     // Read from body or header
     const captchaToken = req.body.captchaToken || req.headers["x-captcha-token"];
 

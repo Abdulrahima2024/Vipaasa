@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Eye, EyeOff } from "lucide-react";
-import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { fetchAPI } from "@/lib/api";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -13,40 +12,28 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const captchaRef = useRef<HCaptcha>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Skip captcha check in development (hCaptcha doesn't work on localhost)
-    if (!captchaToken && !isDev) {
-      setError("hCaptcha verification token is required");
-      return;
-    }
-
     setLoading(true);
     try {
       const data = await fetchAPI("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password, captchaToken }),
+        body: JSON.stringify({ email, password }),
       });
       if (data.accessToken) {
         localStorage.setItem("vipaasa_admin_token", data.accessToken);
         router.push("/dashboard");
       } else {
         setError("Invalid response format from server.");
-        captchaRef.current?.resetCaptcha();
-        setCaptchaToken(null);
       }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to log in. Please try again.");
-      captchaRef.current?.resetCaptcha();
-      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
@@ -130,23 +117,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {!isDev && (
-            <div className="flex justify-center py-2">
-              <HCaptcha
-                ref={captchaRef}
-                sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "bb20f2e0-3a90-43ac-9cfe-e7e4c370e814"}
-                onVerify={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken(null)}
-              />
-            </div>
-          )}
-          {isDev && (
-            <div className="flex justify-center py-2">
-              <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-center">
-                🔧 Development mode — hCaptcha bypassed
-              </div>
-            </div>
-          )}
+
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">

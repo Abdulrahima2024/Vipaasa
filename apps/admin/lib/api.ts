@@ -23,6 +23,7 @@ export async function fetchAPI<T = any>(endpoint: string, options: RequestOption
   const token = typeof window !== "undefined" ? localStorage.getItem("vipaasa_admin_token") : null;
   
   const headers = new Headers(options.headers);
+  headers.set("x-app-source", "admin");
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
