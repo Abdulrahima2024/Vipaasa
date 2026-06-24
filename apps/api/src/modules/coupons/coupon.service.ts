@@ -14,12 +14,47 @@ export async function deleteCoupon(id: string) {
   return prisma.coupon.delete({ where: { id } });
 }
 
-export async function getAllCoupons() {
+export async function getAllCoupons(page = 1, limit = 20, search?: string) {
+  const where: any = {};
+  
+  if (search) {
+    where.OR = [
+      { code: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } }
+    ];
+  }
+
+  const [data, totalCount] = await Promise.all([
+    prisma.coupon.findMany({
+      where,
+      take: limit,
+      skip: (page - 1) * limit,
+      include: {
+        _count: {
+          select: { usages: true }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    }),
+    prisma.coupon.count({ where })
+  ]);
+
+  return {
+    data,
+    totalCount,
+    page,
+    limit,
+    totalPages: Math.ceil(totalCount / limit)
+  };
+}
+
+export async function getActiveCoupons() {
+  const now = new Date();
   return prisma.coupon.findMany({
-    include: {
-      _count: {
-        select: { usages: true }
-      }
+    where: {
+      status: "ACTIVE",
+      startDate: { lte: now },
+      endDate: { gte: now }
     },
     orderBy: { createdAt: "desc" }
   });

@@ -16,6 +16,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { fetchAPI } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface ProductVariant {
   id: string;
@@ -63,18 +64,14 @@ interface InventoryTableProps {
 }
 
 export default function InventoryTable({ onProductChange }: InventoryTableProps) {
-  const [products, setProducts] = useState<BackendProduct[]>([]);
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const queryClient = useQueryClient();
+  
   // Search, Filter & Pagination state
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -120,25 +117,10 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
     }
   };
 
-  // Load categories and products on mount
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  useEffect(() => {
-    loadProducts();
-  }, [currentPage, selectedCategoryFilter, debouncedSearchQuery]);
-
-  const getProductImageUrl = (img: any) => {
-    if (!img) return "";
-    if (typeof img === "string") return img;
-    return img.url || "";
-  };
-
-  const loadCategories = async () => {
-    try {
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
       const data = await fetchAPI("/api/categories");
-      // Flatten hierarchical category tree to simple list
       const list: CategoryItem[] = [];
       const traverse = (nodes: any[]) => {
         nodes.forEach(node => {
@@ -149,22 +131,21 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
         });
       };
       traverse(data);
-      setCategories(list);
-      if (list.length > 0) {
+      if (list.length > 0 && !formCategoryId) {
         setFormCategoryId(list[0].id);
       }
-    } catch (err: any) {
-      console.error("Failed to load categories", err);
+      return list;
     }
-  };
+  });
 
-  const loadProducts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const categories = categoriesData || [];
+
+  const { data: productsData, isLoading: loading, error: productsError, refetch: loadProducts } = useQuery({
+    queryKey: ['adminProducts', currentPage, limit, selectedCategoryFilter, debouncedSearchQuery],
+    queryFn: async () => {
       const params: Record<string, any> = {
         page: currentPage,
-        limit: 10,
+        limit,
         includeInactive: true,
       };
       if (selectedCategoryFilter !== "All") {
@@ -174,31 +155,33 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
       let data;
       if (debouncedSearchQuery.trim() !== "") {
         data = await fetchAPI("/api/products/search", {
-          params: { q: debouncedSearchQuery, page: currentPage, limit: 10 }
+          params: { q: debouncedSearchQuery, page: currentPage, limit }
         });
       } else {
         data = await fetchAPI("/api/products", { params });
       }
 
-      setProducts(data.items || []);
-      setTotalPages(data.totalPages || 1);
-      setTotalCount(data.total || 0);
-    } catch (err: any) {
-      setError(err.message || "Failed to load products");
-    } finally {
-      setLoading(false);
+      return {
+        products: data.items || [],
+        totalPages: data.totalPages || 1,
+        totalCount: data.total || 0
+      };
     }
-  };
+  });
+
+  const products = productsData?.products || [];
+  const totalPages = productsData?.totalPages || 1;
+  const totalCount = productsData?.totalCount || 0;
+  const error = productsError ? (productsError as Error).message : null;
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      // Optimistic local update
-      setProducts(products.map(p => p.id === id ? { ...p, isActive: !currentStatus } : p));
       // Send update to backend
       await fetchAPI(`/api/products/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ isActive: !currentStatus })
       });
+      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
       if (onProductChange) onProductChange();
     } catch (err) {
       console.error(err);
@@ -231,7 +214,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
     if (confirm("Are you sure you want to delete this product?")) {
       try {
         await fetchAPI(`/api/products/${id}`, { method: "DELETE" });
-        setProducts(products.filter(p => p.id !== id));
+        queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
         if (onProductChange) onProductChange();
       } catch (err: any) {
         alert(err.message || "Failed to delete product");
@@ -309,11 +292,17 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
         });
       }
       setIsProductModalOpen(false);
-      loadProducts();
+      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
       if (onProductChange) onProductChange();
     } catch (err: any) {
       alert(err.message || "Failed to save product");
     }
+  };
+
+  const getProductImageUrl = (img: any) => {
+    if (!img) return "";
+    if (typeof img === "string") return img;
+    return img.url || "";
   };
 
   // Helper helper to get pricing details for display

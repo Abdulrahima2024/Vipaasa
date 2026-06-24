@@ -288,8 +288,14 @@ export async function deleteAddress(req: AuthenticatedRequest, res: Response) {
 
 export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
   try {
-    const mappedUsers = await userService.getAllUsers();
-    return res.status(200).json(mappedUsers);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const search = req.query.search as string;
+    const roleFilter = req.query.role as string;
+    const statusFilter = req.query.status as string;
+
+    const result = await userService.getAllUsers(page, limit, search, roleFilter, statusFilter);
+    return res.status(200).json(result);
   } catch (error) {
     console.error("GetAllUsers controller error:", error);
     return res.status(500).json({ error: "Internal server error" });

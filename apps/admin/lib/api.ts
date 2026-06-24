@@ -37,7 +37,9 @@ export async function fetchAPI<T = any>(endpoint: string, options: RequestOption
   });
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
+    // Only redirect to /login on 401 for protected routes — NOT for login/auth endpoints themselves
+    const isAuthEndpoint = endpoint.includes("/auth/login") || endpoint.includes("/auth/register");
+    if (response.status === 401 && typeof window !== "undefined" && !isAuthEndpoint) {
       localStorage.removeItem("vipaasa_admin_token");
       window.location.href = "/login";
     }

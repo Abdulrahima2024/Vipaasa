@@ -298,6 +298,7 @@ model User {
   @@index([email])
   @@index([phoneNumber])
   @@index([isDeleted])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -451,6 +452,7 @@ model Product {
   @@index([isDeleted])
   @@index([categoryId, isActive, isDeleted])
   @@index([isActive, isDeleted])
+  @@index([createdAt])
   @@map("products")
 }
 
@@ -520,6 +522,7 @@ model ProductDiscount {
 
   variants VariantDiscount[]
 
+  @@index([isActive])
   @@map("product_discounts")
 }
 
@@ -704,6 +707,7 @@ model Order {
   @@index([userId])
   @@index([executiveId])
   @@index([status])
+  @@index([createdAt])
   @@map("orders")
 }
 
@@ -723,6 +727,7 @@ model OrderItem {
   variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
 
   @@unique([orderId, variantId])
+  @@index([createdAt])
   @@map("order_items")
 }
 
@@ -867,6 +872,7 @@ model Delivery {
   order          Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
   trackingEvents DeliveryTracking[]
 
+  @@index([deliveryStatus])
   @@map("deliveries")
 }
 
@@ -906,6 +912,7 @@ model Ticket {
 
   @@index([userId])
   @@index([assignedExecutiveId])
+  @@index([status])
   @@map("tickets")
 }
 
@@ -1138,6 +1145,7 @@ model Coupon {
   usages CouponUsage[]
   orders Order[]
 
+  @@index([status])
   @@map("coupons")
 }
 
