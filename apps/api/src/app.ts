@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import dotenv from "dotenv";
+import path from "path";
 import authRoutes from "./modules/auth/auth.routes";
 import userRoutes from "./modules/users/user.routes";
 import productRoutes from "./modules/products/product.routes";
@@ -27,7 +28,9 @@ dotenv.config();
 const app = express();
 
 // Security and utility middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({
   origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(",") : "http://localhost:3000",
   credentials: true
@@ -38,6 +41,9 @@ app.use(requestLogger);
 
 // Apply rate limiting to all api endpoints
 app.use("/api", rateLimiter);
+
+// Serve local uploads folder statically
+app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
 // Routes
 app.use("/api/auth", authRoutes);

@@ -6,6 +6,9 @@ import logger from "../shared/utils/logger";
  * If Redis is unavailable or the key does not exist, returns null.
  */
 export async function get(key: string): Promise<string | null> {
+  if (process.env.NODE_ENV === "development" || process.env.BYPASS_CACHE === "true") {
+    return null;
+  }
   if (!checkRedisStatus() || !redis) return null;
   try {
     return await redis.get(key);

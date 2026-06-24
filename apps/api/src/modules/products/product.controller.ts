@@ -150,8 +150,9 @@ export async function createProduct(req: AuthenticatedRequest, res: Response) {
 
     const validation = CreateProductSchema.safeParse(rawBody);
     if (!validation.success) {
+      const errorMsg = "Validation failed: " + JSON.stringify(validation.error.format());
       return res.status(400).json({
-        error: "Validation failed",
+        error: errorMsg,
         details: validation.error.format(),
       });
     }
@@ -236,8 +237,9 @@ export async function updateProduct(req: AuthenticatedRequest, res: Response) {
 
     const bodyValidation = UpdateProductSchema.safeParse(rawBody);
     if (!bodyValidation.success) {
+      const errorMsg = "Validation failed: " + JSON.stringify(bodyValidation.error.format());
       return res.status(400).json({
-        error: "Validation failed",
+        error: errorMsg,
         details: bodyValidation.error.format(),
       });
     }
