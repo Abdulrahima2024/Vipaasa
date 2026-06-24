@@ -19,6 +19,8 @@ export default function CartPage() {
     removeSavedItem,
     clearCart,
     favorites,
+    updatingItemId,
+    actionItemId,
   } = useCartStore();
 
   const { isAuthenticated } = useAuthStore();
@@ -203,15 +205,13 @@ export default function CartPage() {
                       <span className="font-sans text-lg sm:text-xl font-bold text-[#113C27] tabular-nums">
                         ₹{(item.price * item.quantity).toFixed(2)}
                       </span>
-                    </div>
-
-                    {/* Quantity Controls & Card Actions */}
+                    </div>                    {/* Quantity Controls & Card Actions */}
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
                       {/* Quantity Selector Container */}
                       <div className="flex items-center bg-[#ECE9E0] rounded-full p-1.5 shadow-inner">
                         <button
                           onClick={() => updateQuantity(item.id, -1)}
-                          disabled={item.quantity <= 1}
+                          disabled={item.quantity <= 1 || actionItemId === item.id}
                           className="w-8 h-8 rounded-full flex items-center justify-center text-[#113C27] hover:bg-white/60 active:bg-white disabled:opacity-40 disabled:hover:bg-transparent transition-all"
                           aria-label="Decrease quantity"
                         >
@@ -220,13 +220,16 @@ export default function CartPage() {
                           </svg>
                         </button>
                         
-                        <span className="w-10 text-center font-bold text-sm text-[#113C27] select-none tabular-nums">
-                          {item.quantity}
-                        </span>
+                        <div className="w-10 flex items-center justify-center">
+                          <span className="font-bold text-sm text-[#113C27] select-none tabular-nums">
+                            {item.quantity}
+                          </span>
+                        </div>
 
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-[#113C27] hover:bg-white/60 active:bg-white transition-all"
+                          disabled={actionItemId === item.id}
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-[#113C27] hover:bg-white/60 active:bg-white disabled:opacity-40 disabled:hover:bg-transparent transition-all"
                           aria-label="Increase quantity"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -239,14 +242,16 @@ export default function CartPage() {
                       <div className="flex items-center space-x-5 text-sm font-semibold tracking-wide">
                         <button
                           onClick={() => saveForLater(item.id)}
-                          className="text-[#113C27] underline decoration-1 underline-offset-4 hover:text-opacity-80 transition-colors"
+                          disabled={updatingItemId === item.id || actionItemId === item.id}
+                          className="text-[#113C27] underline decoration-1 underline-offset-4 hover:text-opacity-80 transition-colors disabled:opacity-50"
                         >
-                          Save for Later
+                          {actionItemId === item.id ? "Saving..." : "Save for Later"}
                         </button>
                         
                         <button
                           onClick={() => removeItem(item.id)}
-                          className="bg-[#FEF2F2] text-[#A84444] hover:bg-[#A84444] hover:text-white border border-[#F5C6C6] hover:border-[#A84444] p-2 rounded-lg transition-all duration-200 active:scale-95"
+                          disabled={updatingItemId === item.id || actionItemId === item.id}
+                          className="bg-[#FEF2F2] text-[#A84444] hover:bg-[#A84444] hover:text-white border border-[#F5C6C6] hover:border-[#A84444] p-2 rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:hover:bg-[#FEF2F2] disabled:hover:text-[#A84444] disabled:hover:border-[#F5C6C6]"
                           title="Remove from cart"
                           aria-label="Remove from cart"
                         >

@@ -40,6 +40,8 @@ interface AuthState {
   setHasHydrated: (val: boolean) => void;
 }
 
+let activeRefreshPromise: Promise<boolean> | null = null;
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -177,37 +179,46 @@ export const useAuthStore = create<AuthState>()(
           return false;
         }
       },
-
       refreshSession: async () => {
+        if (activeRefreshPromise) {
+          return activeRefreshPromise;
+        }
+
         const { refreshToken } = get();
         if (!refreshToken) return false;
 
-        try {
-          const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-          const response = await fetch(`${apiBaseUrl}/api/auth/refresh-token`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ refreshToken }),
-          });
+        activeRefreshPromise = (async () => {
+          try {
+            const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+            const response = await fetch(`${apiBaseUrl}/api/auth/refresh-token`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ refreshToken }),
+            });
 
-          if (!response.ok) {
-            get().logout();
+            if (!response.ok) {
+              get().logout();
+              return false;
+            }
+
+            const data = await response.json();
+            set({
+              token: data.accessToken,
+              refreshToken: data.refreshToken || refreshToken,
+              isAuthenticated: true,
+            });
+            return true;
+          } catch (err) {
+            console.warn("AuthStore refresh token error:", err);
             return false;
+          } finally {
+            activeRefreshPromise = null;
           }
+        })();
 
-          const data = await response.json();
-          set({
-            token: data.accessToken,
-            refreshToken: data.refreshToken || refreshToken,
-            isAuthenticated: true,
-          });
-          return true;
-        } catch (err) {
-          console.warn("AuthStore refresh token error:", err);
-          return false;
-        }
+        return activeRefreshPromise;
       },
 
       clearError: () => {

@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# Block private/authenticated routes
+Disallow: /account/
+Disallow: /checkout/
+Disallow: /cart/
+Disallow: /orders/
+Disallow: /store-executive/
+Disallow: /api/
+
+# Block query parameters that create duplicate content
+Disallow: /*?*sort=
+Disallow: /*?*page=
+
+Sitemap: https://vipaasaorganics.com/sitemap.xml
