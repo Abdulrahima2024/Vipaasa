@@ -13,13 +13,6 @@ export const uploadImageToCloudinary = async (
   fileBuffer: Buffer,
   folder: string = 'vipaasa-organics'
 ): Promise<{ url: string; publicId: string }> => {
-  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
-    console.warn("Cloudinary is not configured. Falling back to a placeholder image in development.");
-    return {
-      url: "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-      publicId: "placeholder-public-id",
-    };
-  }
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {

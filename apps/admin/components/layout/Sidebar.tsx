@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -37,12 +37,6 @@ const mainNavItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-
-  const handleLogout = () => {
-    localStorage.removeItem("vipaasa_admin_token");
-    router.replace("/login");
-  };
 
   return (
     <aside className="w-64 bg-[#f4f5f5] border-r border-gray-200 flex flex-col h-screen fixed top-0 left-0">
@@ -87,13 +81,13 @@ export default function Sidebar() {
           Settings
         </Link>
 
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-800 transition-colors"
+        <Link
+          href="/login"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-800 transition-colors"
         >
           <LogOut className="h-5 w-5 text-red-600" />
           Logout
-        </button>
+        </Link>
       </div>
     </aside>
   );

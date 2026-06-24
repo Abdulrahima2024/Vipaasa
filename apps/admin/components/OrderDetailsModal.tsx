@@ -22,9 +22,6 @@ export interface Order {
   paymentId?: string; 
   bankDetails?: string; 
   shippingAddress: string;
-  deliveryPartnerId?: string | null;
-  deliveryPartnerName?: string | null;
-  deliveryStatus?: string;
 }
 
 interface OrderDetailsModalProps {
@@ -104,11 +101,6 @@ export function OrderDetailsModal({ selectedOrder, onClose, onUpdateStatus }: Or
             <div className="space-y-2">
               <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Shipping Address</span>
               <p className="text-xs text-gray-700 font-semibold leading-relaxed">{selectedOrder.shippingAddress}</p>
-              {selectedOrder.deliveryPartnerName && (
-                <p className="text-xs text-[var(--primary-green)] font-bold mt-2">
-                  🚚 Assigned to: {selectedOrder.deliveryPartnerName}
-                </p>
-              )}
             </div>
             <div className="space-y-2">
               <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Fulfillment Status</span>

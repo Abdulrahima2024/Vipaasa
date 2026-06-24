@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import compression from "compression";
 import dotenv from "dotenv";
 import authRoutes from "./modules/auth/auth.routes";
 import userRoutes from "./modules/users/user.routes";
@@ -19,7 +18,6 @@ import marketingRoutes from "./modules/marketing/marketing.routes";
 import couponRoutes from "./modules/coupons/coupon.routes";
 import analyticsRoutes from "./modules/analytics/analytics.routes";
 import notificationRoutes from "./modules/notifications/notification.routes";
-import chatbotRoutes from "./modules/chatbot/chatbot.routes";
 import { requestLogger } from "./shared/middleware/requestLogger";
 import { rateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
@@ -30,7 +28,6 @@ const app = express();
 
 // Security and utility middlewares
 app.use(helmet());
-app.use(compression());
 app.use(cors({
   origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(",") : "http://localhost:3000",
   credentials: true
@@ -59,7 +56,6 @@ app.use("/api", marketingRoutes);
 app.use("/api", couponRoutes);
 app.use("/api", analyticsRoutes);
 app.use("/api", notificationRoutes);
-app.use("/api", chatbotRoutes);
 
 
 
