@@ -106,6 +106,10 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (uploadedImages.length >= 3) {
+        alert("You can only upload a maximum of 3 images.");
+        return;
+      }
       if (file.size > 5 * 1024 * 1024) {
         alert("File size exceeds 5MB limit.");
         return;
@@ -288,6 +292,13 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
     if (formImageUrl.trim() !== "") {
       formData.append("images", formImageUrl.trim());
     }
+    
+    uploadedImages.filter(img => !img.startsWith('data:image/')).forEach(img => {
+      // Avoid duplicating the image if it's already in formImageUrl
+      if (img !== formImageUrl.trim()) {
+        formData.append("images", img);
+      }
+    });
 
     // Append raw files instead of base64
     uploadedFiles.forEach((file) => {

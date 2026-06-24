@@ -37,13 +37,13 @@ router.get("/products/search", optionalAuthenticate, searchProducts);
 router.get("/products/:id", optionalAuthenticate, getProductById);
 
 // Create a new product with variants and pricing (Admin only)
-router.post("/products", authenticate, authorize(["SUPER_ADMIN"]), upload.array("images", 5), createProduct);
+router.post("/products", authenticate, authorize(["SUPER_ADMIN", "ADMIN"]), upload.array("images", 3), createProduct);
 
 // Delete a product (Admin only)
 router.delete("/products/:id", authenticate, authorize(["SUPER_ADMIN"]), deleteProduct);
 
 // Update a product (Admin only)
-router.patch("/products/:id", authenticate, authorize(["SUPER_ADMIN"]), upload.array("images", 5), updateProduct);
+router.patch("/products/:id", authenticate, authorize(["SUPER_ADMIN", "ADMIN"]), upload.array("images", 3), updateProduct);
 
 export default router;
 
