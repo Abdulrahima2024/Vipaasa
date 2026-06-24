@@ -25,35 +25,6 @@ interface Address {
   isDefault?: boolean;
 }
 
-const DEFAULT_MOCK_ADDRESSES: Address[] = [
-  {
-    id: "addr-1",
-    type: "Home",
-    name: "Ananya Sharma",
-    addressLine1: "42, Lotus Boulevard, Sector 150",
-    addressLine2: "",
-    city: "Noida",
-    state: "Uttar Pradesh",
-    postalCode: "201310",
-    country: "India",
-    phone: "+91 98765 43210",
-    isDefault: true,
-  },
-  {
-    id: "addr-2",
-    type: "Work",
-    name: "Ananya Sharma",
-    addressLine1: "The Hub, Floor 12, Cyber City, Phase III",
-    addressLine2: "",
-    city: "Gurugram",
-    state: "Haryana",
-    postalCode: "122002",
-    country: "India",
-    phone: "+91 98765 99887",
-    isDefault: false,
-  },
-];
-
 export default function ManageAddressesPage() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();

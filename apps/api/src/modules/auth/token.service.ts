@@ -20,7 +20,12 @@ export function generateAccessToken(payload: TokenPayload): string {
 }
 
 export function generateRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRY as any });
+  const crypto = require("crypto");
+  const jti = crypto.randomUUID();
+  return jwt.sign(payload, REFRESH_SECRET, { 
+    expiresIn: REFRESH_EXPIRY as any,
+    jwtid: jti 
+  });
 }
 
 export function verifyAccessToken(token: string): TokenPayload | null {

@@ -288,14 +288,8 @@ export async function deleteAddress(req: AuthenticatedRequest, res: Response) {
 
 export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const search = req.query.search as string;
-    const roleFilter = req.query.role as string;
-    const statusFilter = req.query.status as string;
-
-    const result = await userService.getAllUsers(page, limit, search, roleFilter, statusFilter);
-    return res.status(200).json(result);
+    const mappedUsers = await userService.getAllUsers();
+    return res.status(200).json(mappedUsers);
   } catch (error) {
     console.error("GetAllUsers controller error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -380,5 +374,59 @@ export async function getDashboardStats(req: AuthenticatedRequest, res: Response
   } catch (error) {
     console.error("GetDashboardStats controller error:", error);
     return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function uploadAvatar(req: AuthenticatedRequest, res: Response) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // 1. Upload to S3 (and delivery via CloudFront)
+    const file = req.file;
+    const { uploadToS3 } = require("../../config/s3");
+    const avatarUrl = await uploadToS3(file.buffer, `user-${userId}`, file.mimetype);
+
+    // 2. Fetch active user status and details
+    const user = await userService.getUserProfile(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // 3. Update the avatarUrl in database
+    const updatedUser = await userService.updateUserProfile(userId, {
+      firstName: user.profile?.firstName || "User",
+      lastName: user.profile?.lastName || undefined,
+      email: user.email,
+      phoneNumber: user.phoneNumber || undefined,
+      dateOfBirth: user.profile?.dateOfBirth ? user.profile.dateOfBirth.toISOString() : undefined,
+      avatarUrl: avatarUrl,
+    });
+
+    if (!updatedUser) {
+      return res.status(400).json({ error: "Failed to update profile photo" });
+    }
+
+    return res.status(200).json({
+      message: "Profile photo uploaded successfully",
+      avatarUrl,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        role: updatedUser.role.name,
+        profile: updatedUser.profile
+      }
+    });
+  } catch (error: any) {
+    console.error("UploadAvatar controller error:", error);
+    const errorMessage = error?.message || "Internal server error";
+    return res.status(400).json({ error: errorMessage });
   }
 }

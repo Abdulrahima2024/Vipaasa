@@ -34,10 +34,11 @@ interface DealProduct {
 export default function DealsClient() {
   const [mounted, setMounted] = useState(false);
   const [apiProducts, setApiProducts] = useState<any[]>([]);
+  const [serverDeals, setServerDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Cart/Favorites store
-  const { items, favorites, addToCart, toggleFavorite } = useCartStore();
+  const { items, favorites, addToCart, toggleFavorite, actionItemId } = useCartStore();
   const { isAuthenticated, token } = useAuthStore();
 
   // Filters state
@@ -102,213 +103,91 @@ export default function DealsClient() {
     };
   }, [isFilterOpenMobile, isSortOpenMobile]);
 
-  // Fetch real API products or fallback to local productsData
+  // Fetch real API products and active deals from server
   useEffect(() => {
-    async function loadProducts() {
+    async function loadDealsAndProducts() {
       setLoading(true);
       try {
-        const data = await fetchApi<{ items: any[] }>("/api/products?limit=100");
-        if (data && Array.isArray(data.items) && data.items.length > 0) {
-          setApiProducts(data.items);
+        const [prodData, dealData] = await Promise.all([
+          fetchApi<{ items: any[] }>("/api/products?limit=100").catch(() => null),
+          fetchApi<{ data: any[] }>("/api/deals/active").catch(() => null)
+        ]);
+
+        if (prodData && Array.isArray(prodData.items)) {
+          setApiProducts(prodData.items);
         } else {
           setApiProducts([]);
         }
+
+        if (dealData && Array.isArray(dealData.data)) {
+          setServerDeals(dealData.data);
+        } else {
+          setServerDeals([]);
+        }
       } catch (err) {
-        console.warn("DealsClient: Failed to fetch API products.", err);
+        console.warn("DealsClient: Failed to fetch products or deals.", err);
         setApiProducts([]);
+        setServerDeals([]);
       } finally {
         setLoading(false);
       }
     }
-    loadProducts();
+    loadDealsAndProducts();
   }, [token]);
 
   // Parse products into clean, normalized deals (cohesive with standard UI)
   const dealsData = useMemo(() => {
-    if (apiProducts.length === 0) return [];
+    if (apiProducts.length === 0 || serverDeals.length === 0) return [];
     
     const dealsList: DealProduct[] = [];
 
-    const findProductByName = (name: string) => {
-      return apiProducts.find(p => p.name?.toLowerCase() === name.toLowerCase()) || 
-             apiProducts.find(p => p.name?.toLowerCase().includes(name.toLowerCase()));
-    };
+    serverDeals.forEach((dbDeal) => {
+      // Find matching product in apiProducts
+      let product = apiProducts.find(p => p.id === dbDeal.productIds?.[0]);
+      if (!product && apiProducts.length > 0) {
+        // Fallback to first product to avoid complete render failure if product is missing
+        product = apiProducts[0];
+      }
 
-    // 1. Flash Sales
-    const gheeProduct = findProductByName("Desi Cow Ghee");
-    if (gheeProduct) {
-      const isApiShape = !!gheeProduct.price;
-      const basePrice250g = isApiShape ? gheeProduct.price : gheeProduct.prices["250g"];
+      if (!product) return;
+
+      const isApiShape = !!product.price;
+      const basePrice = isApiShape ? product.price : (product.prices?.["1kg"] || 500);
+      const discountPct = Number(dbDeal.discountPercentage) || 0;
+      const dealPrice = Math.round(basePrice * (1 - discountPct / 100));
+
+      // Classify deal type
+      let dealType: "Flash Sales" | "Combo Bundles" | "Bulk Savings" = "Flash Sales";
+      if (dbDeal.productIds && dbDeal.productIds.length > 1) {
+        dealType = "Combo Bundles";
+      } else if (discountPct < 20) {
+        dealType = "Bulk Savings";
+      }
+
       dealsList.push({
-        id: gheeProduct.id || "desi-cow-ghee-deal",
-        name: gheeProduct.name || "Desi Cow Ghee",
-        category: gheeProduct.category?.name || gheeProduct.category || "Honey & Ghee",
-        originalPrice: isApiShape ? Math.round(basePrice250g * 3.2) : gheeProduct.prices["1kg"],
-        dealPrice: isApiShape ? Math.round(basePrice250g * 3.2 * 0.8) : Math.round(gheeProduct.prices["1kg"] * 0.8),
-        discountPercentage: 20,
-        image: gheeProduct.images?.[0]?.url || gheeProduct.images?.[0] || gheeProduct.image || "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=400",
-        dealType: "Flash Sales",
-        inStock: gheeProduct.stockStatus === "IN_STOCK" || gheeProduct.inStock || true,
+        id: product.id,
+        name: dbDeal.title || product.name,
+        category: product.category?.name || product.category || "General",
+        originalPrice: basePrice,
+        dealPrice: dealPrice,
+        discountPercentage: discountPct,
+        image: dbDeal.imageUrl || (product.images?.[0]?.url || product.images?.[0] || product.image || "/placeholder.jpg"),
+        dealType: dealType,
+        inStock: product.stockStatus === "IN_STOCK" || product.inStock || true,
         weight: "1kg",
         prices: {
-          "250g": isApiShape ? basePrice250g : gheeProduct.prices["250g"],
-          "500g": isApiShape ? Math.round(basePrice250g * 1.8) : gheeProduct.prices["500g"],
-          "1kg": isApiShape ? Math.round(basePrice250g * 3.2 * 0.8) : Math.round(gheeProduct.prices["1kg"] * 0.8)
+          "250g": product.prices?.["250g"] || Math.round(basePrice * 0.25),
+          "500g": product.prices?.["500g"] || Math.round(basePrice * 0.5),
+          "1kg": dealPrice
         },
-        description: gheeProduct.description || "100% pure A2 Desi Cow Ghee prepared traditional bilona method.",
-        rating: 4.8,
-        variants: gheeProduct.variants
+        description: dbDeal.description || product.description || "100% pure organic staple.",
+        rating: 4.5 + (parseInt((product.id || "0").replace(/\D/g, "") || "0") % 5) * 0.1,
+        variants: product.variants
       });
-    }
-
-    const honeyProduct = findProductByName("Wild Forest Honey");
-    if (honeyProduct) {
-      const isApiShape = !!honeyProduct.price;
-      const basePrice250g = isApiShape ? honeyProduct.price : honeyProduct.prices["250g"];
-      dealsList.push({
-        id: honeyProduct.id || "wild-honey-deal",
-        name: honeyProduct.name || "Wild Forest Honey",
-        category: honeyProduct.category?.name || honeyProduct.category || "Honey & Ghee",
-        originalPrice: isApiShape ? Math.round(basePrice250g * 1.8) : honeyProduct.prices["500g"],
-        dealPrice: isApiShape ? Math.round(basePrice250g * 1.8 * 0.75) : Math.round(honeyProduct.prices["500g"] * 0.75),
-        discountPercentage: 25,
-        image: honeyProduct.images?.[0]?.url || honeyProduct.images?.[0] || honeyProduct.image || "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
-        dealType: "Flash Sales",
-        inStock: honeyProduct.stockStatus === "IN_STOCK" || honeyProduct.inStock || true,
-        weight: "500g",
-        prices: {
-          "250g": isApiShape ? basePrice250g : honeyProduct.prices["250g"],
-          "500g": isApiShape ? Math.round(basePrice250g * 1.8 * 0.75) : Math.round(honeyProduct.prices["500g"] * 0.75),
-          "1kg": isApiShape ? Math.round(basePrice250g * 3.2) : honeyProduct.prices["1kg"]
-        },
-        description: honeyProduct.description || "Pure raw wild forest honey harvested sustainably from local tribes.",
-        rating: 4.7,
-        variants: honeyProduct.variants
-      });
-    }
-
-    const munagaKaram = findProductByName("Munaga Karam") || findProductByName("Munaga Podi");
-    if (munagaKaram) {
-      const isApiShape = !!munagaKaram.price;
-      const basePrice250g = isApiShape ? munagaKaram.price : munagaKaram.prices["250g"];
-      dealsList.push({
-        id: munagaKaram.id || "munaga-karam-deal",
-        name: munagaKaram.name || "Munaga Karam",
-        category: munagaKaram.category?.name || munagaKaram.category || "Spices & Powders",
-        originalPrice: basePrice250g,
-        dealPrice: Math.round(basePrice250g * 0.8),
-        discountPercentage: 20,
-        image: munagaKaram.images?.[0]?.url || munagaKaram.images?.[0] || munagaKaram.image || "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=400",
-        dealType: "Flash Sales",
-        inStock: munagaKaram.stockStatus === "IN_STOCK" || munagaKaram.inStock || true,
-        weight: "250g",
-        prices: {
-          "250g": Math.round(basePrice250g * 0.8),
-          "500g": isApiShape ? Math.round(basePrice250g * 1.8) : munagaKaram.prices["500g"],
-          "1kg": isApiShape ? Math.round(basePrice250g * 3.2) : munagaKaram.prices["1kg"]
-        },
-        description: munagaKaram.description || "Nutritious moringa leaf spice powder, perfect for daily immune support.",
-        rating: 4.6,
-        variants: munagaKaram.variants
-      });
-    }
-
-    // 2. Combo Bundles
-    dealsList.push({
-      id: "bundle-wellness",
-      name: "Organic Wellness Combo",
-      category: "Honey & Ghee",
-      originalPrice: 950,
-      dealPrice: 799,
-      discountPercentage: 15,
-      image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
-      dealType: "Combo Bundles",
-      inStock: true,
-      weight: "500g",
-      prices: {
-        "250g": 399,
-        "500g": 799,
-        "1kg": 1499
-      },
-      description: "A combination of raw Jamun Honey (250g) and premium Desi Ghee (250g) for your daily health.",
-      rating: 4.9
     });
-
-    dealsList.push({
-      id: "bundle-millets",
-      name: "Conscious Grains Starter Kit",
-      category: "Millets & Grains",
-      originalPrice: 420,
-      dealPrice: 340,
-      discountPercentage: 19,
-      image: "https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?auto=format&fit=crop&q=80&w=400",
-      dealType: "Combo Bundles",
-      inStock: true,
-      weight: "1kg",
-      prices: {
-        "250g": 99,
-        "500g": 190,
-        "1kg": 340
-      },
-      description: "Clean organic Millets sampler pack featuring 1kg each of Korralu and Raagulu.",
-      rating: 4.8
-    });
-
-    // 3. Bulk Savings
-    const dalProduct = findProductByName("Kandipappu");
-    if (dalProduct) {
-      const isApiShape = !!dalProduct.price;
-      const basePrice250g = isApiShape ? dalProduct.price : dalProduct.prices["250g"];
-      dealsList.push({
-        id: dalProduct.id || "kandipappu-bulk",
-        name: dalProduct.name || "Kandipappu (Toor Dal)",
-        category: dalProduct.category?.name || dalProduct.category || "Dals & Pulses",
-        originalPrice: isApiShape ? Math.round(basePrice250g * 3.2) : dalProduct.prices["1kg"],
-        dealPrice: isApiShape ? Math.round(basePrice250g * 3.2 * 0.85) : Math.round(dalProduct.prices["1kg"] * 0.85),
-        discountPercentage: 15,
-        image: dalProduct.images?.[0]?.url || dalProduct.images?.[0] || dalProduct.image || "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
-        dealType: "Bulk Savings",
-        inStock: dalProduct.stockStatus === "IN_STOCK" || dalProduct.inStock || true,
-        weight: "1kg",
-        prices: {
-          "250g": isApiShape ? basePrice250g : dalProduct.prices["250g"],
-          "500g": isApiShape ? Math.round(basePrice250g * 1.8) : dalProduct.prices["500g"],
-          "1kg": isApiShape ? Math.round(basePrice250g * 3.2 * 0.85) : Math.round(dalProduct.prices["1kg"] * 0.85)
-        },
-        description: dalProduct.description || "Unpolished, stone-ground toor dal packed with raw proteins and fiber.",
-        rating: 4.7,
-        variants: dalProduct.variants
-      });
-    }
-
-    const ragiProduct = findProductByName("Raagi Pindi") || findProductByName("Godhuma Pindi");
-    if (ragiProduct) {
-      const isApiShape = !!ragiProduct.price;
-      const basePrice250g = isApiShape ? ragiProduct.price : ragiProduct.prices["250g"];
-      dealsList.push({
-        id: ragiProduct.id || "ragi-pindi-bulk",
-        name: ragiProduct.name || "Raagi Pindi (Millet Flour)",
-        category: ragiProduct.category?.name || ragiProduct.category || "Flours",
-        originalPrice: isApiShape ? Math.round(basePrice250g * 3.2) : ragiProduct.prices["1kg"],
-        dealPrice: isApiShape ? Math.round(basePrice250g * 3.2 * 0.85) : Math.round(ragiProduct.prices["1kg"] * 0.85),
-        discountPercentage: 15,
-        image: ragiProduct.images?.[0]?.url || ragiProduct.images?.[0] || ragiProduct.image || "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400",
-        dealType: "Bulk Savings",
-        inStock: ragiProduct.stockStatus === "IN_STOCK" || ragiProduct.inStock || true,
-        weight: "1kg",
-        prices: {
-          "250g": isApiShape ? basePrice250g : ragiProduct.prices["250g"],
-          "500g": isApiShape ? Math.round(basePrice250g * 1.8) : ragiProduct.prices["500g"],
-          "1kg": isApiShape ? Math.round(basePrice250g * 3.2 * 0.85) : Math.round(ragiProduct.prices["1kg"] * 0.85)
-        },
-        description: ragiProduct.description || "Finely stone-ground nutritious finger millet flour, rich in bone calcium.",
-        rating: 4.5,
-        variants: ragiProduct.variants
-      });
-    }
 
     return dealsList;
-  }, [apiProducts]);
+  }, [apiProducts, serverDeals]);
 
   const handleDealTypeToggle = (type: string) => {
     setSelectedDealTypes((prev) =>
@@ -691,7 +570,9 @@ export default function DealsClient() {
                 {paginatedDeals.map((deal) => {
                   const isFavorite = mounted && favorites.includes(deal.id);
                   const price = deal.prices[deal.weight];
-                  const isAdding = addingId === deal.id;
+                  const matchedVariant = deal.variants?.find((v) => v.weight === deal.weight);
+                  const variantId = matchedVariant?.id || deal.id;
+                  const isAdding = addingId === deal.id || actionItemId === variantId;
                   
                   return (
                     <div

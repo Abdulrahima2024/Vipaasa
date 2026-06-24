@@ -47,7 +47,7 @@ export default function CategoriesClient() {
   ]);
 
   // Cart/Favorites store
-  const { items, favorites, addToCart, toggleFavorite, updateQuantity, removeItem } = useCartStore();
+  const { items, favorites, addToCart, toggleFavorite, updateQuantity, removeItem, updatingItemId, actionItemId } = useCartStore();
   const { isAuthenticated, token } = useAuthStore();
 
   // Search input query
@@ -577,7 +577,9 @@ export default function CategoriesClient() {
                 {paginatedProducts.map((product) => {
                   const isFavorite = mounted && favorites.includes(product.id);
                   const price = product.prices[product.weight];
-                  const isAdding = addingId === product.id;
+                  const matchedVariant = product.variants?.find((v) => v.weight === product.weight);
+                  const variantId = matchedVariant?.id || product.id;
+                  const isAdding = addingId === product.id || actionItemId === variantId;
                   
                   const cartItem = items.find(item => 
                     (item.productId === product.id || 
@@ -722,7 +724,7 @@ export default function CategoriesClient() {
 
                             {/* Add to Cart or Quantity Selector */}
                             {cartQuantity > 0 ? (
-                              <div className="flex items-center bg-white border border-[#EAE6DB] rounded-lg sm:rounded-xl overflow-hidden shadow-sm">
+                              <div className="flex items-center bg-white border border-[#EAE6DB] rounded-lg sm:rounded-xl overflow-hidden shadow-sm h-8 sm:h-[38px]">
                                 <button
                                   onClick={() => {
                                     if (cartQuantity === 1) {
@@ -731,18 +733,24 @@ export default function CategoriesClient() {
                                       updateQuantity(cartItem!.id, -1);
                                     }
                                   }}
-                                  className="px-2 py-1.5 sm:py-2.5 text-[#113C27] hover:bg-[#FAF9F5] transition-colors"
+                                  disabled={actionItemId === cartItem!.id}
+                                  className="px-2 h-full text-[#113C27] hover:bg-[#FAF9F5] transition-colors disabled:opacity-40"
                                 >
                                   <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
                                   </svg>
                                 </button>
-                                <span className="w-6 text-center text-[11px] sm:text-xs font-bold text-[#113C27]">
-                                  {cartQuantity}
-                                </span>
+                                
+                                <div className="w-6 text-center flex items-center justify-center">
+                                  <span className="text-[11px] sm:text-xs font-bold text-[#113C27] select-none tabular-nums">
+                                    {cartQuantity}
+                                  </span>
+                                </div>
+
                                 <button
                                   onClick={() => updateQuantity(cartItem!.id, 1)}
-                                  className="px-2 py-1.5 sm:py-2.5 text-[#113C27] hover:bg-[#FAF9F5] transition-colors"
+                                  disabled={actionItemId === cartItem!.id}
+                                  className="px-2 h-full text-[#113C27] hover:bg-[#FAF9F5] transition-colors disabled:opacity-40"
                                 >
                                   <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

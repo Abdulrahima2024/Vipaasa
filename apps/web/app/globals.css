@@ -4,11 +4,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Production Base Styles ───────────────────────────────────────────────── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Global text selection color */
+  ::selection {
+    background-color: #0F5132;
+    color: #ffffff;
+  }
+  ::-moz-selection {
+    background-color: #0F5132;
+    color: #ffffff;
+  }
+
+  /* Accessible focus ring — only on keyboard nav */
+  :focus-visible {
+    outline: 2px solid #0F5132;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #F0EDE6;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2D6A4F;
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #0F5132;
+  }
+
+  /* Prevent layout shift from scrollbar */
+  body {
+    overflow-x: hidden;
+  }
+}
+
 .font-sans {
   font-family: 'Outfit', sans-serif;
 }
 .font-serif {
   font-family: 'Playfair Display', serif;
+}
+
+/* Hide native browser password reveal eye icons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  display: none !important;
 }
 
 @keyframes local-heart-burst {
@@ -72,3 +130,19 @@
 .animate-local-float-up-center {
   animation: local-float-up-center 1.0s ease-out forwards;
 }
+
+@keyframes local-slide-in-right {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-local-slide-in-right {
+  animation: local-slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

@@ -15,7 +15,6 @@ export const CheckoutRequestSchema = z.object({
   shippingAddress: AddressSchema.optional(),
   billingAddressId: z.string().uuid().optional(),
   billingAddress: AddressSchema.optional(),
-  couponCode: z.string().optional(),
 }).refine(data => data.shippingAddressId || data.shippingAddress, {
   message: "Either shippingAddressId or shippingAddress details must be provided",
   path: ["shippingAddressId"]

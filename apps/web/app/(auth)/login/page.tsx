@@ -13,6 +13,33 @@ import HCaptcha from "@hcaptcha/react-hcaptcha";
 import CaptchaWrapper from "../../../components/auth/CaptchaWrapper";
 import { signInWithGoogle } from "../../../lib/googleOAuth";
 
+const getPasswordStrength = (pass: string) => {
+  if (!pass) return { score: 0, color: "#EAE6DB", text: "" };
+  let score = 0;
+  if (pass.length >= 8) score++;
+  if (/[A-Z]/.test(pass)) score++;
+  if (/[a-z]/.test(pass)) score++;
+  if (/\d/.test(pass)) score++;
+  if (/[@$!%*?&]/.test(pass)) score++;
+
+  const finalScore = Math.max(1, score);
+
+  switch (finalScore) {
+    case 1:
+      return { score: 1, color: "#EF4444", text: "Very Weak" };
+    case 2:
+      return { score: 2, color: "#F97316", text: "Weak" };
+    case 3:
+      return { score: 3, color: "#EAB308", text: "Fair" };
+    case 4:
+      return { score: 4, color: "#84CC16", text: "Good" };
+    case 5:
+      return { score: 5, color: "#2D6A4F", text: "Strong" };
+    default:
+      return { score: 1, color: "#EF4444", text: "Very Weak" };
+  }
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,10 +115,18 @@ export default function LoginPage() {
       return;
     }
 
-    // Password length validation
-    if (password.length < 8) {
-      setValidationError("Password must be at least 8 characters long.");
-      return;
+    // Password complexity validation (only for registration)
+    if (authMode === "register") {
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(password)) {
+        setValidationError("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.");
+        return;
+      }
+    } else {
+      if (password.length < 8) {
+        setValidationError("Password must be at least 8 characters long.");
+        return;
+      }
     }
 
     const siteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "10000000-ffff-ffff-ffff-000000000001";
@@ -332,6 +367,31 @@ export default function LoginPage() {
                     <AnimatedEye isOpen={showPassword} className="w-4 h-4" />
                   </button>
                 </div>
+                {password && (() => {
+                  const strength = getPasswordStrength(password);
+                  return (
+                    <div className="mt-2.5 space-y-1.5 animate-fadeIn">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-[#738276] uppercase tracking-wider">
+                        <span>Password Strength</span>
+                        <span className="font-extrabold" style={{ color: strength.color }}>{strength.text}</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-[#EAE6DB]/40 rounded-full overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-300"
+                          style={{
+                            width: `${(strength.score / 5) * 100}%`,
+                            backgroundColor: strength.color
+                          }}
+                        />
+                      </div>
+                      {authMode === "register" && (
+                        <p className="text-[10px] text-[#738276]/80 leading-relaxed font-semibold">
+                          Must be 8+ characters with an uppercase letter, lowercase letter, number, and special character.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Additional Options */}

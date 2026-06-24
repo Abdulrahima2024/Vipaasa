@@ -137,7 +137,7 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   
-  const { items, favorites, addToCart, toggleFavorite } = useCartStore();
+  const { items, favorites, addToCart, toggleFavorite, actionItemId } = useCartStore();
   const { isAuthenticated, token } = useAuthStore();
 
   const [mounted, setMounted] = useState(false);
@@ -276,6 +276,9 @@ export default function ProductDetailPage() {
   }
 
   const price = product.prices[selectedWeight];
+  const matchedVariant = product.variants?.find((v) => v.weight === selectedWeight);
+  const variantId = matchedVariant?.id || product.id;
+  const isAddingThis = actionItemId === variantId;
 
   const handleShare = async () => {
     if (typeof window !== "undefined") {
@@ -547,15 +550,26 @@ export default function ProductDetailPage() {
               <button
                 type="button"
                 onClick={handleAddToCartClick}
-                className="flex items-center justify-center gap-2 bg-[#113C27] hover:bg-[#2D6A4F] text-white py-4 rounded-2xl font-bold transition-all shadow-md shadow-green-950/10 active:scale-[0.98] text-sm"
+                disabled={isAddingThis}
+                className="flex items-center justify-center gap-2 bg-[#113C27] hover:bg-[#2D6A4F] text-white py-4 rounded-2xl font-bold transition-all shadow-md shadow-green-950/10 active:scale-[0.98] text-sm disabled:opacity-50"
               >
-                <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
-                <span>Add to Cart</span>
+                {isAddingThis ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Adding...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
+                    <span>Add to Cart</span>
+                  </>
+                )}
               </button>
               <button
                 type="button"
                 onClick={handleBuyNowClick}
-                className="bg-[#F5A623] hover:bg-[#E09015] text-[#113C27] py-4 rounded-2xl font-bold transition-all shadow-md shadow-amber-950/5 active:scale-[0.98] text-sm text-center"
+                disabled={isAddingThis}
+                className="bg-[#F5A623] hover:bg-[#E09015] text-[#113C27] py-4 rounded-2xl font-bold transition-all shadow-md shadow-amber-950/5 active:scale-[0.98] text-sm text-center disabled:opacity-50"
               >
                 Buy Now
               </button>

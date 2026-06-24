@@ -41,6 +41,13 @@ export default function Header({
     setMounted(true);
   }, []);
 
+  // Safeguard: Clear inconsistent/corrupted authentication state (e.g., token exists but user data is missing)
+  useEffect(() => {
+    if (_hasHydrated && isAuthenticated && !user) {
+      logout();
+    }
+  }, [_hasHydrated, isAuthenticated, user, logout]);
+
   const storeItems = useCartStore((state) => state.items);
   const storeFavorites = useCartStore((state) => state.favorites);
 
@@ -441,12 +448,23 @@ export default function Header({
               <button
                 type="button"
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="relative w-8 h-8 rounded-full bg-[#113C27] hover:bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs transition-colors focus:outline-none"
+                className="relative w-8 h-8 rounded-full bg-[#113C27] hover:bg-[#2D6A4F] text-white flex items-center justify-center font-bold text-xs transition-colors focus:outline-none overflow-hidden"
                 aria-label="User Menu"
+                data-avatar-url={user?.profile?.avatarUrl || "none"}
               >
-                {user?.profile?.firstName
-                  ? `${user.profile.firstName[0]}${user.profile.lastName ? user.profile.lastName[0] : ""}`.toUpperCase()
-                  : user?.email ? user.email.slice(0, 2).toUpperCase() : "U"}
+                {user?.profile?.avatarUrl ? (
+                  <img
+                    src={user.profile.avatarUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : user?.profile?.firstName ? (
+                  `${user.profile.firstName[0]}${user.profile.lastName ? user.profile.lastName[0] : ""}`.toUpperCase()
+                ) : user?.email ? (
+                  user.email.slice(0, 2).toUpperCase()
+                ) : (
+                  "U"
+                )}
               </button>
               {isUserMenuOpen && (
                 <div className="absolute right-0 top-full mt-3 w-56 bg-white border border-[#EAE6DB] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] z-50 overflow-hidden font-sans">

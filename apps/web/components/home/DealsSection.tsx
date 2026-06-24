@@ -96,50 +96,7 @@ export default function DealsSection() {
       });
     }
 
-    // Fallback static deals...
-    const defaultDeals: DealItem[] = [
-      {
-        id: "40", // Desi Cow Ghee
-        name: "Desi Cow Ghee (A2 Vedic Churned)",
-        category: "Honey & Ghee",
-        image: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&q=80&w=400",
-        originalPrice: 4200,
-        dealPrice: 3499,
-        weight: "1kg",
-        badge: "Best Seller • Save 17%",
-        claimedPercentage: 82,
-        stars: 4.9,
-        reviewsCount: 1842,
-      },
-      {
-        id: "37", // Wild Forest Honey
-        name: "Raw Wild Forest Honey",
-        category: "Honey & Ghee",
-        image: "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=400",
-        originalPrice: 420,
-        dealPrice: 299,
-        weight: "1kg",
-        badge: "Deal of the Day • Save 29%",
-        claimedPercentage: 64,
-        stars: 4.8,
-        reviewsCount: 894,
-      },
-      {
-        id: "1", // Kandipappu
-        name: "Premium Kandipappu (Toor Dal)",
-        category: "Dals & Pulses",
-        image: "https://images.unsplash.com/photo-1547058881-aa0edd92aab3?auto=format&fit=crop&q=80&w=400",
-        originalPrice: 240,
-        dealPrice: 169,
-        weight: "1kg",
-        badge: "Lightning Deal • Save 30%",
-        claimedPercentage: 47,
-        stars: 4.7,
-        reviewsCount: 1230,
-      },
-    ];
-
-    return defaultDeals;
+    return [];
   }, [apiProducts, serverDeals]);
 
   useEffect(() => {
@@ -184,6 +141,10 @@ export default function DealsSection() {
   };
 
   const formatNumber = (num: number) => (num < 10 ? `0${num}` : num);
+
+  if (deals.length === 0) {
+    return null;
+  }
 
   return (
     <section className="bg-gradient-to-br from-[#FFEBEB] via-[#FFF8F0] to-[#FFFBF5] border border-[#FFD2D2] rounded-3xl py-5 px-4 sm:py-7 sm:px-8 relative overflow-hidden shadow-md">

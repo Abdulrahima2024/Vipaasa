@@ -13,7 +13,7 @@ interface CartDrawerProps {
 }
 
 export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
-  const { items, updateQuantity, removeItem } = useCartStore();
+  const { items, updateQuantity, removeItem, updatingItemId, actionItemId } = useCartStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -130,22 +130,28 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                       <div className="flex items-center gap-3 mt-2">
                         {/* Quantity Selector - reference style */}
-                        <div className="flex items-center border border-[#113C27] rounded overflow-hidden">
+                        <div className="flex items-center border border-[#113C27] rounded overflow-hidden h-7 bg-white">
                           <button
                             onClick={() => {
                               if (item.quantity === 1) removeItem(item.id);
                               else updateQuantity(item.id, -1);
                             }}
-                            className="px-2.5 py-1 bg-[#113C27] text-white hover:bg-[#2D6A4F] transition-colors"
+                            disabled={actionItemId === item.id}
+                            className="px-2.5 h-full bg-[#113C27] text-white hover:bg-[#2D6A4F] transition-colors disabled:opacity-50"
                           >
                             <span className="font-bold">-</span>
                           </button>
-                          <span className="w-8 text-center text-xs font-bold text-[#113C27] bg-white py-1">
-                            {item.quantity}
-                          </span>
+                          
+                          <div className="w-8 text-center flex items-center justify-center">
+                            <span className="text-xs font-bold text-[#113C27] select-none tabular-nums">
+                              {item.quantity}
+                            </span>
+                          </div>
+
                           <button
                             onClick={() => updateQuantity(item.id, 1)}
-                            className="px-2.5 py-1 bg-[#113C27] text-white hover:bg-[#2D6A4F] transition-colors"
+                            disabled={actionItemId === item.id}
+                            className="px-2.5 h-full bg-[#113C27] text-white hover:bg-[#2D6A4F] transition-colors disabled:opacity-50"
                           >
                             <span className="font-bold">+</span>
                           </button>
@@ -153,9 +159,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         
                         <button
                           onClick={() => removeItem(item.id)}
-                          className="text-xs text-[#5C6E61] underline hover:text-[#113C27]"
+                          disabled={updatingItemId === item.id || actionItemId === item.id}
+                          className="text-xs text-[#5C6E61] underline hover:text-[#113C27] disabled:opacity-50"
                         >
-                          Remove
+                          {actionItemId === item.id ? "Removing..." : "Remove"}
                         </button>
                       </div>
                     </div>

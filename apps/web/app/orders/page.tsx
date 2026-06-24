@@ -30,63 +30,6 @@ interface OrderItem {
   taxAmount?: number;
 }
 
-const MOCK_ORDERS: OrderItem[] = [
-  {
-    id: "ord-1",
-    orderId: "#VO-89341",
-    placedOn: "Oct 24, 2023",
-    total: 142.50,
-    status: "Delivered",
-    rawStatus: "DELIVERED",
-    images: [
-      "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&q=80&w=150",
-      "https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&q=80&w=150"
-    ],
-    extraItemsCount: 1
-  },
-  {
-    id: "ord-2",
-    orderId: "#VO-90212",
-    placedOn: "Nov 02, 2023",
-    total: 88.00,
-    status: "Shipped",
-    rawStatus: "SHIPPED",
-    images: [
-      "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=150",
-      "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&q=80&w=150"
-    ]
-  },
-  {
-    id: "ord-3",
-    orderId: "#VO-91045",
-    placedOn: "Today, 09:12 AM",
-    total: 210.30,
-    status: "Processing",
-    rawStatus: "PENDING",
-    images: [
-      "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=150",
-      "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=150"
-    ],
-    extraItemsCount: 3
-  },
-  {
-    id: "ord-4",
-    orderId: "#VO-87221",
-    placedOn: "Sep 15, 2023",
-    total: 0,
-    status: "Cancelled",
-    rawStatus: "CANCELLED",
-    images: [],
-    shippingAddress: "",
-    paymentStatus: "",
-    deliveryStatus: "",
-    paymentMethod: "",
-    itemsList: [],
-    subtotal: 0,
-    shippingFee: 0,
-  }
-];
-
 type StatusFilter = "All Orders" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 
 export default function MyOrdersPage() {

@@ -48,7 +48,7 @@ export function ProductCard({
 }) {
   const emojiInfo = parseEmojiImage(product.image);
   
-  const { items, updateQuantity, removeItem } = useCartStore();
+  const { items, updateQuantity, removeItem, updatingItemId, actionItemId } = useCartStore();
   const cartItem = items.find(item => 
     (item.productId === product.id || 
      product.variants?.some(v => v.id === item.productId || v.id === item.variantId) ||
@@ -57,6 +57,9 @@ export function ProductCard({
   );
   const cartQuantity = cartItem?.quantity || 0;
   const price = product.prices[product.weight];
+  const matchedVariant = product.variants?.find((v) => v.weight === product.weight);
+  const variantId = matchedVariant?.id || product.id;
+  const isAddingThis = actionItemId === variantId;
 
   return (
     <div className="bg-white border border-[#EAE6DB]/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.04)] hover:border-[#EAE6DB]/80 transition-all duration-300 group relative">
@@ -205,7 +208,7 @@ export function ProductCard({
 
             {/* Add to Cart or Quantity Selector */}
             {cartQuantity > 0 ? (
-              <div className="flex items-center bg-white border border-[#EAE6DB] rounded-lg sm:rounded-xl overflow-hidden shadow-sm">
+              <div className="flex items-center bg-white border border-[#EAE6DB] rounded-lg sm:rounded-xl overflow-hidden shadow-sm h-8 sm:h-[38px]">
                 <button
                   onClick={() => {
                     if (cartQuantity === 1) {
@@ -214,18 +217,24 @@ export function ProductCard({
                       updateQuantity(cartItem!.id, -1);
                     }
                   }}
-                  className="px-2 py-1.5 sm:py-2.5 text-[#113C27] hover:bg-[#FAF9F5] transition-colors"
+                  disabled={actionItemId === cartItem!.id}
+                  className="px-2 h-full text-[#113C27] hover:bg-[#FAF9F5] transition-colors disabled:opacity-40"
                 >
                   <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
                   </svg>
                 </button>
-                <span className="w-6 text-center text-[11px] sm:text-xs font-bold text-[#113C27]">
-                  {cartQuantity}
-                </span>
+                
+                <div className="w-6 text-center flex items-center justify-center">
+                  <span className="text-[11px] sm:text-xs font-bold text-[#113C27] select-none tabular-nums">
+                    {cartQuantity}
+                  </span>
+                </div>
+
                 <button
                   onClick={() => updateQuantity(cartItem!.id, 1)}
-                  className="px-2 py-1.5 sm:py-2.5 text-[#113C27] hover:bg-[#FAF9F5] transition-colors"
+                  disabled={actionItemId === cartItem!.id}
+                  className="px-2 h-full text-[#113C27] hover:bg-[#FAF9F5] transition-colors disabled:opacity-40"
                 >
                   <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -235,17 +244,31 @@ export function ProductCard({
             ) : (
               <button
                 onClick={onAddToCart}
-                disabled={!product.inStock}
+                disabled={!product.inStock || isAddingThis}
                 className={`flex items-center justify-center gap-1.5 text-xs font-bold px-2 py-2 sm:px-3.5 sm:py-2.5 rounded-lg sm:rounded-xl transition-all shadow-sm active:scale-95 transform whitespace-nowrap ${!product.inStock
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-[#113C27] text-white hover:bg-[#2D6A4F]"
+                  : isAddingThis
+                    ? "bg-[#2D6A4F] text-white opacity-80 cursor-not-allowed"
+                    : "bg-[#113C27] text-white hover:bg-[#2D6A4F]"
                   }`}
                 aria-label={`Add ${product.name} to cart`}
               >
-                <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                </svg>
-                <span className="hidden sm:inline">Add</span>
+                {isAddingThis ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="hidden sm:inline">Adding...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                    </svg>
+                    <span className="hidden sm:inline">Add</span>
+                  </>
+                )}
               </button>
             )}
           </div>
