@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { fetchAPI } from "../../../lib/api";
 import { OrderDetailsModal, Order } from "../../../components/OrderDetailsModal";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface PermissionSet {
   manageProducts: boolean;
@@ -44,70 +45,48 @@ interface SystemUser {
 
 export default function UsersPage() {
   const router = useRouter();
-  const [users, setUsers] = useState<SystemUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Dashboard Stats
-  const [dashboardStats, setDashboardStats] = useState({ totalUsers: 0, totalOrders: 0, totalRevenue: 0 });
-  const [isStatsLoading, setIsStatsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
   // Search query
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Add/Edit user Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
-
-  // Order History State
-  const [selectedUserForOrders, setSelectedUserForOrders] = useState<SystemUser | null>(null);
-  const [userOrders, setUserOrders] = useState<any[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [ordersError, setOrdersError] = useState<string | null>(null);
-  const [ordersPagination, setOrdersPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
-  const [selectedOrderDetail, setSelectedOrderDetail] = useState<Order | null>(null);
-
-  // Form inputs
-  const [formName, setFormName] = useState("");
-  const [formEmail, setFormEmail] = useState("");
-  const [formStatus, setFormStatus] = useState(true);
-  const [formPermProducts, setFormPermProducts] = useState(false);
-  const [formPermOrders, setFormPermOrders] = useState(false);
-  const [formPermInventory, setFormPermInventory] = useState(false);
-  const [formPermReports, setFormPermReports] = useState(false);
-
-  const loadUsers = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await fetchAPI("/api/users");
-      setUsers(data);
-    } catch (err: any) {
-      console.error("Failed to fetch users:", err);
-      setError("Failed to load users list.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadDashboardStats = async () => {
-    setIsStatsLoading(true);
-    try {
-      const data = await fetchAPI("/api/users/dashboard-stats");
-      if (data) {
-        setDashboardStats(data);
-      }
-    } catch (err) {
-      console.error("Failed to load dashboard stats:", err);
-    } finally {
-      setIsStatsLoading(false);
-    }
-  };
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   useEffect(() => {
-    loadUsers();
-    loadDashboardStats();
-  }, []);
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const { data: usersData, isLoading, refetch: loadUsers } = useQuery({
+    queryKey: ['adminUsers', page, limit, debouncedSearchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      if (debouncedSearchQuery) params.append("search", debouncedSearchQuery);
+
+      const res = await fetchAPI(`/api/users?${params.toString()}`);
+      return res;
+    }
+  });
+
+  const users = usersData?.data || [];
+  const totalPages = usersData?.totalPages || 1;
+  const totalCount = usersData?.totalCount || 0;
+
+  const { data: dashboardStatsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: ['adminDashboardStats'],
+    queryFn: async () => {
+      const res = await fetchAPI("/api/users/dashboard-stats");
+      return res || { totalUsers: 0, totalOrders: 0, totalRevenue: 0 };
+    }
+  });
+
+  const dashboardStats = dashboardStatsData || { totalUsers: 0, totalOrders: 0, totalRevenue: 0 };
 
   const handleOpenAddModal = () => {
     setEditingUser(null);
@@ -138,7 +117,7 @@ export default function UsersPage() {
     if (confirm("Are you sure you want to delete this system user?")) {
       try {
         await fetchAPI(`/api/users/${id}`, { method: "DELETE" });
-        setUsers(users.filter(u => u.id !== id));
+        queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       } catch (err: any) {
         alert(err.message || "Failed to delete user.");
       }
@@ -161,7 +140,7 @@ export default function UsersPage() {
           permissions: user.permissions
         })
       });
-      setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
     } catch (err: any) {
       alert("Failed to update user status.");
     }
@@ -196,7 +175,7 @@ export default function UsersPage() {
         });
       }
       setIsModalOpen(false);
-      loadUsers();
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
     } catch (err: any) {
       alert(err.message || "Failed to save user.");
     }
@@ -298,13 +277,8 @@ export default function UsersPage() {
 
   // Filter list
   // Specifically filter out the legacy "Store Executive" roles from the UI display entirely.
-  const filteredUsers = users.filter((u) => {
-    if (u.role === "Store Executive") return false;
-    
-    return u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           u.role.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // The backend already filters based on search term. We just need to filter out 'Store Executive' locally.
+  const filteredUsers = users.filter((u: SystemUser) => u.role !== "Store Executive");
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -387,7 +361,10 @@ export default function UsersPage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
               className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[var(--primary-green)] bg-gray-50/20"
               placeholder="Search users, roles, email..."
             />
@@ -521,6 +498,31 @@ export default function UsersPage() {
           </table>
         </div>
       </div>
+
+      {/* Pagination Controls */}
+      {!isLoading && totalPages > 1 && (
+        <div className="flex justify-between items-center mt-6 mb-8">
+          <div className="text-sm font-semibold text-gray-500">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 font-bold text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 font-bold text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* USER FORM MODAL (ADD & EDIT WITH PERMISSIONS LOCK) */}
       {isModalOpen && (

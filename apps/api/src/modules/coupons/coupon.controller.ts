@@ -70,8 +70,12 @@ export async function deleteCoupon(req: AuthenticatedRequest, res: Response) {
 
 export async function getAllCoupons(req: AuthenticatedRequest, res: Response) {
   try {
-    const coupons = await couponService.getAllCoupons();
-    return res.status(200).json({ status: "success", data: coupons });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const search = req.query.search as string;
+
+    const result = await couponService.getAllCoupons(page, limit, search);
+    return res.status(200).json({ status: "success", ...result });
   } catch (error) {
     console.error("GetAllCoupons error:", error);
     return res.status(500).json({ error: "Failed to fetch coupons" });
