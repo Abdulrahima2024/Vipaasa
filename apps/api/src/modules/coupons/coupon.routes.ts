@@ -6,6 +6,7 @@ import { authorize } from "../../shared/middleware/authorize";
 const router = Router();
 
 // Public / User routes
+router.get("/coupons", authenticate, couponController.getActiveCoupons);
 router.post("/coupons/validate", authenticate, couponController.validateCoupon);
 
 // Admin routes
