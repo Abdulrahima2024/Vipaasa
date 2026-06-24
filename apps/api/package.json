@@ -5,7 +5,7 @@
   "scripts": {
     "db:setup": "npx prisma@5.18.0 migrate dev && npx prisma@5.18.0 db seed",
     "db:deploy": "npx prisma@5.18.0 migrate deploy && npx prisma@5.18.0 db seed",
-    "dev": "npx tsx watch src/server.ts"
+    "dev": "node scripts/kill-port.js && npx tsx watch src/server.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
