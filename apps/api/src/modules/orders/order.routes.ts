@@ -24,10 +24,10 @@ router.get("/orders/:id", authenticate, getOrderById);
 router.patch("/orders/:id/cancel", authenticate, cancelOrder);
 
 // Admin Orders management
-router.get("/admin/orders/stats", authenticate, authorize(["SUPER_ADMIN"]), getAdminOrderStats);
-router.get("/admin/orders", authenticate, authorize(["SUPER_ADMIN"]), getAdminOrders);
-router.patch("/admin/orders/:id/status", authenticate, authorize(["SUPER_ADMIN"]), updateOrderStatus);
-router.post("/admin/orders/:id/assign-delivery", authenticate, authorize(["SUPER_ADMIN"]), assignDelivery);
-router.post("/admin/orders/:id/verify-delivery", authenticate, authorize(["SUPER_ADMIN"]), verifyDelivery);
+router.get("/admin/orders/stats", authenticate, authorize(["SUPER_ADMIN", "STORE_EXECUTIVE", "ADMIN"]), getAdminOrderStats);
+router.get("/admin/orders", authenticate, authorize(["SUPER_ADMIN", "STORE_EXECUTIVE", "ADMIN"]), getAdminOrders);
+router.patch("/admin/orders/:id/status", authenticate, authorize(["SUPER_ADMIN", "STORE_EXECUTIVE", "ADMIN"]), updateOrderStatus);
+router.post("/admin/orders/:id/assign-delivery", authenticate, authorize(["SUPER_ADMIN", "STORE_EXECUTIVE", "ADMIN"]), assignDelivery);
+router.post("/admin/orders/:id/verify-delivery", authenticate, authorize(["SUPER_ADMIN", "STORE_EXECUTIVE", "ADMIN"]), verifyDelivery);
 
 export default router;

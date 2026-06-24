@@ -111,7 +111,7 @@ export default function CouponsPage() {
                   </td>
                 </tr>
               ) : (
-                coupons.map((coupon) => (
+                coupons.map((coupon: any) => (
                   <tr key={coupon.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">

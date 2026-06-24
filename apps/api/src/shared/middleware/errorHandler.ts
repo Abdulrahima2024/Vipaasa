@@ -66,8 +66,8 @@ export const errorHandler = (
       field: e.path.join("."),
       message: e.message,
     }));
-    err.statusCode = 400;
-    err.message = `Validation failed: ${err.issues.map((e: ZodIssue) => `${e.path.join(".")}: ${e.message}`).join(", ")}`;
+    (err as any).statusCode = 400;
+    (err as any).message = `Validation failed: ${err.issues.map((e: ZodIssue) => `${e.path.join(".")}: ${e.message}`).join(", ")}`;
     (err as any).errors = errors;
   } else if (err.name === "JsonWebTokenError") {
     err.statusCode = 401;

@@ -24,8 +24,8 @@ const upload = multer({
 // Retrieve all active hierarchical categories
 router.get("/categories", optionalAuthenticate, getCategories);
 
-// Retrieve catalogue overview metrics (Admin only)
-router.get("/products/stats", authenticate, authorize(["SUPER_ADMIN"]), getProductStats);
+// Retrieve catalogue overview metrics (Admin/Operations)
+router.get("/products/stats", authenticate, authorize(["SUPER_ADMIN", "STORE_EXECUTIVE", "ADMIN"]), getProductStats);
 
 // Retrieve all active, priced, paginated products
 router.get("/products", optionalAuthenticate, getProducts);

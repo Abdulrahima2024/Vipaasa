@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4002";
 
 let socket: Socket | null = null;
 let lastToken: string | null = null;

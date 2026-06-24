@@ -8,6 +8,7 @@ export function authorize(allowedRoles: string[]) {
         return res.status(401).json({ error: "Access denied. User not authenticated." });
       }
 
+      console.log("AUTHORIZE MIDDLEWARE DEBUG:", { userRole: req.user?.role, allowedRoles });
       if (!allowedRoles.includes(req.user.role)) {
         return res.status(403).json({ error: "Access denied. Insufficient permissions." });
       }

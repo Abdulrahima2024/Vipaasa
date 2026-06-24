@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4002";
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -37,7 +37,7 @@ export async function fetchAPI<T = any>(endpoint: string, options: RequestOption
   });
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
+    if ((response.status === 401 || response.status === 403) && typeof window !== "undefined" && !endpoint.includes("/auth/")) {
       localStorage.removeItem("vipaasa_admin_token");
       window.location.href = "/login";
     }

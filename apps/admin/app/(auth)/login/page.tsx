@@ -23,8 +23,13 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       if (data.accessToken) {
+        const role = data.user?.role;
+        if (role === "CUSTOMER") {
+          setError("Access denied. You do not have permissions to access the admin portal.");
+          return;
+        }
         localStorage.setItem("vipaasa_admin_token", data.accessToken);
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       } else {
         setError("Invalid response format from server.");
       }

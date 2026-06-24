@@ -22,6 +22,8 @@ export interface Order {
   paymentId?: string; 
   bankDetails?: string; 
   shippingAddress: string;
+  deliveryPartnerId?: string;
+  deliveryPartnerName?: string;
 }
 
 interface OrderDetailsModalProps {

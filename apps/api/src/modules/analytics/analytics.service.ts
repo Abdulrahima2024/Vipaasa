@@ -47,25 +47,31 @@ export async function getMonthlyAnalytics() {
 }
 
 export async function getProductAnalytics() {
-  // Simplistic top selling products
-  const topProducts = await prisma.orderItem.groupBy({
-    by: ['productId'],
+  // Group by variantId to get top selling variants
+  const topVariants = await prisma.orderItem.groupBy({
+    by: ['variantId'],
     _sum: { quantity: true },
     orderBy: { _sum: { quantity: 'desc' } },
     take: 5
   });
 
-  const productIds = topProducts.map(p => p.productId);
-  const products = await prisma.product.findMany({ where: { id: { in: productIds } }});
+  const variantIds = topVariants.map(v => v.variantId);
+  const variants = await prisma.productVariant.findMany({
+    where: { id: { in: variantIds } },
+    include: { product: true }
+  });
 
-  const result = topProducts.map(p => ({
-    productId: p.productId,
-    name: products.find(prod => prod.id === p.productId)?.name || "Unknown Product",
-    quantitySold: p._sum.quantity
-  }));
+  const result = topVariants.map(v => {
+    const variant = variants.find(varnt => varnt.id === v.variantId);
+    return {
+      productId: variant?.productId || "",
+      name: variant ? `${variant.product.name} (${variant.name})` : "Unknown Product",
+      quantitySold: v._sum?.quantity || 0
+    };
+  });
 
-  const outOfStock = await prisma.product.count({
-    where: { stockStatus: "OUT_OF_STOCK" }
+  const outOfStock = await prisma.productVariant.count({
+    where: { skuStatus: "OUT_OF_STOCK" }
   });
 
   return { topSellingProducts: result, outOfStockProducts: outOfStock };
