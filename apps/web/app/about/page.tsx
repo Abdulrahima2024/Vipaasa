@@ -384,7 +384,7 @@ export default function AboutPage() {
         </section>
 
         {/* CONTACT INQUIRY FORM */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start bg-white border border-[#EAE6DB] rounded-3xl overflow-hidden shadow-sm">
+        <section id="contact" className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start bg-white border border-[#EAE6DB] rounded-3xl overflow-hidden shadow-sm">
           {/* Form left banner */}
           <div className="p-8 lg:p-12 bg-[#113C27] text-white space-y-6 h-full flex flex-col justify-between">
             <div className="space-y-4">
