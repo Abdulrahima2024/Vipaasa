@@ -228,9 +228,6 @@ export async function createProduct(input: CreateProductInput, files?: Express.M
   }
 
   const finalImages = [...(input.images || []), ...uploadedUrls];
-  if (finalImages.length > 3) {
-    throw new Error("A product can have a maximum of 3 images");
-  }
 
   return productRepository.createProduct({
     ...input,
@@ -261,10 +258,6 @@ export async function updateProduct(id: string, input: UpdateProductInput, files
   const finalImages = input.images && input.images.length > 0 || uploadedUrls.length > 0 
     ? [...(input.images || []), ...uploadedUrls] 
     : undefined;
-
-  if (finalImages && finalImages.length > 3) {
-    throw new Error("A product can have a maximum of 3 images");
-  }
 
   return productRepository.updateProduct(id, {
     ...input,

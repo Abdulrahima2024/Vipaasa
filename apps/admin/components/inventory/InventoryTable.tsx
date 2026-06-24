@@ -16,7 +16,6 @@ import {
   RefreshCw
 } from "lucide-react";
 import { fetchAPI } from "@/lib/api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface ProductVariant {
   id: string;
@@ -64,14 +63,18 @@ interface InventoryTableProps {
 }
 
 export default function InventoryTable({ onProductChange }: InventoryTableProps) {
-  const queryClient = useQueryClient();
-  
+  const [products, setProducts] = useState<BackendProduct[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Search, Filter & Pagination state
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
-  const limit = 10;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -101,10 +104,6 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (uploadedImages.length >= 3) {
-      alert("You can upload a maximum of 3 images.");
-      return;
-    }
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -121,10 +120,25 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
     }
   };
 
-  const { data: categoriesData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
+  // Load categories and products on mount
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    loadProducts();
+  }, [currentPage, selectedCategoryFilter, debouncedSearchQuery]);
+
+  const getProductImageUrl = (img: any) => {
+    if (!img) return "";
+    if (typeof img === "string") return img;
+    return img.url || "";
+  };
+
+  const loadCategories = async () => {
+    try {
       const data = await fetchAPI("/api/categories");
+      // Flatten hierarchical category tree to simple list
       const list: CategoryItem[] = [];
       const traverse = (nodes: any[]) => {
         nodes.forEach(node => {
@@ -135,21 +149,22 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
         });
       };
       traverse(data);
-      if (list.length > 0 && !formCategoryId) {
+      setCategories(list);
+      if (list.length > 0) {
         setFormCategoryId(list[0].id);
       }
-      return list;
+    } catch (err: any) {
+      console.error("Failed to load categories", err);
     }
-  });
+  };
 
-  const categories = categoriesData || [];
-
-  const { data: productsData, isLoading: loading, error: productsError, refetch: loadProducts } = useQuery({
-    queryKey: ['adminProducts', currentPage, limit, selectedCategoryFilter, debouncedSearchQuery],
-    queryFn: async () => {
+  const loadProducts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const params: Record<string, any> = {
         page: currentPage,
-        limit,
+        limit: 10,
         includeInactive: true,
       };
       if (selectedCategoryFilter !== "All") {
@@ -159,33 +174,31 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
       let data;
       if (debouncedSearchQuery.trim() !== "") {
         data = await fetchAPI("/api/products/search", {
-          params: { q: debouncedSearchQuery, page: currentPage, limit }
+          params: { q: debouncedSearchQuery, page: currentPage, limit: 10 }
         });
       } else {
         data = await fetchAPI("/api/products", { params });
       }
 
-      return {
-        products: data.items || [],
-        totalPages: data.totalPages || 1,
-        totalCount: data.total || 0
-      };
+      setProducts(data.items || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalCount(data.total || 0);
+    } catch (err: any) {
+      setError(err.message || "Failed to load products");
+    } finally {
+      setLoading(false);
     }
-  });
-
-  const products = productsData?.products || [];
-  const totalPages = productsData?.totalPages || 1;
-  const totalCount = productsData?.totalCount || 0;
-  const error = productsError ? (productsError as Error).message : null;
+  };
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
+      // Optimistic local update
+      setProducts(products.map(p => p.id === id ? { ...p, isActive: !currentStatus } : p));
       // Send update to backend
       await fetchAPI(`/api/products/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ isActive: !currentStatus })
       });
-      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
       if (onProductChange) onProductChange();
     } catch (err) {
       console.error(err);
@@ -218,7 +231,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
     if (confirm("Are you sure you want to delete this product?")) {
       try {
         await fetchAPI(`/api/products/${id}`, { method: "DELETE" });
-        queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
+        setProducts(products.filter(p => p.id !== id));
         if (onProductChange) onProductChange();
       } catch (err: any) {
         alert(err.message || "Failed to delete product");
@@ -228,11 +241,6 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (uploadedImages.length > 3) {
-      alert("A product can have a maximum of 3 images.");
-      return;
-    }
     
     // Construct variants payload based on input prices
     const variants = [];
@@ -276,11 +284,10 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
     formData.append("isActive", String(formStatus));
     formData.append("variants", JSON.stringify(variants));
 
-    // Append existing Image URLs (excluding newly added base64 files)
-    const existingUrls = uploadedImages.filter((img) => !img.startsWith("data:"));
-    existingUrls.forEach((url) => {
-      formData.append("images", url);
-    });
+    // Append existing Image URLs
+    if (formImageUrl.trim() !== "") {
+      formData.append("images", formImageUrl.trim());
+    }
 
     // Append raw files instead of base64
     uploadedFiles.forEach((file) => {
@@ -302,17 +309,11 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
         });
       }
       setIsProductModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
+      loadProducts();
       if (onProductChange) onProductChange();
     } catch (err: any) {
       alert(err.message || "Failed to save product");
     }
-  };
-
-  const getProductImageUrl = (img: any) => {
-    if (!img) return "";
-    if (typeof img === "string") return img;
-    return img.url || "";
   };
 
   // Helper helper to get pricing details for display
@@ -758,7 +759,7 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Upload Image File</label>
                   <div className="flex items-center gap-4">
-                    <label className={`flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold text-gray-600 bg-white ${uploadedImages.length >= 3 ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}`}>
+                    <label className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-xs font-bold text-gray-600 bg-white">
                       <Upload className="w-4 h-4 text-gray-500" />
                       Choose File
                       <input
@@ -766,7 +767,6 @@ export default function InventoryTable({ onProductChange }: InventoryTableProps)
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
-                        disabled={uploadedImages.length >= 3}
                       />
                     </label>
                     {uploadedImages.length > 0 && (

@@ -146,17 +146,11 @@ export async function cancelOrder(req: AuthenticatedRequest, res: Response, next
  */
 export async function getAdminOrders(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const search = req.query.search as string;
-    const status = req.query.status as string;
-
-    const result = await orderService.getAdminOrders(page, limit, search, status);
-    
+    const orders = await orderService.getAdminOrders();
     return res.status(200).json({
       status: "success",
-      results: result.data.length,
-      ...result,
+      results: orders.length,
+      data: orders,
     });
   } catch (error) {
     next(error);

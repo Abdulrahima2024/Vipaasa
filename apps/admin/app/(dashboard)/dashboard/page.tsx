@@ -10,20 +10,28 @@ import RevenueChart from "@/components/dashboard/RevenueChart";
 import OrderStatusPie from "@/components/dashboard/OrderStatusPie";
 import { Package, Banknote, Truck, Calendar, ShoppingBag, Eye, Users2 } from "lucide-react";
 import { fetchAPI } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
 
 export default function DashboardPage() {
   const [filter, setFilter] = useState<"today" | "week" | "month">("month");
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { data, isLoading: loading } = useQuery({
-    queryKey: ['dashboardStats', filter],
-    queryFn: async () => {
-      const res = await fetchAPI("/api/reports/dashboard", {
-        params: { filter }
-      });
-      return res;
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        setLoading(true);
+        const res = await fetchAPI("/api/reports/dashboard", {
+          params: { filter }
+        });
+        setData(res);
+      } catch (err) {
+        console.error("Failed to load dashboard stats:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  });
+    loadStats();
+  }, [filter]);
 
   // Dynamic values depending on filter selection
   const totalOrders = loading ? "..." : String(data?.kpis?.totalOrders ?? 0);

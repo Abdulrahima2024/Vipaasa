@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Sprout, X, Send, Bot, User, Sparkles, Trash2 } from "lucide-react";
-import { useAuthStore } from "../../store/authStore";
-import { fetchApi } from "../../lib/api";
+import { Sprout, X, Send, Bot, User, Sparkles } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -20,27 +18,11 @@ const faqData: Record<string, string> = {
   "How do I partner as a farmer?": "We are always looking for regenerative farmers! Please email us at info@vipaasaorganics.com or submit the partner form on our /about page."
 };
 
-const menuOptions = {
-  orders: ["Track my order", "Recent orders"],
-  cart: ["My cart", "Cart summary"],
-  profile: ["My profile", "Account details"],
-  payment: ["Payment methods", "Refund policy"],
-  other: [
-    "What makes Vipaasa Organics unique?",
-    "Where are your store branches located?",
-    "What are your delivery timings?"
-  ]
-};
-
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -57,57 +39,12 @@ export default function Chatbot() {
     ]);
   }, []);
 
-  // Load chat history when the chatbot is opened and user is authenticated
-  useEffect(() => {
-    if (isOpen && isAuthenticated && _hasHydrated) {
-      loadHistory();
-    }
-  }, [isOpen, isAuthenticated, _hasHydrated]);
-
   // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const loadHistory = async () => {
-    try {
-      const history = await fetchApi<any[]>("/api/chatbot/history");
-      if (history && history.length > 0) {
-        const mappedMessages = history.map((msg) => ({
-          id: msg.id,
-          sender: (msg.role === "user" ? "user" : "bot") as "user" | "bot",
-          text: msg.message,
-          timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        }));
-        setMessages(mappedMessages);
-      }
-    } catch (error) {
-      console.warn("Failed to load chat history:", error);
-    }
-  };
-
-  const handleClearHistory = async () => {
-    if (confirm("Are you sure you want to clear your chat history?")) {
-      try {
-        await fetchApi("/api/chatbot/history", {
-          method: "DELETE",
-        });
-        const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        setMessages([
-          {
-            id: "welcome",
-            sender: "bot",
-            text: "Chat history cleared. How can I assist you today?",
-            timestamp: timeString
-          }
-        ]);
-      } catch (error) {
-        console.warn("Failed to clear chat history:", error);
-      }
-    }
-  };
-
-  const handleSendMessage = async (textToSend: string) => {
+  const handleSendMessage = (textToSend: string) => {
     if (!textToSend.trim()) return;
 
     const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -122,46 +59,18 @@ export default function Chatbot() {
     setInputMessage("");
     setIsTyping(true);
 
-    if (!_hasHydrated || !isAuthenticated) {
-      setTimeout(() => {
-        const botMsg: ChatMessage = {
-          id: `bot-${Date.now()}`,
-          sender: "bot",
-          text: "you are valuable customer please sign in",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages((prev) => [...prev, botMsg]);
-        setIsTyping(false);
-      }, 800);
-      return;
-    }
-
-    try {
-      const response = await fetchApi<{ type: string; answer: string }>("/api/chatbot/message", {
-        method: "POST",
-        body: JSON.stringify({ message: textToSend }),
-      });
-
+    // Simulate bot thinking/typing
+    setTimeout(() => {
+      const responseText = faqData[textToSend] || "I don't have an idea on that topic. Please feel free to reach out to our team at info@vipaasaorganics.com or call +91 99887 76655!";
       const botMsg: ChatMessage = {
         id: `bot-${Date.now()}`,
         sender: "bot",
-        text: response.answer,
+        text: responseText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, botMsg]);
-    } catch (error: any) {
-      console.warn("Chatbot message error:", error);
-      const errorMessage = error?.message || "Please contact with phone number: +91 99887 76655";
-      const botMsg: ChatMessage = {
-        id: `bot-${Date.now()}`,
-        sender: "bot",
-        text: errorMessage,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages((prev) => [...prev, botMsg]);
-    } finally {
       setIsTyping(false);
-    }
+    }, 1000);
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -226,25 +135,13 @@ export default function Chatbot() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              {isAuthenticated && _hasHydrated && messages.length > 1 && (
-                <button
-                  onClick={handleClearHistory}
-                  className="p-1 rounded-lg hover:bg-white/10 text-[#C1F2D0] hover:text-white transition-colors"
-                  title="Clear Chat History"
-                  aria-label="Clear Chat History"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors"
-                aria-label="Close chat"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+              aria-label="Close chat"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Messages display box */}
@@ -276,13 +173,7 @@ export default function Chatbot() {
                         : "bg-white text-[#113C27] border border-[#EAE6DB] rounded-tl-none shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
                     }`}
                   >
-                    {msg.text === "you are valuable customer please sign in" ? (
-                      <span>
-                        You are valuable customer please <a href="/login" className="underline font-bold text-[#2D6A4F] hover:text-[#113C27]">sign in</a>
-                      </span>
-                    ) : (
-                      msg.text
-                    )}
+                    {msg.text}
                   </div>
                   <span className="text-[9px] text-[#738276] font-semibold block px-1 text-right">
                     {msg.timestamp}
@@ -310,39 +201,15 @@ export default function Chatbot() {
 
           {/* Quick FAQ buttons */}
           <div className="px-4 py-2 border-t border-[#EAE6DB]/40 bg-white/40 flex flex-wrap gap-2 justify-start max-h-[120px] overflow-y-auto">
-            {!isAuthenticated ? (
-              null
-            ) : selectedCategory === null ? (
-              <>
-                {(["orders", "cart", "profile", "payment", "other"] as const).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className="text-[10px] font-bold text-[#113C27] bg-white border border-[#EAE6DB] px-3 py-1.5 rounded-full hover:bg-[#C1F2D0] hover:border-[#113C27]/40 transition-colors shadow-sm text-left leading-normal capitalize"
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => setSelectedCategory(null)}
-                  className="text-[10px] font-extrabold text-white bg-[#113C27] border border-[#113C27] px-3 py-1.5 rounded-full hover:bg-[#2D6A4F] transition-colors shadow-sm text-left leading-normal"
-                >
-                  ← Back
-                </button>
-                {menuOptions[selectedCategory as keyof typeof menuOptions].map((question) => (
-                  <button
-                    key={question}
-                    onClick={() => handleSendMessage(question)}
-                    className="text-[10px] font-bold text-[#113C27] bg-white border border-[#EAE6DB] px-3 py-1.5 rounded-full hover:bg-[#C1F2D0] hover:border-[#113C27]/40 transition-colors shadow-sm text-left leading-normal"
-                  >
-                    {question}
-                  </button>
-                ))}
-              </>
-            )}
+            {Object.keys(faqData).map((question) => (
+              <button
+                key={question}
+                onClick={() => handleSendMessage(question)}
+                className="text-[10px] font-bold text-[#113C27] bg-white border border-[#EAE6DB] px-3 py-1.5 rounded-full hover:bg-[#C1F2D0] hover:border-[#113C27]/40 transition-colors shadow-sm text-left leading-normal"
+              >
+                {question}
+              </button>
+            ))}
           </div>
 
           {/* Message input form */}

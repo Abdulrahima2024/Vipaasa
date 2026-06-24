@@ -400,45 +400,27 @@ export async function deleteUserAddress(userId: string, addressId: string) {
   return true;
 }
 
-export async function getAllUsers(page = 1, limit = 20, search?: string, roleFilter?: string, statusFilter?: string) {
-  const where: any = { isDeleted: false };
-  
-  if (statusFilter && statusFilter !== "All") {
-    where.status = statusFilter.toUpperCase();
-  }
-
-  if (search) {
-    where.OR = [
-      { email: { contains: search, mode: "insensitive" } },
-      { profile: { firstName: { contains: search, mode: "insensitive" } } },
-      { profile: { lastName: { contains: search, mode: "insensitive" } } },
-      { phoneNumber: { contains: search, mode: "insensitive" } }
-    ];
-  }
-
-  const [users, totalCount] = await Promise.all([
-    prisma.user.findMany({
-      where,
-      take: limit,
-      skip: (page - 1) * limit,
-      include: {
-        role: true,
-        profile: true,
-        orders: {
-          select: {
-            totalPayable: true,
-            status: true
-          }
+export async function getAllUsers() {
+  const users = await prisma.user.findMany({
+    where: {
+      isDeleted: false
+    },
+    include: {
+      role: true,
+      profile: true,
+      orders: {
+        select: {
+          totalPayable: true,
+          status: true
         }
-      },
-      orderBy: {
-        createdAt: "desc"
       }
-    }),
-    prisma.user.count({ where })
-  ]);
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
 
-  const mappedData = users.map(u => {
+  return users.map(u => {
     let roleName = "Customer";
     let permissions = { manageProducts: false, manageOrders: false, manageInventory: false, viewReports: false };
 
@@ -476,14 +458,6 @@ export async function getAllUsers(page = 1, limit = 20, search?: string, roleFil
       totalSpent
     };
   });
-
-  return {
-    data: mappedData,
-    totalCount,
-    page,
-    limit,
-    totalPages: Math.ceil(totalCount / limit)
-  };
 }
 
 export async function createSystemUser(data: {

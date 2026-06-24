@@ -47,7 +47,7 @@ export function getSocket(): Socket {
     connectionAttempts++;
     console.warn(`[SOCKET] Connection error (attempt ${connectionAttempts}):`, err.message);
     if (connectionAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      console.warn("[SOCKET] Max reconnection attempts reached. Giving up.");
+      console.error("[SOCKET] Max reconnection attempts reached. Giving up.");
       socket?.disconnect();
     }
   });
