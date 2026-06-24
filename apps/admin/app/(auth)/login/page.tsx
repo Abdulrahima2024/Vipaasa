@@ -6,6 +6,8 @@ import { Lock, Mail, Eye, EyeOff } from "lucide-react";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { fetchAPI } from "@/lib/api";
 
+const isDev = process.env.NODE_ENV === "development";
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -20,7 +22,8 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    if (!captchaToken) {
+    // Skip captcha check in development (hCaptcha doesn't work on localhost)
+    if (!captchaToken && !isDev) {
       setError("hCaptcha verification token is required");
       return;
     }
@@ -127,14 +130,23 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="flex justify-center py-2">
-            <HCaptcha
-              ref={captchaRef}
-              sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "bb20f2e0-3a90-43ac-9cfe-e7e4c370e814"}
-              onVerify={(token) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken(null)}
-            />
-          </div>
+          {!isDev && (
+            <div className="flex justify-center py-2">
+              <HCaptcha
+                ref={captchaRef}
+                sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "bb20f2e0-3a90-43ac-9cfe-e7e4c370e814"}
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+              />
+            </div>
+          )}
+          {isDev && (
+            <div className="flex justify-center py-2">
+              <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-center">
+                🔧 Development mode — hCaptcha bypassed
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">
