@@ -1,33 +1,35 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Ticket, Percent, Users, Coins } from "lucide-react";
+import { useState } from "react";
+import { Plus, Edit, Trash2, Ticket, Percent, Users, Coins, RefreshCw } from "lucide-react";
 import { fetchAPI } from "../../../lib/api";
 import { format } from "date-fns";
 import AddCouponModal from "../../../components/coupons/AddCouponModal";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function CouponsPage() {
-  const [coupons, setCoupons] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const limit = 20;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<any>(null);
+  const { data: couponsData, isLoading, refetch: loadCoupons } = useQuery({
+    queryKey: ['adminCoupons', page, limit],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      const res = await fetchAPI(`/api/admin/coupons?${params.toString()}`);
+      return res;
+    },
+    staleTime: 0,               // Always consider data stale — fetch fresh each time
+    refetchOnWindowFocus: true, // Refetch when admin returns to this tab
+  });
 
-  useEffect(() => {
-    loadCoupons();
-  }, []);
-
-  const loadCoupons = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetchAPI("/api/admin/coupons");
-      setCoupons(res.data || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to load coupons");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const coupons = couponsData?.data || [];
+  const totalPages = couponsData?.totalPages || 1;
+  const totalCount = couponsData?.totalCount || 0;
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     try {
@@ -36,7 +38,7 @@ export default function CouponsPage() {
         method: "PUT",
         body: JSON.stringify({ status: newStatus }),
       });
-      loadCoupons();
+      queryClient.invalidateQueries({ queryKey: ['adminCoupons'] });
     } catch (err: any) {
       alert("Failed to update status");
     }
@@ -46,7 +48,7 @@ export default function CouponsPage() {
     if (!confirm("Are you sure you want to delete this coupon?")) return;
     try {
       await fetchAPI(`/api/admin/coupons/${id}`, { method: "DELETE" });
-      loadCoupons();
+      queryClient.invalidateQueries({ queryKey: ['adminCoupons'] });
     } catch (err: any) {
       alert("Failed to delete coupon");
     }
@@ -66,23 +68,26 @@ export default function CouponsPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Manage discount coupons and track usage</p>
         </div>
-        <button 
-          onClick={() => {
-            setEditingCoupon(null);
-            setIsAddModalOpen(true);
-          }}
-          className="bg-[var(--primary-green)] text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[var(--secondary-green)] transition-all shadow-sm flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Create Coupon
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-100">
-          {error}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => loadCoupons()}
+            className="p-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-[var(--primary-green)] transition-colors"
+            title="Refresh coupon usage counts"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => {
+              setEditingCoupon(null);
+              setIsAddModalOpen(true);
+            }}
+            className="bg-[var(--primary-green)] text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[var(--secondary-green)] transition-all shadow-sm flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Create Coupon
+          </button>
         </div>
-      )}
+      </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -174,6 +179,31 @@ export default function CouponsPage() {
         </div>
       </div>
 
+      {/* Pagination Controls */}
+      {!isLoading && totalPages > 1 && (
+        <div className="flex justify-between items-center mt-6 mb-8">
+          <div className="text-sm font-semibold text-gray-500">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 font-bold text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 font-bold text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       {isAddModalOpen && (
         <AddCouponModal
           initialData={editingCoupon}
@@ -184,7 +214,7 @@ export default function CouponsPage() {
           onSuccess={() => {
             setIsAddModalOpen(false);
             setEditingCoupon(null);
-            loadCoupons();
+            queryClient.invalidateQueries({ queryKey: ['adminCoupons'] });
           }}
         />
       )}

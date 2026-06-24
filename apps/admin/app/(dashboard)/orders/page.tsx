@@ -19,95 +19,96 @@ import {
 } from "lucide-react";
 import { OrderDetailsModal, Order } from "../../../components/OrderDetailsModal";
 import AssignDeliveryModal from "../../../components/orders/AssignDeliveryModal";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Order and OrderItem interfaces are imported from OrderDetailsModal
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Stats state
-  const [orderStats, setOrderStats] = useState<{ totalRevenue: number; totalOrders: number } | null>(null);
-  const [isStatsLoading, setIsStatsLoading] = useState(true);
-
-  // Search & Filter state
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("All");
-
-  const fetchOrders = () => {
-    setIsLoading(true);
-    fetchAPI("/api/admin/orders")
-      .then((res) => {
-        if (res && res.data) {
-          const mapped: Order[] = res.data.map((o: any) => {
-            const formattedItems = (o.items || []).map((item: any) => ({
-              name: item.variant?.product?.name || "Product",
-              qty: item.quantity,
-              weight: item.variant?.weightGrams ? `${item.variant.weightGrams}g` : "250g",
-              price: Number(item.unitPrice),
-            }));
-
-            const addr = `${o.shippingAddressLine1}${o.shippingAddressLine2 ? ', ' + o.shippingAddressLine2 : ''}, ${o.shippingCity}, ${o.shippingState}, ${o.shippingPostalCode}`;
-
-            let status = "Pending";
-            if (o.status === "PENDING_PAYMENT") status = "Pending Payment";
-            else if (o.status === "PAYMENT_FAILED") status = "Payment Failed";
-            else if (o.status === "PAYMENT_SUCCESS") status = "Payment Success";
-            else if (o.status === "CONFIRMED") status = "Confirmed";
-            else if (o.status === "PROCESSING") status = "Processing";
-            else if (o.status === "PACKED") status = "Packed";
-            else if (o.status === "SHIPPED") status = "Shipped";
-            else if (o.status === "OUT_FOR_DELIVERY") status = "Out for Delivery";
-            else if (o.status === "DELIVERY_FAILED") status = "Delivery Failed";
-            else if (o.status === "DELIVERED") status = "Delivered";
-            else if (o.status === "RETURN_REQUESTED") status = "Return Requested";
-            else if (o.status === "RETURNED") status = "Returned";
-            else if (o.status === "CANCELLED") status = "Cancelled";
-            else if (o.status === "REFUNDED") status = "Refunded";
-
-            if (o.paymentStatus === "REFUNDED") {
-              status = "Refunded";
-            }
-
-            return {
-              id: o.id,
-              orderNumber: o.orderNumber || o.id,
-              customerName: o.user?.profile ? `${o.user.profile.firstName} ${o.user.profile.lastName}`.trim() : "Customer",
-              email: o.user?.email || "",
-              date: new Date(o.createdAt).toISOString().split("T")[0],
-              items: formattedItems,
-              total: Number(o.totalPayable),
-              status,
-              paymentMethod: o.paymentStatus === "PAID" ? "Paid" : "Cash on Delivery",
-              paymentId: o.payments?.[0]?.gatewayPaymentIntentId || "",
-              bankDetails: o.payments?.[0]?.gatewayName || "COD",
-              shippingAddress: addr,
-            };
-          });
-          setOrders(mapped);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch admin orders:", err);
-      })
-      .finally(() => {
-        setIsLoading(false);
+  const limit = 15;
+  const { data: ordersData, isLoading, refetch: fetchOrders } = useQuery({
+    queryKey: ['adminOrders', page, limit, searchQuery, selectedStatusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
       });
-  };
+      if (searchQuery) params.append("search", searchQuery);
+      if (selectedStatusFilter !== "All") params.append("status", selectedStatusFilter);
 
-  useEffect(() => {
-    fetchOrders();
-    // Fetch order stats
-    setIsStatsLoading(true);
-    fetchAPI("/api/admin/orders/stats")
-      .then((res: any) => {
-        if (res && res.data) {
-          setOrderStats(res.data);
-        }
-      })
-      .catch((err) => console.error("Failed to fetch order stats:", err))
-      .finally(() => setIsStatsLoading(false));
-  }, []);
+      const res = await fetchAPI(`/api/admin/orders?${params.toString()}`);
+      if (res && res.data) {
+        const mapped: Order[] = res.data.map((o: any) => {
+          const formattedItems = (o.items || []).map((item: any) => ({
+            name: item.variant?.product?.name || "Product",
+            qty: item.quantity,
+            weight: item.variant?.weightGrams ? `${item.variant.weightGrams}g` : "250g",
+            price: Number(item.unitPrice),
+          }));
+
+          const addr = `${o.shippingAddressLine1}${o.shippingAddressLine2 ? ', ' + o.shippingAddressLine2 : ''}, ${o.shippingCity}, ${o.shippingState}, ${o.shippingPostalCode}`;
+
+          let status = "Pending";
+          if (o.status === "PENDING_PAYMENT") status = "Pending Payment";
+          else if (o.status === "PAYMENT_FAILED") status = "Payment Failed";
+          else if (o.status === "PAYMENT_SUCCESS") status = "Payment Success";
+          else if (o.status === "CONFIRMED") status = "Confirmed";
+          else if (o.status === "PROCESSING") status = "Processing";
+          else if (o.status === "PACKED") status = "Packed";
+          else if (o.status === "SHIPPED") status = "Shipped";
+          else if (o.status === "OUT_FOR_DELIVERY") status = "Out for Delivery";
+          else if (o.status === "DELIVERY_FAILED") status = "Delivery Failed";
+          else if (o.status === "DELIVERED") status = "Delivered";
+          else if (o.status === "RETURN_REQUESTED") status = "Return Requested";
+          else if (o.status === "RETURNED") status = "Returned";
+          else if (o.status === "CANCELLED") status = "Cancelled";
+          else if (o.status === "REFUNDED") status = "Refunded";
+
+          if (o.paymentStatus === "REFUNDED") {
+            status = "Refunded";
+          }
+
+          return {
+            id: o.id,
+            orderNumber: o.orderNumber || o.id,
+            customerName: o.user?.profile ? `${o.user.profile.firstName} ${o.user.profile.lastName}`.trim() : "Customer",
+            email: o.user?.email || "",
+            date: new Date(o.createdAt).toISOString().split("T")[0],
+            items: formattedItems,
+            total: Number(o.totalPayable),
+            status,
+            paymentMethod: o.paymentStatus === "PAID" ? "Paid" : "Cash on Delivery",
+            paymentId: o.payments?.[0]?.gatewayPaymentIntentId || "",
+            bankDetails: o.payments?.[0]?.gatewayName || "COD",
+            shippingAddress: addr,
+            deliveryPartnerId: o.OrderAssignment?.deliveryPartner?.id || null,
+            deliveryPartnerName: o.OrderAssignment?.deliveryPartner?.name || null,
+            deliveryStatus: o.deliveryStatus || "PENDING",
+          };
+        });
+
+        return {
+          orders: mapped,
+          totalPages: res.totalPages,
+        };
+      }
+      return { orders: [], totalPages: 1 };
+    }
+  });
+
+  const orders = ordersData?.orders || [];
+  const totalPages = ordersData?.totalPages || 1;
+
+  const { data: orderStats, isLoading: isStatsLoading } = useQuery({
+    queryKey: ['adminOrderStats'],
+    queryFn: async () => {
+      const res = await fetchAPI("/api/admin/orders/stats");
+      return res?.data || null;
+    }
+  });
 
   // Selected Order Detail View State
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -123,7 +124,8 @@ export default function OrdersPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (response && response.status === "success") {
-        setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+        queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
+        queryClient.invalidateQueries({ queryKey: ['adminOrderStats'] });
         if (selectedOrder && selectedOrder.id === id) {
           setSelectedOrder({ ...selectedOrder, status: newStatus });
         }
@@ -209,24 +211,8 @@ export default function OrdersPage() {
     }
   };
 
-  // Filter calculations
-  const filteredOrders = orders.filter((o) => {
-    const orderNumStr = String(o.orderNumber || "").toLowerCase();
-    const custNameStr = String(o.customerName || "").toLowerCase();
-    const query = searchQuery.toLowerCase().trim();
-    
-    let matchesSearch = true;
-    if (query !== "") {
-      const isUUID = orderNumStr.length === 36 && orderNumStr.includes("-");
-      if (isUUID) {
-         matchesSearch = custNameStr.includes(query) || orderNumStr === query;
-      } else {
-         matchesSearch = orderNumStr.includes(query) || custNameStr.includes(query);
-      }
-    }
-    const matchesStatus = selectedStatusFilter === "All" || o.status === selectedStatusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Filter calculations (already applied backend, but kept for UI sync if needed)
+  const filteredOrders = orders;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -420,7 +406,8 @@ export default function OrdersPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {order.status === "Packed" && (
+                          {/* Show Assign button only for Packed orders without a partner yet */}
+                          {order.status === "Packed" && !order.deliveryPartnerId && (
                             <button
                               onClick={() => setAssignModalOrderId(order.id)}
                               className="px-2.5 py-1.5 bg-[var(--primary-green)] hover:bg-[var(--secondary-green)] text-white text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center gap-1"
@@ -428,6 +415,19 @@ export default function OrdersPage() {
                               <Truck className="w-3.5 h-3.5" />
                               Assign
                             </button>
+                          )}
+                          {/* Show assigned partner card for any order that already has a partner */}
+                          {order.deliveryPartnerId && (
+                            <div className="flex flex-col items-end mr-2">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assigned to</span>
+                              <span className="text-xs font-bold text-[var(--primary-green)]">{order.deliveryPartnerName}</span>
+                              <button
+                                onClick={() => setAssignModalOrderId(order.id)}
+                                className="text-[10px] mt-0.5 text-gray-500 hover:text-[var(--primary-green)] underline"
+                              >
+                                Change Partner
+                              </button>
+                            </div>
                           )}
                           <button
                             onClick={() => setSelectedOrder(order)}
@@ -453,6 +453,31 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      {/* Pagination Controls */}
+      {!isLoading && totalPages > 1 && (
+        <div className="flex justify-between items-center mt-6 mb-8">
+          <div className="text-sm font-semibold text-gray-500">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 font-bold text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 font-bold text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ORDER DETAILS DIALOG */}
       {selectedOrder && (
         <OrderDetailsModal 
@@ -468,7 +493,9 @@ export default function OrdersPage() {
         onClose={() => setAssignModalOrderId(null)}
         orderId={assignModalOrderId}
         onAssigned={() => {
-          fetchOrders(); // Refresh to show new status
+          // Force a full network refetch so the newly assigned partner is visible immediately
+          queryClient.invalidateQueries({ queryKey: ['adminOrders'], refetchType: 'all' });
+          queryClient.invalidateQueries({ queryKey: ['adminOrderStats'], refetchType: 'all' });
         }}
       />
     </div>

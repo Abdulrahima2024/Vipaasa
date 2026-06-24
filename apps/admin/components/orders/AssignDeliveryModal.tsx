@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Truck, AlertCircle } from "lucide-react";
+import { X, Truck, AlertCircle, CheckCircle2, Copy, Check, Send } from "lucide-react";
 import { fetchAPI } from "../../lib/api";
 
 type Partner = {
@@ -27,6 +27,8 @@ export default function AssignDeliveryModal({ isOpen, onClose, orderId, onAssign
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successOtp, setSuccessOtp] = useState<string | null>(null);
+  const [assignedPartner, setAssignedPartner] = useState<Partner | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isOpen && orderId) {
@@ -35,6 +37,8 @@ export default function AssignDeliveryModal({ isOpen, onClose, orderId, onAssign
       setSelectedPartner("");
       setNotes("");
       setError(null);
+      setAssignedPartner(null);
+      setCopied(false);
     }
   }, [isOpen, orderId]);
 
@@ -68,10 +72,16 @@ export default function AssignDeliveryModal({ isOpen, onClose, orderId, onAssign
         body: JSON.stringify({ partnerId: selectedPartner, notes })
       });
 
+      // Immediately trigger the parent list refresh in the background
+      onAssigned();
+
+      // Store full partner object for WhatsApp send
+      const partner = partners.find(p => p.id === selectedPartner) || null;
+      setAssignedPartner(partner);
+
       if (res.data?.generatedOtp) {
         setSuccessOtp(res.data.generatedOtp);
       } else {
-        onAssigned();
         onClose();
       }
     } catch (err: any) {
@@ -81,43 +91,144 @@ export default function AssignDeliveryModal({ isOpen, onClose, orderId, onAssign
     }
   };
 
+  const handleCopyOtp = async () => {
+    if (!successOtp) return;
+    try {
+      await navigator.clipboard.writeText(successOtp);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Fallback for browsers that block clipboard API
+      const el = document.createElement("textarea");
+      el.value = successOtp;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!successOtp || !assignedPartner) return;
+
+    const message =
+      `🚚 *Vipaasa Organics — Delivery Assignment*\n\n` +
+      `Hello ${assignedPartner.name},\n\n` +
+      `You have been assigned a new delivery.\n\n` +
+      `📦 *Order ID:* ${orderId}\n` +
+      `🔐 *Delivery OTP:* ${successOtp}\n\n` +
+      `Please use this OTP to confirm delivery with the customer.\n\n` +
+      `— Vipaasa Admin`;
+
+    // Clean phone: remove spaces, dashes, add country code if missing
+    let phone = assignedPartner.phone.replace(/[\s\-]/g, "");
+    if (!phone.startsWith("+") && !phone.startsWith("91")) {
+      phone = "91" + phone; // India country code
+    }
+    phone = phone.replace(/^\+/, "");
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleDone = () => {
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-        
+
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Truck className="w-5 h-5 text-[var(--primary-green)]" />
             Assign Delivery Partner
           </h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+          <button onClick={handleDone} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-6 overflow-y-auto">
           {successOtp ? (
-            <div className="text-center py-6">
+            <div className="text-center py-4">
+              {/* Success Icon */}
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Truck className="w-8 h-8 text-green-600" />
+                <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Delivery Assigned!</h3>
-              <p className="text-sm text-gray-600 mb-6">Partner will receive the details. Please share this Delivery OTP with the partner so they can complete the delivery.</p>
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1">Delivery OTP</p>
-                <p className="text-3xl font-mono font-bold tracking-widest text-[var(--primary-green)]">{successOtp}</p>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Delivery Assigned!</h3>
+              {assignedPartner && (
+                <p className="text-sm font-semibold text-[var(--primary-green)] mb-1">
+                  Assigned to: {assignedPartner.name}
+                </p>
+              )}
+              <p className="text-sm text-gray-500 mb-5">
+                Share the OTP with the delivery partner to confirm delivery.
+              </p>
+
+              {/* OTP Box with Copy Button */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                <p className="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2">Delivery OTP</p>
+                <div className="flex items-center justify-center gap-3">
+                  <p className="text-4xl font-mono font-extrabold tracking-[0.3em] text-[var(--primary-green)]">
+                    {successOtp}
+                  </p>
+                  <button
+                    onClick={handleCopyOtp}
+                    title="Copy OTP"
+                    className={`p-2 rounded-lg transition-all ${
+                      copied
+                        ? "bg-green-100 text-green-600"
+                        : "bg-white border border-gray-200 text-gray-400 hover:text-[var(--primary-green)] hover:border-[var(--primary-green)]"
+                    }`}
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+                {copied && (
+                  <p className="text-xs text-green-600 font-semibold mt-2 animate-pulse">
+                    ✓ Copied to clipboard!
+                  </p>
+                )}
               </div>
-              <button 
-                onClick={() => {
-                  onAssigned();
-                  onClose();
-                }}
-                className="w-full bg-[var(--primary-green)] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[var(--secondary-green)] transition-colors"
-              >
-                Done
-              </button>
+
+              {/* Partner details reminder */}
+              {assignedPartner && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 text-left">
+                  <p className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-1.5">Partner Details</p>
+                  <div className="space-y-0.5 text-sm text-gray-700 font-medium">
+                    <p>👤 {assignedPartner.name}</p>
+                    <p>📱 {assignedPartner.phone}</p>
+                    <p>🚗 {assignedPartner.vehicleNumber} ({assignedPartner.vehicleType})</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3">
+                {/* Send via WhatsApp */}
+                {assignedPartner?.phone && (
+                  <button
+                    onClick={handleSendWhatsApp}
+                    className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white px-4 py-3 rounded-xl font-semibold transition-colors shadow-sm"
+                  >
+                    <Send className="w-4 h-4" />
+                    Send OTP &amp; Details via WhatsApp
+                  </button>
+                )}
+
+                {/* Done / Close */}
+                <button
+                  onClick={handleDone}
+                  className="w-full bg-[var(--primary-green)] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[var(--secondary-green)] transition-colors"
+                >
+                  Done — Close
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-5">

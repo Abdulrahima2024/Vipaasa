@@ -104,6 +104,29 @@ export default function UsersPage() {
     }
   };
 
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
+
+  // Form field state
+  const [formName, setFormName] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+  const [formStatus, setFormStatus] = useState(true);
+  const [formPermProducts, setFormPermProducts] = useState(true);
+  const [formPermOrders, setFormPermOrders] = useState(true);
+  const [formPermInventory, setFormPermInventory] = useState(true);
+  const [formPermReports, setFormPermReports] = useState(true);
+
+  // Order history state
+  const [selectedUserForOrders, setSelectedUserForOrders] = useState<SystemUser | null>(null);
+  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [ordersPagination, setOrdersPagination] = useState<any>({ page: 1, pages: 1, total: 0 });
+
+  // Selected order detail for the order details modal
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<any>(null);
+
   useEffect(() => {
     loadUsers();
     loadDashboardStats();

@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Fix the workspace root detection warning
+  outputFileTracingRoot: require("path").join(__dirname, "../../"),
+
   // ── Compiler optimisations ─────────────────────────────────────────────────
   compiler: {
     // Remove console.log in production builds
@@ -71,6 +74,23 @@ const nextConfig = {
         permanent: true,
       },
     ];
+  },
+
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Reduce memory pressure during development
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: false,
+        runtimeChunk: false,
+      };
+      config.parallelism = 1;
+      config.snapshot = {
+        ...(config.snapshot || {}),
+        managedPaths: [],
+      };
+    }
+    return config;
   },
 
   // ── Bundle analyser (run with ANALYZE=true npm run build) ─────────────────
