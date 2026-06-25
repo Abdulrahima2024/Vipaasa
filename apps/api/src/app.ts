@@ -22,6 +22,7 @@ import notificationRoutes from "./modules/notifications/notification.routes";
 import { requestLogger } from "./shared/middleware/requestLogger";
 import { rateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
+import { isOriginAllowed } from "./config/cors";
 
 dotenv.config();
 
@@ -32,7 +33,13 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(cors({
-  origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(",") : "http://localhost:3000",
+  origin: (origin, callback) => {
+    if (isOriginAllowed(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true
 }));
 app.use(express.json({ limit: "10mb" }));
