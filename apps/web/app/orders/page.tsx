@@ -208,7 +208,8 @@ export default function MyOrdersPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F9F7F2] font-sans antialiased text-[#1F3E2F]">
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
         .font-sans { font-family: 'Outfit', sans-serif; }
         .font-serif { font-family: 'Playfair Display', serif; }
@@ -238,11 +239,10 @@ export default function MyOrdersPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-4 text-sm font-bold transition-all relative ${
-                  isActive
-                    ? "text-[#113C27]"
-                    : "text-[#738276] hover:text-[#113C27]"
-                }`}
+                className={`pb-4 text-sm font-bold transition-all relative ${isActive
+                  ? "text-[#113C27]"
+                  : "text-[#738276] hover:text-[#113C27]"
+                  }`}
               >
                 {tab}
                 {isActive && (
@@ -326,7 +326,7 @@ export default function MyOrdersPage() {
                       <RefreshCw className="w-3.5 h-3.5" /> Reorder
                     </button>
                   )}
-                  
+
                   {order.rawStatus === "PENDING" && (
                     <button
                       onClick={() => {
@@ -341,11 +341,10 @@ export default function MyOrdersPage() {
 
                   <button
                     onClick={() => setSelectedOrderDetail(order)}
-                    className={`py-2.5 px-5 rounded-xl font-bold transition-all text-xs active:scale-95 ${
-                      order.status === "Cancelled"
-                        ? "bg-[#EAE6DB]/60 hover:bg-[#EAE6DB]/90 text-[#1F3E2F]"
-                        : "bg-[#0F5132] hover:bg-[#113C27] text-white shadow-sm shadow-green-950/10"
-                    }`}
+                    className={`py-2.5 px-5 rounded-xl font-bold transition-all text-xs active:scale-95 ${order.status === "Cancelled"
+                      ? "bg-[#EAE6DB]/60 hover:bg-[#EAE6DB]/90 text-[#1F3E2F]"
+                      : "bg-[#0F5132] hover:bg-[#113C27] text-white shadow-sm shadow-green-950/10"
+                      }`}
                   >
                     View Details
                   </button>
@@ -381,7 +380,7 @@ export default function MyOrdersPage() {
                 Contact Support
               </Link>
             </div>
-            
+
             {/* Watermark question mark */}
             <div className="absolute right-[-10px] bottom-[-20px] opacity-10 select-none pointer-events-none">
               <span className="text-[160px] font-bold text-white font-serif">?</span>
